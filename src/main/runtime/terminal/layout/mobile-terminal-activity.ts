@@ -1,9 +1,10 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithMarkPtyLivenessUnverifiable } from './orca-runtime-mark-pty-liveness-unverifiable'
-import type { ApplyLayoutResult, DriverState } from './orca-runtime-core'
-import { clampTerminalViewport } from './terminal-viewport'
+import { OrcaRuntimeWithMarkPtyLivenessUnverifiable } from './terminal-input-floor'
+import type { ApplyLayoutResult, DriverState } from '../../orca-runtime-core'
+import { clampTerminalViewport } from '../../terminal-viewport'
 
-export class OrcaRuntimeWithMobileTookFloor extends OrcaRuntimeWithMarkPtyLivenessUnverifiable {
+export abstract class OrcaRuntimeWithMobileTookFloor extends OrcaRuntimeWithMarkPtyLivenessUnverifiable {
+  abstract applyMobileDisplayMode(ptyId: string): Promise<boolean>
+
   // Why: invoked from mobile RPC method handlers (terminal.send / setDisplayMode /
   // resizeForClient / fresh subscribe with auto). Records the actor as the
   // most recent mobile driver and re-applies phone-fit if we were previously

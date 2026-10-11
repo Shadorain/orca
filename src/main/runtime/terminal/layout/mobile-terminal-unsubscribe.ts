@@ -1,7 +1,6 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithHandleMobileSubscribeInternal } from './orca-runtime-handle-mobile-subscribe-internal'
+import { OrcaRuntimeWithHandleMobileSubscribeInternal } from './mobile-terminal-subscribe-internal'
 
-export class OrcaRuntimeWithHandleMobileUnsubscribe extends OrcaRuntimeWithHandleMobileSubscribeInternal {
+export abstract class OrcaRuntimeWithHandleMobileUnsubscribe extends OrcaRuntimeWithHandleMobileSubscribeInternal {
   // Why: delayed restore prevents resize thrashing during rapid tab switches.
   // The 300ms debounce means only the final tab triggers a PTY restore;
   // intermediate terminals keep their current dims harmlessly.

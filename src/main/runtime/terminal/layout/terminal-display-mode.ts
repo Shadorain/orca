@@ -1,7 +1,6 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithHandleMobileUnsubscribe } from './orca-runtime-handle-mobile-unsubscribe'
+import { OrcaRuntimeWithHandleMobileUnsubscribe } from './mobile-terminal-unsubscribe'
 
-export class OrcaRuntimeWithApplyMobileDisplayMode extends OrcaRuntimeWithHandleMobileUnsubscribe {
+export abstract class OrcaRuntimeWithApplyMobileDisplayMode extends OrcaRuntimeWithHandleMobileUnsubscribe {
   // Why: called when mode changes via terminal.setDisplayMode. Applies the
   // mode change immediately if there's an active subscriber, and emits a
   // 'resized' event so the mobile client can reinitialize xterm inline.

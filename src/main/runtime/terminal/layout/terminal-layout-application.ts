@@ -1,8 +1,13 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithPickMostRecentActor } from './orca-runtime-pick-most-recent-actor'
-import type { ApplyLayoutResult, PtyLayoutState, PtyLayoutTarget } from './orca-runtime-core'
+import { OrcaRuntimeWithPickMostRecentActor } from './terminal-layout-queue'
+import type { ApplyLayoutResult, PtyLayoutState, PtyLayoutTarget } from '../../orca-runtime-core'
 
-export class OrcaRuntimeWithApplyLayout extends OrcaRuntimeWithPickMostRecentActor {
+export abstract class OrcaRuntimeWithApplyLayout extends OrcaRuntimeWithPickMostRecentActor {
+  protected abstract suppressResizesForMs(ms: number): void
+  protected abstract notifyTerminalResize(
+    ptyId: string,
+    event: { cols: number; rows: number; displayMode: string; reason: string; seq?: number }
+  ): void
+
   protected async applyLayout(ptyId: string, target: PtyLayoutTarget): Promise<ApplyLayoutResult> {
     // Why: re-check pty-exit at the head of the slot — the queue may have
     // accepted this target before onPtyExit ran.

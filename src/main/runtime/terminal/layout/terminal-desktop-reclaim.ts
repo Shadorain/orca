@@ -1,11 +1,13 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithMobileTookFloor } from './orca-runtime-mobile-took-floor'
+import { OrcaRuntimeWithMobileTookFloor } from './mobile-terminal-activity'
 import {
   MOBILE_AUTO_RESTORE_FIT_MAX_MS,
   MOBILE_AUTO_RESTORE_FIT_MIN_MS
-} from './orca-runtime-postlude'
+} from '../../orca-runtime-postlude'
 
-export class OrcaRuntimeWithReclaimTerminalForDesktop extends OrcaRuntimeWithMobileTookFloor {
+export abstract class OrcaRuntimeWithReclaimTerminalForDesktop extends OrcaRuntimeWithMobileTookFloor {
+  abstract isMobileSubscriberActive(ptyId: string): boolean
+  abstract setMobileDisplayMode(ptyId: string, mode: 'auto' | 'desktop'): void
+
   // Why: invoked from `runtime:restoreTerminalFit` IPC (the desktop "Take
   // back" / "Restore" button). Forces the PTY back to desktop dims and flips
   // the driver to `desktop`, suppressing further mobile-driven dim changes

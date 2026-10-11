@@ -1,32 +1,31 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { sessionIdFromStructuredWorkerIncarnation } from './structured-worker-identity'
-import { observeStructuredWorker } from './rpc/methods/orchestration-structured-worker-lifecycle'
-import { OrcaRuntimeWithApplyMobileDisplayMode } from './orca-runtime-apply-mobile-display-mode'
-import { addListenerToMap } from './orca-runtime-core'
-import { notifyRuntimeListeners, withTimeoutResult } from './runtime-async-boundaries'
-import type { TerminalExitCause } from '../../shared/terminal-exit-cause'
+import { sessionIdFromStructuredWorkerIncarnation } from '../../structured-worker-identity'
+import { observeStructuredWorker } from '../../rpc/methods/orchestration-structured-worker-lifecycle'
+import { OrcaRuntimeWithApplyMobileDisplayMode } from './terminal-display-mode'
+import { addListenerToMap } from '../../orca-runtime-core'
+import { notifyRuntimeListeners, withTimeoutResult } from '../../runtime-async-boundaries'
+import type { TerminalExitCause } from '../../../../shared/terminal-exit-cause'
 import {
   describeTerminalExitCause,
   isDeliberateTerminalExit
-} from '../../shared/terminal-exit-cause'
+} from '../../../../shared/terminal-exit-cause'
 import {
   DEFAULT_TERMINAL_LIST_LIMIT,
   PTY_CONTROLLER_LIST_TIMEOUT_MS
-} from './orca-runtime-postlude'
+} from '../../orca-runtime-postlude'
 import type {
   RuntimeTerminalListResult,
   RuntimeTerminalOrphanAdoptionRequest,
   RuntimeTerminalOrphanAdoptionResult
-} from '../../shared/runtime-types'
+} from '../../../../shared/runtime-terminal-contracts'
 import {
   classifyWorkerTerminalProcessIncarnation,
   parseWorkerTerminalHostScope
-} from './orchestration/worker-terminal-process-liveness'
-import { getRepoIdFromWorktreeId } from '../../shared/worktree/id'
-import { buildOrchestrationTaskDisplayMetadata } from '../../shared/orchestration-task-display'
-import { LOCAL_EXECUTION_HOST_ID, toSshExecutionHostId } from '../../shared/execution-host'
+} from '../../orchestration/worker-terminal-process-liveness'
+import { getRepoIdFromWorktreeId } from '../../../../shared/worktree/id'
+import { buildOrchestrationTaskDisplayMetadata } from '../../../../shared/orchestration-task-display'
+import { LOCAL_EXECUTION_HOST_ID, toSshExecutionHostId } from '../../../../shared/execution-host'
 
-export class OrcaRuntimeWithSubscribeToTerminalResize extends OrcaRuntimeWithApplyMobileDisplayMode {
+export abstract class OrcaRuntimeWithSubscribeToTerminalResize extends OrcaRuntimeWithApplyMobileDisplayMode {
   subscribeToTerminalResize(
     ptyId: string,
     listener: (event: {

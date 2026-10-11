@@ -1,7 +1,12 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithApplyLayout } from './orca-runtime-apply-layout'
+import { OrcaRuntimeWithApplyLayout } from './terminal-layout-application'
 
-export class OrcaRuntimeWithHandleMobileSubscribe extends OrcaRuntimeWithApplyLayout {
+export abstract class OrcaRuntimeWithHandleMobileSubscribe extends OrcaRuntimeWithApplyLayout {
+  protected abstract handleMobileSubscribeInternal(
+    ptyId: string,
+    clientId: string,
+    viewport?: { cols: number; rows: number }
+  ): Promise<boolean>
+
   // Why: server-side auto-fit on mobile subscribe. The runtime is the single
   // source of truth — the mobile client just passes its viewport and the runtime
   // decides whether to resize. This eliminates the measure→RPC→resubscribe

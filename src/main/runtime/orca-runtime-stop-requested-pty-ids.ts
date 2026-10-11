@@ -1,5 +1,8 @@
 // @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
 import { OrchestrationStructuredMailboxPointerDelivery } from './orchestration/structured-mailbox-pointer-delivery'
+import type { RuntimeLeafRecord } from './runtime-terminal-state-records'
+import type { ResolvedWorktree } from './runtime-worktree-path-identity'
+import type * as PtyControllerContract from './runtime-pty-controller-contract'
 import { createStructuredMailboxPointerHost } from './orchestration/structured-mailbox-pointer-host'
 import { localOrchestrationCliCommand } from './orchestration/cli-command'
 import { RuntimeOrchestrationSenderNames } from './runtime-orchestration-sender-names'
@@ -45,6 +48,18 @@ import type { LiveTerminalPty } from './orca-runtime-build-pty-terminal-summary'
 import type { FreshExplicitAgentStatus } from './runtime-hook-agent-row-selection'
 
 export abstract class OrcaRuntimeWithStopRequestedPtyIds extends OrcaRuntimeWithRuntimeId {
+  protected abstract getLeavesForPty(ptyId: string): RuntimeLeafRecord[]
+  abstract notifyMessageArrived(handle: string, messageType?: string): void
+  protected abstract resolveWorktreeSelector(selector: string): Promise<ResolvedWorktree>
+  protected abstract refreshPtyWorktreeRecordsWithControllerInventory(
+    resolvedWorktrees: ResolvedWorktree[],
+    targetWorktreeId?: string | null,
+    deadline?: number,
+    connectionId?: string | null,
+    retryStale?: boolean,
+    inventoryOptions?: PtyControllerContract.PtyInventoryRefreshOptions
+  ): Promise<PtyControllerContract.PtyControllerInventory | null>
+
   protected abstract getLivePtyForHandle(handle: string): LiveTerminalPty
 
   protected abstract getFreshExplicitAgentStatusForHandle(

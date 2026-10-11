@@ -16,7 +16,9 @@ import type { createAgentStatusOscProcessor } from '../../shared/agent-status-os
 import { RuntimeTerminalViewSubscribers } from './runtime-terminal-view-subscribers'
 import { parseAppSshPtyId } from '../../shared/ssh-pty-id'
 
-export class OrcaRuntimeWithFitOverrideListeners extends OrcaRuntimeWithStopRequestedPtyIds {
+export abstract class OrcaRuntimeWithFitOverrideListeners extends OrcaRuntimeWithStopRequestedPtyIds {
+  protected abstract notifyRemoteTerminalViewPresenceChanged(ptyId: string): void
+
   // Why: mobile clients need to know when the desktop restores a terminal
   // from mobile-fit so they can update their UI. These listeners are
   // invoked from resizeForClient and onClientDisconnected/onPtyExit.

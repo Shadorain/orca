@@ -1,5 +1,5 @@
-import { OrcaRuntimeWithHandleMobileSubscribe } from './orca-runtime-handle-mobile-subscribe'
-import { clampTerminalViewport } from './terminal-viewport'
+import { OrcaRuntimeWithHandleMobileSubscribe } from './mobile-terminal-subscribe'
+import { clampTerminalViewport } from '../../terminal-viewport'
 
 export abstract class OrcaRuntimeWithHandleMobileSubscribeInternal extends OrcaRuntimeWithHandleMobileSubscribe {
   protected async handleMobileSubscribeInternal(

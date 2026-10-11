@@ -1,8 +1,9 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithReclaimTerminalForDesktop } from './orca-runtime-reclaim-terminal-for-desktop'
-import type { ApplyLayoutResult, PtyLayoutState, PtyLayoutTarget } from './orca-runtime-core'
+import { OrcaRuntimeWithReclaimTerminalForDesktop } from './terminal-desktop-reclaim'
+import type { ApplyLayoutResult, PtyLayoutState, PtyLayoutTarget } from '../../orca-runtime-core'
 
-export class OrcaRuntimeWithPickMostRecentActor extends OrcaRuntimeWithReclaimTerminalForDesktop {
+export abstract class OrcaRuntimeWithPickMostRecentActor extends OrcaRuntimeWithReclaimTerminalForDesktop {
+  protected abstract applyLayout(ptyId: string, target: PtyLayoutTarget): Promise<ApplyLayoutResult>
+
   // Why: with multiple subscribers, the active phone-fit dims follow the
   // most recent mobile actor (argmax(lastActedAt)). See
   // docs/mobile-presence-lock.md "Active phone-fit dim selection".

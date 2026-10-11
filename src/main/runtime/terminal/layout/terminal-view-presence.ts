@@ -1,13 +1,45 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithRecordAgentPromptLifecycleState } from './terminal/output/terminal-output-generation'
-import type { DriverState } from './orca-runtime-core'
-import { addListenerToMap } from './orca-runtime-core'
-import { notifyRuntimeListeners } from './runtime-async-boundaries'
-import type { RuntimeTerminalBufferSnapshot } from './runtime-terminal-state-records'
-import { AUTHORITATIVE_TERMINAL_SNAPSHOT_TIMEOUT_MS } from './orca-runtime-postlude'
-import { assertTerminalInputWithinLimitWithYield } from './terminal-send-payload'
+import { OrcaRuntimeWithRecordAgentPromptLifecycleState } from '../output/terminal-output-generation'
+import type { TerminalOscLinkRange } from '../../../../shared/terminal-osc-link-ranges'
+import type { PtyProviderBufferSnapshot } from '../../../providers/pty-provider-contract'
+import type { RuntimeTerminalWriteOptions } from '../../runtime-terminal-writer'
+import type { WriteSettlement } from '../../../../shared/pty-write-settlement'
+import type { DriverState } from '../../orca-runtime-core'
+import { addListenerToMap } from '../../orca-runtime-core'
+import { notifyRuntimeListeners } from '../../runtime-async-boundaries'
+import type { RuntimeTerminalBufferSnapshot } from '../../runtime-terminal-state-records'
+import { AUTHORITATIVE_TERMINAL_SNAPSHOT_TIMEOUT_MS } from '../../orca-runtime-postlude'
+import { assertTerminalInputWithinLimitWithYield } from '../../terminal-send-payload'
 
-export class OrcaRuntimeWithNotifyRemoteTerminalViewPresenceChanged extends OrcaRuntimeWithRecordAgentPromptLifecycleState {
+export abstract class OrcaRuntimeWithNotifyRemoteTerminalViewPresenceChanged extends OrcaRuntimeWithRecordAgentPromptLifecycleState {
+  protected abstract serializeTerminalBufferFromAvailableState(
+    ptyId: string,
+    opts?: { scrollbackRows?: number }
+  ): Promise<{
+    data: string
+    frameRestoreAnsi?: string
+    cols: number
+    rows: number
+    cwd?: string | null
+    lastTitle?: string
+    seq?: number
+    source?: 'headless' | 'renderer'
+    oscLinks?: TerminalOscLinkRange[]
+    alternateScreen?: boolean
+    pendingEscapeTailAnsi?: string
+    kittyKeyboardFlags?: number
+    terminalOwner?: 'shell'
+  } | null>
+  protected abstract serializeProviderTerminalBuffer(
+    ptyId: string,
+    opts?: { scrollbackRows?: number },
+    wait?: { timeoutMs?: number; retireOnTimeout?: boolean }
+  ): Promise<PtyProviderBufferSnapshot | null>
+  protected abstract writeTerminalInputChunks(
+    ptyId: string,
+    text: string,
+    options: RuntimeTerminalWriteOptions
+  ): Promise<WriteSettlement | undefined>
+
   protected notifyRemoteTerminalViewPresenceChanged(ptyId: string): void {
     try {
       this.onRemoteTerminalViewPresenceChanged?.(ptyId)

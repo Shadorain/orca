@@ -1,10 +1,20 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithHasRecentTerminalOutputPath } from './terminal/output/terminal-output-path'
-import type { RuntimeCommandSurfaceHost } from './orca-runtime-core'
+import { OrcaRuntimeWithHasRecentTerminalOutputPath } from '../output/terminal-output-path'
+import type { DriverState } from '../../orca-runtime-core'
+import type { RuntimeFileCommandSurface } from '../../runtime-file-command-surface'
 
-export class OrcaRuntimeWithOnClientDisconnected extends OrcaRuntimeWithHasRecentTerminalOutputPath {
+export abstract class OrcaRuntimeWithOnClientDisconnected extends OrcaRuntimeWithHasRecentTerminalOutputPath {
+  abstract getMobileDisplayMode(ptyId: string): 'auto' | 'desktop'
+  protected abstract pickMostRecentActor(
+    inner: Map<string, { clientId: string; lastActedAt: number }>
+  ): { clientId: string; lastActedAt: number } | null
+  protected abstract setDriver(ptyId: string, next: DriverState): void
+  abstract applyRemoteDesktopLayout(ptyId: string): Promise<boolean>
+  protected abstract getAutoRestoreFitMs(): number | null
+
+  declare revokeTerminalFileGrantsForClient: RuntimeFileCommandSurface['revokeTerminalFileGrantsForClient']
+
   onClientDisconnected(clientId: string): void {
-    ;(this as RuntimeCommandSurfaceHost<this>).revokeTerminalFileGrantsForClient(clientId)
+    this.revokeTerminalFileGrantsForClient(clientId)
     this.mobileDictation.cancelForClient(clientId)
 
     // (1) Cancel pending restore-debounce timers owned by this client.

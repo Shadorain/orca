@@ -1,16 +1,20 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithOnPtyExit } from './orca-runtime-on-pty-exit'
-import type { PtyLivenessVerdict } from '../../shared/pty-liveness-verdict'
-import type { DriverState } from './orca-runtime-core'
-import type { TerminalInputKind } from '../../shared/terminal-input-kind'
-import { isUntypedTerminalInput } from './terminal-run-facts'
-import { clampTerminalViewport } from './terminal-viewport'
-import { getPtyTerminalState, getTerminalState } from './terminal-wait-results'
+import { OrcaRuntimeWithOnPtyExit } from '../../orca-runtime-on-pty-exit'
+import type { PtyLivenessVerdict } from '../../../../shared/pty-liveness-verdict'
+import type { DriverState } from '../../orca-runtime-core'
+import type { TerminalInputKind } from '../../../../shared/terminal-input-kind'
+import { isUntypedTerminalInput } from '../../terminal-run-facts'
+import { clampTerminalViewport } from '../../terminal-viewport'
+import { getPtyTerminalState, getTerminalState } from '../../terminal-wait-results'
 
 // Orphaned verdicts are bounded; active PTYs retain theirs until new evidence resolves them.
 const MAX_TRACKED_PTY_LIVENESS_VERDICTS = 256
 
-export class OrcaRuntimeWithMarkPtyLivenessUnverifiable extends OrcaRuntimeWithOnPtyExit {
+export abstract class OrcaRuntimeWithMarkPtyLivenessUnverifiable extends OrcaRuntimeWithOnPtyExit {
+  protected abstract leafExistsForPty(ptyId: string): boolean
+  abstract recordRendererGeometry(ptyId: string, cols: number, rows: number): void
+  abstract isResizeSuppressed(): boolean
+  protected abstract refreshRendererGeometry(ptyId: string, cols: number, rows: number): void
+
   /**
    * Records that we lost contact with a PTY's owning host. Callers must never
    * read this as an exit: a detached relay PTY is designed to outlive the

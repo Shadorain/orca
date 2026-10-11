@@ -6,7 +6,7 @@ import {
 } from './pty-recorded-surface-topology'
 import { resolveStructuredWorkerAuthority } from './structured-worker-authority'
 import type { RuntimeLeafRecord } from './runtime-terminal-state-records'
-import { OrcaRuntimeWithSubscribeToTerminalResize } from './orca-runtime-subscribe-to-terminal-resize'
+import { OrcaRuntimeWithSubscribeToTerminalResize } from './terminal/layout/terminal-resize-listeners'
 import type {
   RuntimeMobileSessionTabsResult,
   RuntimeTerminalOrphanAdoptionRequest,

@@ -1,5 +1,7 @@
 // @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
 import { OrcaRuntimeWithTerminalDrivers } from './orca-runtime-terminal-drivers'
+import type { FolderWorkspace } from '../../shared/folder-workspace-types'
+import type { ResolvedWorktree } from './runtime-worktree-path-identity'
 import { confirmRunTerminalShellAlone, readRunTerminalClientUse } from './run-terminal-client-use'
 import { ALL_EXECUTION_HOSTS_SCOPE, type ExecutionHostScope } from '../../shared/execution-host'
 import { RuntimePreservedBranchCleanup } from './runtime-preserved-branch-cleanup'
@@ -50,6 +52,14 @@ import type { Worktree } from '../../shared/worktree/types'
 import type { TerminalWorkspaceLaunchScope } from './runtime-legacy-worker-terminal-recovery-types'
 
 export abstract class OrcaRuntimeWithPreservedBranchCleanup extends OrcaRuntimeWithTerminalDrivers {
+  protected abstract runWorktreeTerminalMutation<T>(
+    worktreeId: string,
+    operation: () => Promise<T>
+  ): Promise<T>
+  protected abstract folderWorkspaceToResolvedWorktree(
+    folderWorkspace: FolderWorkspace
+  ): ResolvedWorktree
+
   protected abstract resolveTerminalWorkspaceLaunchScope(
     selector: string,
     createdWorktree?: Worktree
