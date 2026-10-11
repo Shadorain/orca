@@ -1,8 +1,7 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
 import { OrcaRuntimeWithHandleMobileSubscribe } from './orca-runtime-handle-mobile-subscribe'
 import { clampTerminalViewport } from './terminal-viewport'
 
-export class OrcaRuntimeWithHandleMobileSubscribeInternal extends OrcaRuntimeWithHandleMobileSubscribe {
+export abstract class OrcaRuntimeWithHandleMobileSubscribeInternal extends OrcaRuntimeWithHandleMobileSubscribe {
   protected async handleMobileSubscribeInternal(
     ptyId: string,
     clientId: string,

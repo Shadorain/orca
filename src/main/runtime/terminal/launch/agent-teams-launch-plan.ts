@@ -1,12 +1,11 @@
-// @ts-nocheck -- the launch-plan adapter is kept independent from the runtime mixin chain.
-import type { ClaudeAgentTeamsMode } from '../../shared/claude-agent-teams-tmux-compat'
-import type { TerminalCreateOptions } from './runtime-terminal-contracts'
 import {
   addClaudeTeammateModeAuto,
   addClaudeTeammateModeInProcess,
-  buildClaudeAgentTeamsLaunchPlan,
-  inferCapturedClaudeAgentTeamsMode
-} from './orca-runtime-create-terminal-dependencies'
+  type ClaudeAgentTeamsMode
+} from '../../../../shared/claude-agent-teams-tmux-compat'
+import type { TerminalCreateOptions } from '../../runtime-terminal-contracts'
+import { buildClaudeAgentTeamsLaunchPlan } from '../../claude-agent-teams-shim-env'
+import { inferCapturedClaudeAgentTeamsMode } from '../../runtime-agent-launch-resolution'
 
 export async function buildRuntimeAgentTeamsLaunchPlan(args: {
   launchConfig: TerminalCreateOptions['launchConfig']

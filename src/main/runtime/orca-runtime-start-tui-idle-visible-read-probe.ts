@@ -1,4 +1,3 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
 import { OrcaRuntimeWithCreateAgentPromptRenderGate } from './orca-runtime-create-agent-prompt-render-gate'
 import type {
   RuntimeProviderSnapshotReadOptions,
@@ -29,7 +28,7 @@ import {
 import { createSetupCompletionScanner } from './orchestration/setup-completion-signal'
 import type { TuiAgent } from '../../shared/tui-agent'
 
-export class OrcaRuntimeWithStartTuiIdleVisibleReadProbe extends OrcaRuntimeWithCreateAgentPromptRenderGate {
+export abstract class OrcaRuntimeWithStartTuiIdleVisibleReadProbe extends OrcaRuntimeWithCreateAgentPromptRenderGate {
   /** One bounded look at the provider's screen for an adopted PTY whose retained
    *  readiness metadata was lost. Deliberately single-shot: it answers "is the
    *  screen already showing a settled prompt", and the poll above owns every

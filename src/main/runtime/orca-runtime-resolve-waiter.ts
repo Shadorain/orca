@@ -1,4 +1,3 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
 import { OrcaRuntimeWithDeliverPendingMessages } from './orca-runtime-deliver-pending-messages'
 import type { TerminalWaiter } from './runtime-terminal-contracts'
 import type { RuntimeTerminalWait } from '../../shared/runtime-types'
