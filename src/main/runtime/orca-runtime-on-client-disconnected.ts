@@ -1,5 +1,5 @@
 // @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithHasRecentTerminalOutputPath } from './orca-runtime-has-recent-terminal-output-path'
+import { OrcaRuntimeWithHasRecentTerminalOutputPath } from './terminal/output/terminal-output-path'
 import type { RuntimeCommandSurfaceHost } from './orca-runtime-core'
 
 export class OrcaRuntimeWithOnClientDisconnected extends OrcaRuntimeWithHasRecentTerminalOutputPath {

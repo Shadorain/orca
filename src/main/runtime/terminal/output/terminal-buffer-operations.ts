@@ -1,14 +1,75 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithNotifyRemoteTerminalViewPresenceChanged } from './orca-runtime-notify-remote-terminal-view-presence-changed'
-import type { TerminalOscLinkRange } from '../../shared/terminal-osc-link-ranges'
-import type { HeadlessSeedMetadata } from './runtime-terminal-state-records'
+import type { PtyProviderBufferSnapshot } from '../../../providers/pty-provider-contract'
+import type {
+  HeadlessSeedMetadata,
+  RuntimeHeadlessTerminal
+} from '../../runtime-terminal-state-records'
+import type { OrcaRuntimeWithSerializeTerminalBufferFromAvailableState } from './terminal-buffer-selection'
+import { OrcaRuntimeWithNotifyRemoteTerminalViewPresenceChanged } from '../../orca-runtime-notify-remote-terminal-view-presence-changed'
+import type { TerminalOscLinkRange } from '../../../../shared/terminal-osc-link-ranges'
 import {
   applyRestoredTerminalTailSeed,
   buildRestoredTerminalTailSeed,
   restoredTerminalTailSeedAllowed
-} from './terminal-tail-restore-seed'
+} from '../../terminal-tail-restore-seed'
 
-export class OrcaRuntimeWithSerializeMainTerminalBuffer extends OrcaRuntimeWithNotifyRemoteTerminalViewPresenceChanged {
+export abstract class OrcaRuntimeWithSerializeMainTerminalBuffer extends OrcaRuntimeWithNotifyRemoteTerminalViewPresenceChanged {
+  protected abstract serializePreferredRestoredTerminalBuffer(
+    ptyId: string,
+    opts?: { scrollbackRows?: number }
+  ): ReturnType<
+    OrcaRuntimeWithSerializeTerminalBufferFromAvailableState['serializePreferredRestoredTerminalBuffer']
+  >
+  protected abstract serializeHeadlessTerminalBuffer(
+    ptyId: string,
+    opts?: { scrollbackRows?: number; includeEmpty?: boolean }
+  ): Promise<{
+    data: string
+    cols: number
+    rows: number
+    cwd?: string | null
+    lastTitle?: string
+    seq?: number
+    source?: 'headless'
+    oscLinks?: TerminalOscLinkRange[]
+    alternateScreen?: boolean
+    scrollbackAnsi?: string
+    kittyKeyboardFlags?: number
+    terminalOwner?: 'shell'
+    // Why: dangling mid-escape tail the restorer must write LAST, after any
+    // reset, so the next live chunk completes it instead of rendering it
+    // literally (Bug E / #7329).
+    pendingEscapeTailAnsi?: string
+  } | null>
+  abstract serializeRendererTerminalBuffer(
+    ptyId: string,
+    opts?: { scrollbackRows?: number }
+  ): Promise<{
+    data: string
+    frameRestoreAnsi?: string
+    cols: number
+    rows: number
+    seq?: number
+    cwd?: string | null
+    lastTitle?: string
+    source?: 'renderer'
+    oscLinks?: TerminalOscLinkRange[]
+    pendingEscapeTailAnsi?: string
+    kittyKeyboardFlags?: number
+  } | null>
+  protected abstract serializeProviderTerminalBuffer(
+    ptyId: string,
+    opts?: { scrollbackRows?: number },
+    wait?: { timeoutMs?: number; retireOnTimeout?: boolean }
+  ): Promise<PtyProviderBufferSnapshot | null>
+  abstract resolveLeafForHandle(handle: string): { ptyId: string | null } | null
+  abstract clearHeadlessTerminalBuffer(ptyId: string): Promise<void>
+  abstract resetHeadlessTerminalInputModes(ptyId: string): Promise<void>
+  protected abstract createPtyHeadlessTerminalState(
+    ptyId: string,
+    dims: { cols: number; rows: number }
+  ): RuntimeHeadlessTerminal
+  protected abstract applySeededAgentStatus(ptyId: string, title: string): void
+
   serializeMainTerminalBuffer(
     ptyId: string,
     opts: { scrollbackRows?: number } = {}

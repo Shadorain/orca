@@ -1,13 +1,27 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithEmitDaemonPtyTransientFact } from './orca-runtime-emit-daemon-pty-transient-fact'
-import { getDecorativeTitleGateKey } from '../../shared/agent-decorative-title-signature'
-import { shouldEmitTitleFactForFrame } from './decorative-title-fact-emission'
-import type { RuntimePtyTitleTrackerEntry } from './runtime-terminal-state-records'
-import { createTerminalTitleTracker } from '../../shared/terminal-output-side-effects'
-import { detectAgentStatusFromTitle } from '../../shared/agent-detection'
-import type { TerminalGitHubPRLink } from '../../shared/terminal-github-pr-link-detector'
+import type { TerminalTitleFactMeta } from '../../../../shared/terminal-output-side-effects'
+import { OrcaRuntimeWithEmitDaemonPtyTransientFact } from './terminal-transient-facts'
+import { getDecorativeTitleGateKey } from '../../../../shared/agent-decorative-title-signature'
+import { shouldEmitTitleFactForFrame } from '../../decorative-title-fact-emission'
+import type { RuntimePtyTitleTrackerEntry } from '../../runtime-terminal-state-records'
+import { createTerminalTitleTracker } from '../../../../shared/terminal-output-side-effects'
+import { detectAgentStatusFromTitle } from '../../../../shared/agent-detection'
+import type { TerminalGitHubPRLink } from '../../../../shared/terminal-github-pr-link-detector'
 
-export class OrcaRuntimeWithGetUnpersistedTrackedTitleForPty extends OrcaRuntimeWithEmitDaemonPtyTransientFact {
+export abstract class OrcaRuntimeWithGetUnpersistedTrackedTitleForPty extends OrcaRuntimeWithEmitDaemonPtyTransientFact {
+  protected abstract recheckHookAgentPresenceForPty(
+    ptyId: string
+  ): Promise<'live' | 'unverifiable' | 'exited' | null>
+  protected abstract applyTrackedPtyTitle(
+    ptyId: string,
+    rawTitle: string,
+    normalizedTitle: string,
+    meta?: TerminalTitleFactMeta
+  ): boolean
+  protected abstract confirmPtyAgentExit(ptyId: string, recoverCompletedHook?: boolean): void
+  protected abstract createTerminalSideEffectCommandCodeDetector(
+    ptyId: string
+  ): NonNullable<RuntimePtyTitleTrackerEntry['commandCodeDetector']>
+
   protected getUnpersistedTrackedTitleForPty(ptyId: string | null): string | null {
     if (!ptyId || this.getTrackedRawTitleForPty(ptyId) !== null) {
       return null

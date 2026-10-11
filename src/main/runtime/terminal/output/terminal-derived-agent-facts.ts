@@ -1,18 +1,19 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithApplyTrackedPtyTitle } from './orca-runtime-apply-tracked-pty-title'
+import { OrcaRuntimeWithApplyTrackedPtyTitle } from './terminal-title-observation'
 import type {
   RuntimePtyTitleTrackerEntry,
   RuntimePtyWorktreeRecord
-} from './runtime-terminal-state-records'
-import { createCommandCodeOutputStatusDetector } from '../../shared/command-code-output-status'
-import { extractLastOsc7Uri, extractOscScanTail } from '../daemon/osc7-uri-extraction'
-import { parseFileUriPathParts } from '../daemon/osc7-file-uri'
-import { splitWorktreeIdForFilesystem } from '../../shared/worktree/id'
-import { isWindowsAbsolutePathLike } from '../../shared/cross-platform-path'
-import type { ProcessedAgentStatusChunk } from '../../shared/agent-status-osc'
-import { mapExplicitAgentStateToRuntimeTerminalStatus } from './runtime-worktree-status-projection'
+} from '../../runtime-terminal-state-records'
+import { createCommandCodeOutputStatusDetector } from '../../../../shared/command-code-output-status'
+import { extractLastOsc7Uri, extractOscScanTail } from '../../../daemon/osc7-uri-extraction'
+import { parseFileUriPathParts } from '../../../daemon/osc7-file-uri'
+import { splitWorktreeIdForFilesystem } from '../../../../shared/worktree/id'
+import { isWindowsAbsolutePathLike } from '../../../../shared/cross-platform-path'
+import type { ProcessedAgentStatusChunk } from '../../../../shared/agent-status-osc'
+import { mapExplicitAgentStateToRuntimeTerminalStatus } from '../../runtime-worktree-status-projection'
 
-export class OrcaRuntimeWithCreateTerminalSideEffectCommandCodeDetector extends OrcaRuntimeWithApplyTrackedPtyTitle {
+export abstract class OrcaRuntimeWithCreateTerminalSideEffectCommandCodeDetector extends OrcaRuntimeWithApplyTrackedPtyTitle {
+  abstract getAgentStatusTerminalHandleForPaneKey(paneKey: string): string | undefined
+
   protected createTerminalSideEffectCommandCodeDetector(
     ptyId: string
   ): NonNullable<RuntimePtyTitleTrackerEntry['commandCodeDetector']> {
@@ -87,7 +88,7 @@ export class OrcaRuntimeWithCreateTerminalSideEffectCommandCodeDetector extends 
 
   protected emitTerminalAgentStatusEvents(
     ptyId: string,
-    chunk: Pick<ProcessedAgentStatusChunk, 'payloads'>,
+    chunk: Pick<ProcessedAgentStatusChunk, 'payloads'> & Partial<ProcessedAgentStatusChunk>,
     provenance?: { origin: 'process'; yieldsToHookSince: number }
   ): void {
     if (chunk.payloads.length === 0) {

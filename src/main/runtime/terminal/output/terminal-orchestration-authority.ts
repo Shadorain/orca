@@ -1,41 +1,48 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithVerifyOrchestrationCompatibilityCaller } from './orca-runtime-verify-orchestration-compatibility-caller'
-import type { OrchestrationCompatibilityTerminalAuthority } from './runtime-terminal-contracts'
+import type { AgentStatusOrchestrationContext } from '../../../../shared/agent-status-types'
+import type { OrchestrationDb } from '../../orchestration/db/orchestration-db'
+import { OrcaRuntimeWithVerifyOrchestrationCompatibilityCaller } from '../../orca-runtime-verify-orchestration-compatibility-caller'
+import type { OrchestrationCompatibilityTerminalAuthority } from '../../runtime-terminal-contracts'
 import { createHash } from 'node:crypto'
 import {
   isTerminalLeafId,
   makePaneKey,
   parseLegacyNumericPaneKey,
   parsePaneKey
-} from '../../shared/stable-pane-id'
-import { isValidTerminalTabId } from '../../shared/terminal-tab-id'
-import { RECENT_PTY_OUTPUT_LIMIT, RecentPtyOutputBuffer } from './recent-pty-output-buffer'
-import { appendRecentPtyPathCandidates } from './terminal-output-path-candidates'
-import type { ProjectExecutionRuntimeResolution } from '../../shared/project-execution-runtime'
-import { resolveLocalProjectRuntimeForWorktreeId } from '../local-project-runtime-resolution'
+} from '../../../../shared/stable-pane-id'
+import { isValidTerminalTabId } from '../../../../shared/terminal-tab-id'
+import { RECENT_PTY_OUTPUT_LIMIT, RecentPtyOutputBuffer } from '../../recent-pty-output-buffer'
+import { appendRecentPtyPathCandidates } from '../../terminal-output-path-candidates'
+import type { ProjectExecutionRuntimeResolution } from '../../../../shared/project-execution-runtime'
+import { resolveLocalProjectRuntimeForWorktreeId } from '../../../local-project-runtime-resolution'
 import {
   HOST_DEFAULT_AGENT_DETECTION,
   resolveWorkspaceAgentDetectionHost,
   type AgentDetectionHost
-} from '../preflight/workspace-agent-detection'
-import { FLOATING_TERMINAL_WORKTREE_ID } from '../../shared/constants'
-import { parseWorkspaceKey } from '../../shared/workspace-scope'
-import type { ResolvedWorktree } from './runtime-worktree-path-identity'
-import type { RuntimePtyWorktreeRecord } from './runtime-terminal-state-records'
+} from '../../../preflight/workspace-agent-detection'
+import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../../shared/constants'
+import { parseWorkspaceKey } from '../../../../shared/workspace-scope'
+import type { ResolvedWorktree } from '../../runtime-worktree-path-identity'
+import type { RuntimePtyWorktreeRecord } from '../../runtime-terminal-state-records'
 import {
   localOrchestrationCliCommand,
   resolveTerminalOrchestrationCliCommand,
-  runtimeOrchestrationCliCommand,
-  type OrchestrationCliCommand
-} from './orchestration/cli-command'
-import type { FleetAgentStatusEvidence } from '../../shared/orchestration-fleet-agent-status-evidence'
-import { readOrchestrationFleetAgentStatusSnapshot } from './orchestration-fleet-agent-status-snapshot'
-import { resolveStructuredWorkerAuthority } from './structured-worker-authority'
-import { isStructuredWorkerHandle } from './structured-worker-identity'
-import { parseOrcaSessionAddress } from '../../shared/orca-session-address'
-import { matchesProcessIncarnation } from './orchestration/worker-terminal-process-liveness'
+  runtimeOrchestrationCliCommand
+} from '../../orchestration/cli-command'
+import { readOrchestrationFleetAgentStatusSnapshot } from '../../orchestration-fleet-agent-status-snapshot'
+import { resolveStructuredWorkerAuthority } from '../../structured-worker-authority'
+import { isStructuredWorkerHandle } from '../../structured-worker-identity'
+import { parseOrcaSessionAddress } from '../../../../shared/orca-session-address'
+import { matchesProcessIncarnation } from '../../orchestration/worker-terminal-process-liveness'
 
-export class OrcaRuntimeWithGetOrchestrationDispatchAuthority extends OrcaRuntimeWithVerifyOrchestrationCompatibilityCaller {
+export abstract class OrcaRuntimeWithGetOrchestrationDispatchAuthority extends OrcaRuntimeWithVerifyOrchestrationCompatibilityCaller {
+  protected abstract getExistingTerminalHandlesForPtyId(ptyId: string): string[]
+  protected abstract getOrchestrationDbIfAvailable(): OrchestrationDb | null
+  abstract getTerminalProcessIncarnation(handle: string): string | null
+  abstract getAgentStatusOrchestrationContextForPaneKey(
+    paneKey: string
+  ): AgentStatusOrchestrationContext | undefined
+  protected abstract issuePtyHandle(pty: RuntimePtyWorktreeRecord): string
+
   /** Every pane key this PTY could be addressed by, including restored receipts. */
   protected collectPaneKeysForPty(ptyId: string): Set<string> {
     const paneKeys = new Set<string>()
@@ -291,11 +298,11 @@ export class OrcaRuntimeWithGetOrchestrationDispatchAuthority extends OrcaRuntim
     })
   }
 
-  getOrchestrationFleetAgentStatusSnapshot(): readonly FleetAgentStatusEvidence[] {
+  getOrchestrationFleetAgentStatusSnapshot() {
     return readOrchestrationFleetAgentStatusSnapshot(this)
   }
 
-  getTerminalOrchestrationCliCommand(handle: string): OrchestrationCliCommand {
+  getTerminalOrchestrationCliCommand(handle: string) {
     // A structured session runs in this process: it is told what the structured mail lane types.
     if (isStructuredWorkerHandle(handle) || parseOrcaSessionAddress(handle)) {
       return localOrchestrationCliCommand()

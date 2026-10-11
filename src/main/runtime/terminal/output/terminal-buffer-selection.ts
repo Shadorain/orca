@@ -1,10 +1,15 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithCreatePtyHeadlessTerminalState } from './orca-runtime-create-pty-headless-terminal-state'
-import type { TerminalOscLinkRange } from '../../shared/terminal-osc-link-ranges'
-import type { PtyProviderBufferSnapshot } from '../providers/pty-provider-contract'
-import { withTimeout } from './runtime-async-boundaries'
+import { OrcaRuntimeWithCreatePtyHeadlessTerminalState } from './headless-terminal-state'
+import type { TerminalOscLinkRange } from '../../../../shared/terminal-osc-link-ranges'
+import type { PtyProviderBufferSnapshot } from '../../../providers/pty-provider-contract'
+import { withTimeout } from '../../runtime-async-boundaries'
 
-export class OrcaRuntimeWithSerializeTerminalBufferFromAvailableState extends OrcaRuntimeWithCreatePtyHeadlessTerminalState {
+export abstract class OrcaRuntimeWithSerializeTerminalBufferFromAvailableState extends OrcaRuntimeWithCreatePtyHeadlessTerminalState {
+  protected abstract captureProviderTerminalBuffer(
+    ptyId: string,
+    opts: { scrollbackRows?: number },
+    generation: number
+  ): Promise<PtyProviderBufferSnapshot | null>
+
   protected async serializeTerminalBufferFromAvailableState(
     ptyId: string,
     opts: { scrollbackRows?: number } = {}

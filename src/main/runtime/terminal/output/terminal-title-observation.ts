@@ -1,11 +1,49 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithGetUnpersistedTrackedTitleForPty } from './orca-runtime-get-unpersisted-tracked-title-for-pty'
-import type { TerminalTitleFactMeta } from '../../shared/terminal-output-side-effects'
-import { detectAgentStatusFromTitle } from '../../shared/agent-detection'
-import { terminalTitleBlocksExplicitAgentStatus } from './runtime-worktree-status-projection'
-import type { ClaudeTerminalEvidence } from '../../shared/claude-terminal-interrupt'
+import type { AgentStatus } from '../../../../shared/agent-detection'
+import type {
+  RuntimePtyWorktreeRecord,
+  RuntimeLeafRecord
+} from '../../runtime-terminal-state-records'
+import { OrcaRuntimeWithGetUnpersistedTrackedTitleForPty } from './terminal-title-tracker'
+import type { TerminalTitleFactMeta } from '../../../../shared/terminal-output-side-effects'
+import { detectAgentStatusFromTitle } from '../../../../shared/agent-detection'
+import { terminalTitleBlocksExplicitAgentStatus } from '../../runtime-worktree-status-projection'
+import type { ClaudeTerminalEvidence } from '../../../../shared/claude-terminal-interrupt'
 
-export class OrcaRuntimeWithApplyTrackedPtyTitle extends OrcaRuntimeWithGetUnpersistedTrackedTitleForPty {
+export abstract class OrcaRuntimeWithApplyTrackedPtyTitle extends OrcaRuntimeWithGetUnpersistedTrackedTitleForPty {
+  protected abstract collectPaneKeysForPty(ptyId: string): Set<string>
+  protected abstract recordAgentPromptLifecycleState(
+    ptyId: string,
+    status: AgentStatus | null
+  ): void
+  protected abstract nextTitleObservationSequence(): number
+  protected abstract setPtyManagementTitleFromObservedTitle(
+    pty: RuntimePtyWorktreeRecord,
+    title: string | null | undefined,
+    observedAt: number
+  ): void
+  protected abstract resolvePtyTuiIdleWaiters(pty: RuntimePtyWorktreeRecord, ptyId: string): void
+  protected abstract shouldDelayPtyBackedMobileSnapshotForForegroundAgent(
+    pty: RuntimePtyWorktreeRecord,
+    title: string
+  ): boolean
+  protected abstract getPendingForegroundAgentRefreshForTitle(
+    ptyId: string,
+    titleObservedAt: number
+  ): Promise<boolean> | undefined
+  protected abstract delayPtyBackedMobileSnapshotForForegroundAgent(
+    ptyId: string,
+    titleObservedAt: number,
+    foregroundRefresh: Promise<boolean>
+  ): void
+  protected abstract resolveTuiIdleWaiters(leaf: RuntimeLeafRecord): void
+  protected abstract checkDeliverySettledAndArmRecheck(leaf: {
+    tabId: string
+    leafId: string
+  }): boolean
+  protected abstract deliverPendingMessagesForLeaf(leaf: RuntimeLeafRecord): void
+  protected abstract clearAgentPromptCorrelationForPty(ptyId: string): void
+  protected abstract collectAgentStatusPaneKeysForPty(ptyId: string): Set<string>
+
   observeClaudeTerminalEvidence(ptyId: string, evidence: ClaudeTerminalEvidence): void {
     if (!this.onClaudeTerminalEvidence || this.ptysById.get(ptyId)?.connectionId) {
       return

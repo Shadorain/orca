@@ -1,13 +1,18 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { splitFreebuffScreenUpdates } from '../../shared/freebuff-screen-status'
-import { OrcaRuntimeWithSerializeMainTerminalBuffer } from './orca-runtime-serialize-main-terminal-buffer'
-import { observeFreebuffTerminalStatus } from './freebuff-terminal-status'
-import { observeCodexCapacityTerminalStatus } from './codex-capacity-terminal-status'
-import { MOBILE_SUBSCRIBE_SCROLLBACK_ROWS } from './scrollback-limits'
-import { detectAgentStatusFromTitle, normalizeTerminalTitle } from '../../shared/agent-detection'
-import { shouldModelAnswerHiddenPtyQueries } from './terminal-model-query-authority'
+import type { RuntimeHeadlessTerminal } from '../../runtime-terminal-state-records'
+import { splitFreebuffScreenUpdates } from '../../../../shared/freebuff-screen-status'
+import { OrcaRuntimeWithSerializeMainTerminalBuffer } from './terminal-buffer-operations'
+import { observeFreebuffTerminalStatus } from '../../freebuff-terminal-status'
+import { observeCodexCapacityTerminalStatus } from '../../codex-capacity-terminal-status'
+import { MOBILE_SUBSCRIBE_SCROLLBACK_ROWS } from '../../scrollback-limits'
+import {
+  detectAgentStatusFromTitle,
+  normalizeTerminalTitle
+} from '../../../../shared/agent-detection'
+import { shouldModelAnswerHiddenPtyQueries } from '../../terminal-model-query-authority'
 
-export class OrcaRuntimeWithMaybeHydrateHeadlessFromRenderer extends OrcaRuntimeWithSerializeMainTerminalBuffer {
+export abstract class OrcaRuntimeWithMaybeHydrateHeadlessFromRenderer extends OrcaRuntimeWithSerializeMainTerminalBuffer {
+  protected abstract getOrCreateHeadlessTerminal(ptyId: string): RuntimeHeadlessTerminal
+
   // Why: hydrate the runtime headless emulator from the desktop renderer's
   // xterm buffer on the first onPtyData byte after a PTY is taken over by a
   // pane. Eager-state pattern matches seedHeadlessTerminal: headlessTerminals

@@ -1,13 +1,24 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithGetOrchestrationDispatchAuthority } from './orca-runtime-get-orchestration-dispatch-authority'
+import type { ApplyLayoutResult, DriverState, PtyLayoutTarget } from '../../orca-runtime-core'
+import { OrcaRuntimeWithGetOrchestrationDispatchAuthority } from './terminal-orchestration-authority'
 import {
   recentTerminalOutputIncludesPath,
   recentTerminalPathCandidatesIncludePath
-} from './terminal-output-path-candidates'
-import type { ApplyLayoutResult, DriverState } from './orca-runtime-core'
-import { clampTerminalViewport } from './terminal-viewport'
+} from '../../terminal-output-path-candidates'
+import { clampTerminalViewport } from '../../terminal-viewport'
 
-export class OrcaRuntimeWithHasRecentTerminalOutputPath extends OrcaRuntimeWithGetOrchestrationDispatchAuthority {
+export abstract class OrcaRuntimeWithHasRecentTerminalOutputPath extends OrcaRuntimeWithGetOrchestrationDispatchAuthority {
+  protected abstract enqueueLayout(
+    ptyId: string,
+    target: PtyLayoutTarget
+  ): Promise<ApplyLayoutResult>
+  abstract mobileTookFloor(
+    ptyId: string,
+    clientId: string,
+    previousFloor?: DriverState,
+    isCurrent?: () => boolean
+  ): Promise<void>
+  protected abstract resolveDesktopRestoreTarget(ptyId: string): { cols: number; rows: number }
+
   hasRecentTerminalOutputPath(handle: string, pathText: string, absolutePath: string): boolean {
     // Why: safety net for any query path that never saw a mobile onReady —
     // lazily backfill so the answer matches pre-gate behavior.

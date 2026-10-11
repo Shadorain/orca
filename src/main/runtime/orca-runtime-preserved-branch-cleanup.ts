@@ -77,11 +77,11 @@ export abstract class OrcaRuntimeWithPreservedBranchCleanup extends OrcaRuntimeW
 
   protected terminalSideEffectConsumerAvailable = false
 
-  protected readonly getAgentStatusSnapshotFn: (() => AgentStatusIpcPayload[]) | null
+  readonly getAgentStatusSnapshotFn: (() => AgentStatusIpcPayload[]) | null
 
   protected readonly structuredAgentStatusSinkFn: StructuredAgentSessionStatusSink | null
 
-  protected readonly readObservedAgentStatusPaneIdentityFn: (
+  readonly readObservedAgentStatusPaneIdentityFn: (
     paneKey: string
   ) => ObservedAgentStatusPaneIdentity
 

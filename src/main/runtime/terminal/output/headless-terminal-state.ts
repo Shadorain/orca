@@ -1,14 +1,13 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithMaybeHydrateHeadlessFromRenderer } from './orca-runtime-maybe-hydrate-headless-from-renderer'
-import type { RuntimeHeadlessTerminal } from './runtime-terminal-state-records'
-import { HeadlessEmulator } from '../daemon/headless-emulator'
-import { shouldForwardHeadlessTerminalQueryReply } from './headless-terminal-query-reply-policy'
-import { isNativeWindowsConptyPty } from './terminal-model-query-authority'
-import { getTerminalViewAttributes } from './terminal-view-attribute-store'
-import { PtyShellOwnershipMirror } from './pty-shell-ownership-mirror'
-import { PROCESS_BOUNDARY_GROUND } from '../../shared/terminal-mode-reset-profiles'
+import { OrcaRuntimeWithMaybeHydrateHeadlessFromRenderer } from './headless-terminal-hydration'
+import type { RuntimeHeadlessTerminal } from '../../runtime-terminal-state-records'
+import { HeadlessEmulator } from '../../../daemon/headless-emulator'
+import { shouldForwardHeadlessTerminalQueryReply } from '../../headless-terminal-query-reply-policy'
+import { isNativeWindowsConptyPty } from '../../terminal-model-query-authority'
+import { getTerminalViewAttributes } from '../../terminal-view-attribute-store'
+import { PtyShellOwnershipMirror } from '../../pty-shell-ownership-mirror'
+import { PROCESS_BOUNDARY_GROUND } from '../../../../shared/terminal-mode-reset-profiles'
 
-export class OrcaRuntimeWithCreatePtyHeadlessTerminalState extends OrcaRuntimeWithMaybeHydrateHeadlessFromRenderer {
+export abstract class OrcaRuntimeWithCreatePtyHeadlessTerminalState extends OrcaRuntimeWithMaybeHydrateHeadlessFromRenderer {
   /** Shared factory for the per-PTY runtime emulators (seed, hydration, and
    *  lazy live-byte creation): wires the Phase-5 query-reply sink and the
    *  ConPTY DA1 override. The daemon emulator never goes through here. */

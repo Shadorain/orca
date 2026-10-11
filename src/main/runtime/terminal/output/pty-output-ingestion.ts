@@ -1,21 +1,88 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithPreparePtyExecutionContext } from './orca-runtime-prepare-pty-execution-context'
-import { advertisedUrlWatcher } from '../ports/advertised-url-watcher'
-import { appendNormalizedToTailBuffer } from './terminal-tail-buffer'
-import { normalizeTerminalChunk } from './terminal-ansi-normalization'
-import { observeTerminalCommandPaint } from './terminal-command-paint'
+import type { ProcessedAgentStatusChunk } from '../../../../shared/agent-status-osc'
+import type {
+  RuntimePtyWorktreeRecord,
+  RuntimeLeafRecord,
+  RuntimePtyTitleTrackerEntry
+} from '../../runtime-terminal-state-records'
+import type { RuntimeSyncedLeaf } from '../../../../shared/runtime-types'
+import { OrcaRuntimeWithPreparePtyExecutionContext } from '../../orca-runtime-prepare-pty-execution-context'
+import { advertisedUrlWatcher } from '../../../ports/advertised-url-watcher'
+import { appendNormalizedToTailBuffer } from '../../terminal-tail-buffer'
+import { normalizeTerminalChunk } from '../../terminal-ansi-normalization'
+import { observeTerminalCommandPaint } from '../../terminal-command-paint'
 import {
   appendCompletedTerminalTranscript,
   buildPreview,
   tailStateMatches
-} from './terminal-tail-state'
+} from '../../terminal-tail-state'
 import {
   computeTerminalTailWaitState,
   tailGainedNewerBlockedReason
-} from './terminal-wait-tail-state'
-import { extractOscTitleScanTail } from '../../shared/osc-title-scan-tail'
+} from '../../terminal-wait-tail-state'
+import { extractOscTitleScanTail } from '../../../../shared/osc-title-scan-tail'
 
-export class OrcaRuntimeWithOnPtyData extends OrcaRuntimeWithPreparePtyExecutionContext {
+export abstract class OrcaRuntimeWithOnPtyData extends OrcaRuntimeWithPreparePtyExecutionContext {
+  protected abstract recordOsc7MetadataForPty(
+    ptyId: string,
+    data: string
+  ): { cwd: string | null; cwdChanged: boolean }
+  protected abstract processAgentStatusOscForPty(
+    ptyId: string,
+    data: string
+  ): ProcessedAgentStatusChunk
+  protected abstract recordRecentPtyOutputForPathProvenance(ptyId: string, data: string): void
+  protected abstract shouldAnswerQueriesForLiveChunk(ptyId: string): boolean
+  abstract maybeHydrateHeadlessFromRenderer(ptyId: string): Promise<boolean> | null
+  protected abstract trackHeadlessTerminalData(
+    ptyId: string,
+    data: string,
+    outputSequence: number,
+    forwardQueryReplies?: boolean
+  ): void
+  protected abstract getOrCreatePtyWorktreeRecord(ptyId: string): RuntimePtyWorktreeRecord | null
+  protected abstract scheduleWaitBlockedCheck(ptyId: string, appendedText: string, at: number): void
+  protected abstract getLeavesForPty(ptyId: string): RuntimeLeafRecord[]
+  protected abstract recordPtyWorktree(
+    ptyId: string,
+    worktreeId: string,
+    state?: Partial<
+      Pick<
+        RuntimePtyWorktreeRecord,
+        | 'connected'
+        | 'lastOutputAt'
+        | 'preview'
+        | 'tabId'
+        | 'paneKey'
+        | 'surfaceRecordedAtGraphSequence'
+        | 'title'
+        | 'connectionId'
+        | 'runtimeSessionOwned'
+        | 'isWsl'
+        | 'wslDistro'
+        | 'incarnationId'
+        | 'agentSessionOwners'
+      >
+    >
+  ): RuntimePtyWorktreeRecord
+  protected abstract makeRuntimePaneKey(
+    leaf: Pick<RuntimeSyncedLeaf, 'tabId' | 'leafId' | 'paneRuntimeId'>
+  ): string
+  protected abstract getOrCreatePtyTitleTrackerEntry(ptyId: string): RuntimePtyTitleTrackerEntry
+  protected abstract emitTerminalAgentStatusEvents(
+    ptyId: string,
+    chunk: Pick<ProcessedAgentStatusChunk, 'payloads'> & Partial<ProcessedAgentStatusChunk>,
+    provenance?: { origin: 'process'; yieldsToHookSince: number }
+  ): void
+  protected abstract restoreAgentPromptLifecycleByteOrder(
+    ptyId: string,
+    titleInput: string,
+    lastPayloadTitleOffset: number | null
+  ): void
+  protected abstract flushPendingTerminalSideEffectFacts(
+    ptyId: string,
+    entry: RuntimePtyTitleTrackerEntry
+  ): void
+
   /** Arrival-order mode scan: the settled tracker plus any in-flight snapshot capture's. */
   protected scanProviderModeTrackers(ptyId: string, data: string): void {
     this.providerModeTrackersByPtyId.get(ptyId)?.scan(data)

@@ -1,4 +1,4 @@
-import { OrcaRuntimeWithOnPtyData } from '../../orca-runtime-on-pty-data'
+import { OrcaRuntimeWithOnPtyData } from '../output/pty-output-ingestion'
 import {
   WAIT_BLOCKED_CHECK_MIN_INTERVAL_MS,
   WAIT_BLOCKED_KEYWORD_CARRY_CHARS,
@@ -20,9 +20,9 @@ import type { ProcessedAgentStatusChunk } from '../../../../shared/agent-status-
 import { createAgentStatusOscProcessor } from '../../../../shared/agent-status-osc'
 import type { RuntimePtyTitleTrackerEntry } from '../../runtime-terminal-state-records'
 
-import type { OrcaRuntimeWithRecordAgentPromptLifecycleState } from '../../orca-runtime-record-agent-prompt-lifecycle-state'
-import type { OrcaRuntimeWithEmitDaemonPtyTransientFact } from '../../orca-runtime-emit-daemon-pty-transient-fact'
-import type { OrcaRuntimeWithGetUnpersistedTrackedTitleForPty } from '../../orca-runtime-get-unpersisted-tracked-title-for-pty'
+import type { OrcaRuntimeWithRecordAgentPromptLifecycleState } from '../output/terminal-output-generation'
+import type { OrcaRuntimeWithEmitDaemonPtyTransientFact } from '../output/terminal-transient-facts'
+import type { OrcaRuntimeWithGetUnpersistedTrackedTitleForPty } from '../output/terminal-title-tracker'
 
 export abstract class OrcaRuntimeWithScheduleWaitBlockedCheck extends OrcaRuntimeWithOnPtyData {
   protected abstract recordAgentPromptPermissionObservation(

@@ -1,19 +1,19 @@
-import { OrcaRuntimeWithCaptureProviderTerminalBuffer } from './orca-runtime-capture-provider-terminal-buffer'
-import type { RuntimeTerminalProjection } from './orca-runtime-core'
-import { buildPreview } from './terminal-tail-state'
+import { OrcaRuntimeWithCaptureProviderTerminalBuffer } from './provider-buffer-capture'
+import type { RuntimeTerminalProjection } from '../../orca-runtime-core'
+import { buildPreview } from '../../terminal-tail-state'
 import type {
   RuntimeHeadlessTerminal,
   RuntimeVisibleTerminalState
-} from './runtime-terminal-state-records'
+} from '../../runtime-terminal-state-records'
 import {
   VISIBLE_TERMINAL_SNAPSHOT_RETRY_MS,
   VISIBLE_TERMINAL_SNAPSHOT_TIMEOUT_MS
-} from './orca-runtime-postlude'
-import { projectTerminalVisibleLines } from './orca-runtime-terminal-projection'
-import { visibleNonBlankTerminalLines } from './terminal-tail-read'
-import type { RuledScreen } from './screen-input-veto'
-import { HeadlessEmulator } from '../daemon/headless-emulator'
-import { withTimeout } from './runtime-async-boundaries'
+} from '../../orca-runtime-postlude'
+import { projectTerminalVisibleLines } from '../../orca-runtime-terminal-projection'
+import { visibleNonBlankTerminalLines } from '../../terminal-tail-read'
+import type { RuledScreen } from '../../screen-input-veto'
+import { HeadlessEmulator } from '../../../daemon/headless-emulator'
+import { withTimeout } from '../../runtime-async-boundaries'
 
 export abstract class OrcaRuntimeWithVisibleSnapshotPreview extends OrcaRuntimeWithCaptureProviderTerminalBuffer {
   protected async visibleSnapshotPreview(ptyId: string, preview: string): Promise<string> {

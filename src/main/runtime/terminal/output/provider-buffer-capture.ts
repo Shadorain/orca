@@ -1,20 +1,32 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithSerializeTerminalBufferFromAvailableState } from './orca-runtime-serialize-terminal-buffer-from-available-state'
-import type { PtyProviderBufferSnapshot } from '../providers/pty-provider-contract'
-import { TerminalKittyKeyboardModeTracker } from '../../shared/terminal-kitty-keyboard-mode-tracker'
-import type { RuntimeTerminalRead } from '../../shared/runtime-types'
-import type { RuntimeProviderSnapshotReadOptions } from './runtime-terminal-contracts'
+import type { RuntimeVisibleTerminalState } from '../../runtime-terminal-state-records'
+import { OrcaRuntimeWithSerializeTerminalBufferFromAvailableState } from './terminal-buffer-selection'
+import type { PtyProviderBufferSnapshot } from '../../../providers/pty-provider-contract'
+import { TerminalKittyKeyboardModeTracker } from '../../../../shared/terminal-kitty-keyboard-mode-tracker'
+import type { RuntimeTerminalRead } from '../../../../shared/runtime-types'
+import type { RuntimeProviderSnapshotReadOptions } from '../../runtime-terminal-contracts'
 import {
   buildVisibleSnapshotReadFallback,
   shouldFallbackToVisibleTerminalSnapshot,
   terminalReadLimit
-} from './terminal-tail-read'
-import type { RuntimeTerminalProjection } from './orca-runtime-core'
-import { DEFAULT_TERMINAL_READ_LIMIT } from './terminal-tail-limits'
-import { HeadlessEmulator } from '../daemon/headless-emulator'
-import { projectTerminalTailLines } from './orca-runtime-terminal-projection'
+} from '../../terminal-tail-read'
+import type { RuntimeTerminalProjection } from '../../orca-runtime-core'
+import { DEFAULT_TERMINAL_READ_LIMIT } from '../../terminal-tail-limits'
+import { HeadlessEmulator } from '../../../daemon/headless-emulator'
+import { projectTerminalTailLines } from '../../orca-runtime-terminal-projection'
 
-export class OrcaRuntimeWithCaptureProviderTerminalBuffer extends OrcaRuntimeWithSerializeTerminalBufferFromAvailableState {
+export abstract class OrcaRuntimeWithCaptureProviderTerminalBuffer extends OrcaRuntimeWithSerializeTerminalBufferFromAvailableState {
+  protected abstract readVisibleTerminalState(
+    ptyId: string
+  ): Promise<RuntimeVisibleTerminalState | null>
+  protected abstract readRendererVisibleSnapshotLines(
+    ptyId: string
+  ): Promise<RuntimeTerminalProjection>
+  protected abstract parseVisibleSnapshot(snapshot: {
+    data: string
+    cols: number
+    rows: number
+  }): Promise<RuntimeTerminalProjection>
+
   protected async captureProviderTerminalBuffer(
     ptyId: string,
     opts: { scrollbackRows?: number },

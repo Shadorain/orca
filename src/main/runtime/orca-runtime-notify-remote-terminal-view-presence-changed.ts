@@ -1,5 +1,5 @@
 // @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithRecordAgentPromptLifecycleState } from './orca-runtime-record-agent-prompt-lifecycle-state'
+import { OrcaRuntimeWithRecordAgentPromptLifecycleState } from './terminal/output/terminal-output-generation'
 import type { DriverState } from './orca-runtime-core'
 import { addListenerToMap } from './orca-runtime-core'
 import { notifyRuntimeListeners } from './runtime-async-boundaries'

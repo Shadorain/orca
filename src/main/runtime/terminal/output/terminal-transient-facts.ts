@@ -1,24 +1,29 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithScheduleWaitBlockedCheck } from './terminal/wait/terminal-wait-blocked-checks'
-import type { PtyTransientFact } from '../providers/pty-provider-contract'
+import { OrcaRuntimeWithScheduleWaitBlockedCheck } from '../wait/terminal-wait-blocked-checks'
+import type { PtyTransientFact } from '../../../providers/pty-provider-contract'
 import type {
   TerminalSideEffectBatch,
   TerminalSideEffectFact
-} from '../../shared/terminal-side-effect-facts'
+} from '../../../../shared/terminal-side-effect-facts'
 import {
   detectAgentStatusFromTitle,
   isCursorNativeAgentTitle,
   normalizeTerminalTitle
-} from '../../shared/agent-detection'
+} from '../../../../shared/agent-detection'
 import {
   getLeafDisplayRecord,
   getPtyDisplayRecord,
   type TitleDisplayClear
-} from './runtime-worktree-status-projection'
-import type { RuntimeLeafRecord, RuntimePtyWorktreeRecord } from './runtime-terminal-state-records'
-import type { TerminalTitleFactMeta } from '../../shared/terminal-output-side-effects'
+} from '../../runtime-worktree-status-projection'
+import type {
+  RuntimeLeafRecord,
+  RuntimePtyWorktreeRecord
+} from '../../runtime-terminal-state-records'
+import type { TerminalTitleFactMeta } from '../../../../shared/terminal-output-side-effects'
 
-export class OrcaRuntimeWithEmitDaemonPtyTransientFact extends OrcaRuntimeWithScheduleWaitBlockedCheck {
+export abstract class OrcaRuntimeWithEmitDaemonPtyTransientFact extends OrcaRuntimeWithScheduleWaitBlockedCheck {
+  protected abstract retirePtyAgentLaunchAuthority(ptyId: string): void
+  protected abstract disposeHeadlessTerminal(ptyId: string): void
+
   /** A transient fact the daemon detected while it held scan authority —
    *  emitted through the same fact channel as byte-scanned facts. Arrives
    *  between chunks, so recordTerminalSideEffectFact emits it immediately. */

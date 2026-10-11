@@ -1,11 +1,12 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithVisibleSnapshotPreview } from './orca-runtime-visible-snapshot-preview'
-import type { TerminalOscLinkRange } from '../../shared/terminal-osc-link-ranges'
-import { parseTerminalKittyKeyboardFlags } from '../../shared/terminal-kitty-keyboard-flags'
-import type { OrchestrationCompatibilitySshAttachmentAuthority } from './runtime-terminal-contracts'
+import { OrcaRuntimeWithVisibleSnapshotPreview } from './terminal-visible-state'
+import type { TerminalOscLinkRange } from '../../../../shared/terminal-osc-link-ranges'
+import { parseTerminalKittyKeyboardFlags } from '../../../../shared/terminal-kitty-keyboard-flags'
+import type { OrchestrationCompatibilitySshAttachmentAuthority } from '../../runtime-terminal-contracts'
 import { randomUUID } from 'node:crypto'
 
-export class OrcaRuntimeWithSerializeHeadlessTerminalBuffer extends OrcaRuntimeWithVisibleSnapshotPreview {
+export abstract class OrcaRuntimeWithSerializeHeadlessTerminalBuffer extends OrcaRuntimeWithVisibleSnapshotPreview {
+  protected abstract getLeafKey(tabId: string, leafId: string): string
+
   protected async serializeHeadlessTerminalBuffer(
     ptyId: string,
     opts: { scrollbackRows?: number; includeEmpty?: boolean } = {}
