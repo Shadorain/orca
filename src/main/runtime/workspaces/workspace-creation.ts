@@ -1,24 +1,46 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithGetWorktreeTerminalProvisioningHost } from './orca-runtime-get-worktree-terminal-provisioning-host'
-import type { RuntimeManagedWorktreeCreateArgs } from './runtime-managed-worktree-create-types'
-import type { CreateWorktreeResult } from '../../shared/worktree/create-types'
-import { isTuiAgentEnabled } from '../../shared/tui-agent-selection'
-import { isFolderRepo } from '../../shared/repo-kind'
-import { resolveWorktreeCreateRoute } from '../worktree-create-execution-host-route'
-import { ExecutionHostNotDispatchableError } from '../providers/execution-host-provider-dispatch'
-import { SshHostNotServedError } from '../providers/ssh-host-not-served-error'
-import { createRuntimeFolderWorktree } from './runtime-folder-worktree-create'
-import { createRuntimeLocalManagedWorktree } from './runtime-local-worktree-create'
-import type { PreparationRearmHolder } from '../worktree-create-preparation'
-import { prepareRuntimeLocalWorktreeSetup } from './runtime-local-worktree-setup'
-import { invalidateAuthorizedRootsCacheForRepo } from '../ipc/filesystem-auth'
-import { startRuntimeLocalWorktreeTerminals } from './runtime-local-worktree-terminal-startup'
-import { trackRuntimeWorkspaceCreate } from '../workspace-create-telemetry'
-import { assertOpenCodeModelLaunchPreferencesAbsent } from '../opencode/opencode-model-startup-plan'
-import { resolveWorktreeCreateAgentStartup } from './runtime-worktree-agent-startup'
-import type { RuntimeWorkspaceCreateEvents } from '../workspace-create-telemetry'
+import type { RuntimeRemoteFetchController } from '../runtime-remote-fetch-controller'
+import type { Repo } from '../../../shared/repo-types'
+import type {
+  WorktreeLineageInput,
+  WorktreeLineageResolution
+} from '../runtime-worktree-lineage-resolution'
+import { OrcaRuntimeWithGetWorktreeTerminalProvisioningHost } from '../orca-runtime-get-worktree-terminal-provisioning-host'
+import type { RuntimeManagedWorktreeCreateArgs } from '../runtime-managed-worktree-create-types'
+import type { CreateWorktreeResult } from '../../../shared/worktree/create-types'
+import { isTuiAgentEnabled } from '../../../shared/tui-agent-selection'
+import { isFolderRepo } from '../../../shared/repo-kind'
+import { resolveWorktreeCreateRoute } from '../../worktree-create-execution-host-route'
+import { ExecutionHostNotDispatchableError } from '../../providers/execution-host-provider-dispatch'
+import { SshHostNotServedError } from '../../providers/ssh-host-not-served-error'
+import { createRuntimeFolderWorktree } from '../runtime-folder-worktree-create'
+import { createRuntimeLocalManagedWorktree } from '../runtime-local-worktree-create'
+import type { PreparationRearmHolder } from '../../worktree-create-preparation'
+import { prepareRuntimeLocalWorktreeSetup } from '../runtime-local-worktree-setup'
+import { invalidateAuthorizedRootsCacheForRepo } from '../../ipc/filesystem-auth'
+import { startRuntimeLocalWorktreeTerminals } from '../runtime-local-worktree-terminal-startup'
+import { trackRuntimeWorkspaceCreate } from '../../workspace-create-telemetry'
+import { assertOpenCodeModelLaunchPreferencesAbsent } from '../../opencode/opencode-model-startup-plan'
+import { resolveWorktreeCreateAgentStartup } from '../runtime-worktree-agent-startup'
+import type { RuntimeWorkspaceCreateEvents } from '../../workspace-create-telemetry'
 
-export class OrcaRuntimeWithCreateManagedWorktree extends OrcaRuntimeWithGetWorktreeTerminalProvisioningHost {
+export abstract class OrcaRuntimeWithCreateManagedWorktree extends OrcaRuntimeWithGetWorktreeTerminalProvisioningHost {
+  protected abstract resolveLineageForWorktreeCreate(
+    input?: WorktreeLineageInput,
+    childRepo?: Repo
+  ): Promise<WorktreeLineageResolution>
+  abstract resolveRemoteTrackingBase(
+    ...args: Parameters<RuntimeRemoteFetchController['resolveRemoteTrackingBase']>
+  ): ReturnType<RuntimeRemoteFetchController['resolveRemoteTrackingBase']>
+  abstract hasRemoteTrackingRef(
+    ...args: Parameters<RuntimeRemoteFetchController['hasRemoteTrackingRef']>
+  ): ReturnType<RuntimeRemoteFetchController['hasRemoteTrackingRef']>
+  abstract getOrStartRemoteTrackingBaseRefresh(
+    ...args: Parameters<RuntimeRemoteFetchController['getOrStartRemoteTrackingBaseRefresh']>
+  ): ReturnType<RuntimeRemoteFetchController['getOrStartRemoteTrackingBaseRefresh']>
+  abstract fetchRemoteWithCache(
+    ...args: Parameters<RuntimeRemoteFetchController['fetchRemoteWithCache']>
+  ): ReturnType<RuntimeRemoteFetchController['fetchRemoteWithCache']>
+
   async createManagedWorktree(
     args: RuntimeManagedWorktreeCreateArgs
   ): Promise<CreateWorktreeResult> {

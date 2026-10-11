@@ -1,7 +1,7 @@
 import type { RuntimeStore } from '../runtime-store-contract'
 import type { OrcaRuntimeWithStopTerminalsForWorktree } from '../orca-runtime-stop-terminals-for-worktree'
 import type { GitWorktreeInfo } from '../../../shared/worktree/types'
-import { OrcaRuntimeWithCreateManagedRemoteWorktree } from '../orca-runtime-create-managed-remote-worktree'
+import { OrcaRuntimeWithCreateManagedRemoteWorktree } from './workspace-metadata'
 import {
   resolveWorktreeRemovalMetadata,
   resolveWorktreeRemovalRepoOwner
@@ -47,8 +47,6 @@ export abstract class OrcaRuntimeWithRemoveManagedWorktree extends OrcaRuntimeWi
     worktreeId: string,
     hostId?: ExecutionHostId
   ): void
-  abstract invalidateResolvedWorktreeCache(): void
-  abstract invalidateWorktreeScanCacheForRepo(repoId: string): void
   protected abstract resolveWorktreeRemovalTarget(
     worktreeSelector: string,
     requiredHostId?: ExecutionHostId

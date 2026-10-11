@@ -1,26 +1,25 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithCreateManagedWorktree } from './orca-runtime-create-managed-worktree'
-import type { LocalGitExecOptions } from '../git/repo-default-base-ref'
-import type { CreateWorktreeResult } from '../../shared/worktree/create-types'
-import type { RemoteFetchResult, RemoteTrackingBase } from './runtime-remote-fetch-controller'
-import type { WorktreeBaseStatusEvent } from '../../shared/worktree/base-ref-drift-types'
-import { probeRuntimeWorktreeDrift } from './runtime-worktree-drift-probe'
-import type { WorktreeMeta } from '../../shared/worktree/meta-types'
-import type { GitHubPrStartPoint, GitPushTarget } from '../../shared/worktree/types'
+import { OrcaRuntimeWithCreateManagedWorktree } from './workspace-creation'
+import type { LocalGitExecOptions } from '../../git/repo-default-base-ref'
+import type { CreateWorktreeResult } from '../../../shared/worktree/create-types'
+import type { RemoteFetchResult, RemoteTrackingBase } from '../runtime-remote-fetch-controller'
+import type { WorktreeBaseStatusEvent } from '../../../shared/worktree/base-ref-drift-types'
+import { probeRuntimeWorktreeDrift } from '../runtime-worktree-drift-probe'
+import type { WorktreeMeta } from '../../../shared/worktree/meta-types'
+import type { GitHubPrStartPoint, GitPushTarget } from '../../../shared/worktree/types'
 import {
   persistRuntimeManagedWorktreeSortOrder,
   updateRuntimeManagedWorktreeMetadata
-} from './runtime-managed-worktree-metadata'
-import { resolveRuntimeGitHubWorktreeBase } from './runtime-github-worktree-base'
-import { resolveRuntimeGitLabWorktreeBase } from './runtime-gitlab-worktree-base'
-import { listWorktreesStrict } from '../git/worktree-listing'
+} from '../runtime-managed-worktree-metadata'
+import { resolveRuntimeGitHubWorktreeBase } from '../runtime-github-worktree-base'
+import { resolveRuntimeGitLabWorktreeBase } from '../runtime-gitlab-worktree-base'
+import { listWorktreesStrict } from '../../git/worktree-listing'
 import {
   adoptRuntimeProvisionedRoot,
   readLocalSparseCheckoutEnabled,
   type RuntimeProvisionedRootRequest
-} from './runtime-provisioned-root-adoption'
+} from '../runtime-provisioned-root-adoption'
 
-export class OrcaRuntimeWithCreateManagedRemoteWorktree extends OrcaRuntimeWithCreateManagedWorktree {
+export abstract class OrcaRuntimeWithCreateManagedRemoteWorktree extends OrcaRuntimeWithCreateManagedWorktree {
   async getCanonicalFetchKey(
     repoPath: string,
     remote: string,

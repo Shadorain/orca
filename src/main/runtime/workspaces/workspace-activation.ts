@@ -1,50 +1,61 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithListManagedWorktrees } from './orca-runtime-list-managed-worktrees'
-import type { RuntimeNavigationTarget } from '../../shared/runtime-navigation'
+import { OrcaRuntimeWithListManagedWorktrees } from '../orca-runtime-list-managed-worktrees'
+import type { RuntimeNavigationTarget } from '../../../shared/runtime-navigation'
 import {
   navigationTargetsClients,
   navigationTargetsHost,
   resolveRuntimeNavigationTarget
-} from '../../shared/runtime-navigation'
-import { getRepoExecutionHostId } from '../../shared/execution-host'
-import type { Repo } from '../../shared/repo-types'
-import type { TuiAgent } from '../../shared/tui-agent'
-import type { RuntimeTerminalWait } from '../../shared/runtime-terminal-contracts'
-import type { WorktreeStartupLaunch } from '../../shared/worktree/launch-types'
+} from '../../../shared/runtime-navigation'
+import { getRepoExecutionHostId } from '../../../shared/execution-host'
+import type { Repo } from '../../../shared/repo-types'
+import type { TuiAgent } from '../../../shared/tui-agent'
+import type { RuntimeTerminalWait } from '../../../shared/runtime-terminal-contracts'
+import type { WorktreeStartupLaunch } from '../../../shared/worktree/launch-types'
 import type {
   WorktreeStartupDraftPaste,
   WorktreeStartupFollowup
-} from './runtime-worktree-agent-startup'
+} from '../runtime-worktree-agent-startup'
 import {
   buildWorktreeStartupForAgent,
   buildWorktreeStartupForDraft,
   resolveWorktreeStartupDraftAgent
-} from './runtime-worktree-agent-startup'
-import type { AgentLaunchPreferences } from '../../shared/agent-session-host-authority'
-import type { Worktree } from '../../shared/worktree/types'
-import type { WorktreeLineageResolution } from './runtime-worktree-lineage-resolution'
+} from '../runtime-worktree-agent-startup'
+import type { AgentLaunchPreferences } from '../../../shared/agent-session-host-authority'
+import type { Worktree } from '../../../shared/worktree/types'
+import type { WorktreeLineageResolution } from '../runtime-worktree-lineage-resolution'
 import type {
   WorkspaceLineage,
   WorktreeLineage,
   WorktreeLineageWarning
-} from '../../shared/worktree/lineage-types'
-import { recordCreatedWorktreeLineage as recordCreatedWorktreeLineageState } from './runtime-worktree-lineage-recording'
+} from '../../../shared/worktree/lineage-types'
+import { recordCreatedWorktreeLineage as recordCreatedWorktreeLineageState } from '../runtime-worktree-lineage-recording'
 import {
   deliverWorktreeStartupFollowup,
   pasteWorktreeStartupDraftWhenReady,
   sendWorktreeStartupFollowupWhenReady,
-  waitForWorktreeStartupDraft
-} from './runtime-worktree-startup-readiness'
-import type { CreateWorktreeResult } from '../../shared/worktree/create-types'
-import { provisionWorktreeTerminals } from './runtime-worktree-terminal-provisioning'
-import { readFreshComposerHold } from './launched-agent-composer-readiness'
-import { buildTerminalWaitText } from './terminal-wait-tail-state'
+  waitForWorktreeStartupDraft,
+  type WorktreeStartupReadinessHost
+} from '../runtime-worktree-startup-readiness'
+import type { CreateWorktreeResult } from '../../../shared/worktree/create-types'
+import {
+  provisionWorktreeTerminals,
+  type WorktreeTerminalProvisioningHost
+} from '../runtime-worktree-terminal-provisioning'
+import { readFreshComposerHold } from '../launched-agent-composer-readiness'
+import { buildTerminalWaitText } from '../terminal-wait-tail-state'
 import {
   readLaunchedAgentForeground,
   type LaunchedAgentForeground
-} from './launched-agent-foreground'
+} from '../launched-agent-foreground'
 
-export class OrcaRuntimeWithActivateManagedWorktree extends OrcaRuntimeWithListManagedWorktrees {
+export abstract class OrcaRuntimeWithActivateManagedWorktree extends OrcaRuntimeWithListManagedWorktrees {
+  protected abstract toAgentSessionOptions(
+    preferences: AgentLaunchPreferences | undefined
+  ): Record<string, string> | undefined
+  protected abstract getWorktreeStartupReadinessHost(): WorktreeStartupReadinessHost
+  protected abstract getWorktreeTerminalProvisioningHost(
+    createdWorktree?: Worktree
+  ): WorktreeTerminalProvisioningHost
+
   async activateManagedWorktree(
     worktreeSelector: string,
     opts: {

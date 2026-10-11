@@ -35,6 +35,8 @@ import type {
 } from '../../shared/artifacts'
 
 export abstract class OrcaRuntimeWithHasExactPersistedTerminalSurfaceIdentity extends OrcaRuntimeWithAutomationOperations {
+  abstract notifyMobileSessionTabsChanged(worktreeId?: string): void
+
   protected abstract adoptTerminalOrphansFromInventoryUnderMutation(
     request: RuntimeTerminalOrphanAdoptionRequest,
     workspace: TerminalWorkspaceLaunchScope,

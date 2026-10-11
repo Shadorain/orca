@@ -1,5 +1,4 @@
 import type { ResolvedWorktree } from '../runtime-worktree-path-identity'
-import type { AgentLaunchPreferences } from '../../../shared/agent-session-host-authority'
 import { OrcaRuntimeWithRemoveManagedWorktree } from './workspace-removal'
 import type {
   RemoveManagedWorktreeOptions,
@@ -46,14 +45,8 @@ export abstract class OrcaRuntimeWithResolveWorktreeRemovalTarget extends OrcaRu
     worktreeId: string,
     requiredHostId?: ExecutionHostId
   ): Promise<ResolvedWorktree | null>
-  abstract invalidateResolvedWorktreeCache(): void
-  abstract invalidateWorktreeScanCacheForRepo(repoId: string): void
   protected abstract cancelScheduledMobileSessionTabsChanged(worktreeId: string): void
   protected abstract notifyMobileSessionTabsRemoved(worktreeId: string): void
-  protected abstract assertGraphReady(): void
-  protected abstract toAgentSessionOptions(
-    preferences: AgentLaunchPreferences | undefined
-  ): Record<string, string> | undefined
 
   protected async resolveWorktreeRemovalTarget(
     worktreeSelector: string,
