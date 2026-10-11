@@ -10,7 +10,6 @@ src/main/runtime/orca-runtime-apply-mobile-display-mode.ts
 src/main/runtime/orca-runtime-apply-mobile-session-tab-navigation.ts
 src/main/runtime/orca-runtime-apply-tracked-pty-title.ts
 src/main/runtime/orca-runtime-attach-window.ts
-src/main/runtime/orca-runtime-bind-pty-incarnation-handle.ts
 src/main/runtime/orca-runtime-build-headless-mobile-session-browser-tabs.ts
 src/main/runtime/orca-runtime-build-pty-terminal-summary.ts
 src/main/runtime/orca-runtime-capture-provider-terminal-buffer.ts
@@ -74,7 +73,6 @@ src/main/runtime/orca-runtime-publish-pty-backed-mobile-session-terminal.ts
 src/main/runtime/orca-runtime-reclaim-terminal-for-desktop.ts
 src/main/runtime/orca-runtime-reconcile-headless-mobile-session-browser-tabs.ts
 src/main/runtime/orca-runtime-record-agent-prompt-lifecycle-state.ts
-src/main/runtime/orca-runtime-record-pty-worktree.ts
 src/main/runtime/orca-runtime-refresh-floating-workspace-pty-liveness.ts
 src/main/runtime/orca-runtime-refresh-pty-worktree-records-from-controller.ts
 src/main/runtime/orca-runtime-refresh-pty-worktree-records-with-controller-inventory.ts

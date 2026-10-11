@@ -1,21 +1,30 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { RuntimeWorkspaceRepoScanRefresh } from './workspaces/workspace-repo-scan-refresh'
-import type { RuntimePtyWorktreeRecord } from './runtime-terminal-state-records'
-import { parseAppSshPtyId } from '../../shared/ssh-pty-id'
-import { splitWorktreeIdForFilesystem } from '../../shared/worktree/id'
-import { parseWslUncPath } from '../../shared/wsl-paths'
-import { cloneAgentSessionOwnerBinding } from '../../shared/claimed-agent-pty-owner-snapshot'
-import { advertisedUrlWatcher } from '../ports/advertised-url-watcher'
-import { maxTimestamp } from './runtime-worktree-status-projection'
-import type { RuntimeSyncedLeaf } from '../../shared/runtime-types'
-import { isTerminalLeafId, makePaneKey } from '../../shared/stable-pane-id'
-import { inferWorktreeIdFromPtyId } from './runtime-worktree-path-identity'
+import { RuntimeWorkspaceRepoScanRefresh } from '../../workspaces/workspace-repo-scan-refresh'
+import type { RuntimePtyWorktreeRecord } from '../../runtime-terminal-state-records'
+import { parseAppSshPtyId } from '../../../../shared/ssh-pty-id'
+import { splitWorktreeIdForFilesystem } from '../../../../shared/worktree/id'
+import { parseWslUncPath } from '../../../../shared/wsl-paths'
+import { cloneAgentSessionOwnerBinding } from '../../../../shared/claimed-agent-pty-owner-snapshot'
+import { advertisedUrlWatcher } from '../../../ports/advertised-url-watcher'
+import { maxTimestamp } from '../../runtime-worktree-status-projection'
+import type { RuntimeSyncedLeaf } from '../../../../shared/runtime-types'
+import { isTerminalLeafId, makePaneKey } from '../../../../shared/stable-pane-id'
+import { inferWorktreeIdFromPtyId } from '../../runtime-worktree-path-identity'
 import {
   recordPtySurfaceClaim,
   SURFACE_CLAIM_WITHOUT_STANDING
-} from './pty-recorded-surface-topology'
+} from '../../pty-recorded-surface-topology'
 
-export class OrcaRuntimeWithRecordPtyWorktree extends RuntimeWorkspaceRepoScanRefresh {
+export abstract class OrcaRuntimeWithRecordPtyWorktree extends RuntimeWorkspaceRepoScanRefresh {
+  protected abstract nextTitleObservationSequence(): number
+
+  protected abstract setPtyManagementTitleFromObservedTitle(
+    pty: RuntimePtyWorktreeRecord,
+    title: string | null | undefined,
+    observedAt: number
+  ): void
+
+  protected abstract invalidatePtyIncarnationHandle(ptyId: string): void
+
   protected recordPtyWorktree(
     ptyId: string,
     worktreeId: string,

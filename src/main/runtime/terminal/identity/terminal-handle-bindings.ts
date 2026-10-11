@@ -1,10 +1,16 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithBuildPtyTerminalSummary } from './orca-runtime-build-pty-terminal-summary'
-import type { PtyIncarnationHandleRecord } from './orca-runtime-core'
-import type { RuntimeLeafRecord, RuntimePtyWorktreeRecord } from './runtime-terminal-state-records'
+import { OrcaRuntimeWithBuildPtyTerminalSummary } from '../../orca-runtime-build-pty-terminal-summary'
+import type { PtyIncarnationHandleRecord } from '../../orca-runtime-core'
+import type {
+  RuntimeLeafRecord,
+  RuntimePtyWorktreeRecord
+} from '../../runtime-terminal-state-records'
 import { randomUUID } from 'node:crypto'
 
-export class OrcaRuntimeWithBindPtyIncarnationHandle extends OrcaRuntimeWithBuildPtyTerminalSummary {
+export abstract class OrcaRuntimeWithBindPtyIncarnationHandle extends OrcaRuntimeWithBuildPtyTerminalSummary {
+  protected abstract getLeafKey(tabId: string, leafId: string): string
+
+  protected abstract rejectWaitersForHandle(handle: string, code: string): void
+
   protected bindPtyIncarnationHandle(
     retained: PtyIncarnationHandleRecord,
     leaf: RuntimeLeafRecord
