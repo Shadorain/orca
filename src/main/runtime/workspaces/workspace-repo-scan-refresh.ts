@@ -174,11 +174,11 @@ export abstract class RuntimeWorkspaceRepoScanRefresh extends RuntimeWorkspaceCa
     return new Map((await this.listResolvedWorktrees()).map((worktree) => [worktree.id, worktree]))
   }
 
-  protected invalidateResolvedWorktreeCache(): void {
+  invalidateResolvedWorktreeCache(): void {
     this.resolvedWorktrees.invalidateResolved()
   }
 
-  protected invalidateWorktreeScanCacheForRepo(repoId: string): void {
+  invalidateWorktreeScanCacheForRepo(repoId: string): void {
     const prefix = `${repoId}\0`
     const scopeKeys = new Set(
       this.store

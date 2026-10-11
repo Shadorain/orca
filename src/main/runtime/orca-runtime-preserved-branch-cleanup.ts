@@ -65,13 +65,13 @@ export abstract class OrcaRuntimeWithPreservedBranchCleanup extends OrcaRuntimeW
     createdWorktree?: Worktree
   ): Promise<TerminalWorkspaceLaunchScope>
 
-  protected readonly preservedBranchCleanup = new RuntimePreservedBranchCleanup(() =>
+  readonly preservedBranchCleanup = new RuntimePreservedBranchCleanup(() =>
     this.store ? this.requireStore() : null
   )
 
   protected readonly getLocalProviderFn: (() => IPtyProvider) | null
 
-  protected readonly onPtyStopped: ((ptyId: string) => void) | null
+  readonly onPtyStopped: ((ptyId: string) => void) | null
 
   protected readonly onTerminalAgentStatus:
     | ((event: RuntimeTerminalAgentStatusEvent) => void)

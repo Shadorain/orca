@@ -1,11 +1,30 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService.
-import { splitWorktreeId, splitWorktreeIdForFilesystem } from '../../shared/worktree/id'
-import { parseExecutionHostId } from '../../shared/execution-host'
-import { invalidateAuthorizedRootsCache } from '../ipc/filesystem-auth'
-import { isFolderRepo } from '../../shared/repo-kind'
-import { getRuntimeFolderWorkspaceRootId } from './runtime-folder-workspace'
-import { killAllProcessesForWorktree } from './worktree-teardown'
-import { teardownFolderWorkspacePtys } from './folder-workspace-pty-teardown'
+import type { OrcaRuntimeWithRemoveManagedWorktree } from './workspace-removal'
+import type { RuntimeStore } from '../runtime-store-contract'
+import type { RuntimeWorktreeRemovalTarget } from '../runtime-worktree-selection'
+import type { Repo } from '../../../shared/repo-types'
+import type { ExecutionHostId } from '../../../shared/execution-host'
+import type { WorktreeTeardownRuntime } from '../worktree-teardown'
+import { splitWorktreeId, splitWorktreeIdForFilesystem } from '../../../shared/worktree/id'
+import { parseExecutionHostId } from '../../../shared/execution-host'
+import { invalidateAuthorizedRootsCache } from '../../ipc/filesystem-auth'
+import { isFolderRepo } from '../../../shared/repo-kind'
+import { getRuntimeFolderWorkspaceRootId } from '../runtime-folder-workspace'
+import { killAllProcessesForWorktree } from '../worktree-teardown'
+import { teardownFolderWorkspacePtys } from '../folder-workspace-pty-teardown'
+
+type WorkspaceRegistrationRemovalRuntime = WorktreeTeardownRuntime &
+  Pick<
+    OrcaRuntimeWithRemoveManagedWorktree,
+    | 'getLocalProvider'
+    | 'onPtyStopped'
+    | 'acquireFileWatcherRemoval'
+    | 'clearOptimisticReconcileToken'
+    | 'removeWorktreeMetadataAndHistory'
+    | 'preservedBranchCleanup'
+    | 'invalidateResolvedWorktreeCache'
+    | 'invalidateWorktreeScanCacheForRepo'
+    | 'notifyWorktreesChanged'
+  >
 
 export async function removeOrphanOrFolderWorktree({
   runtime,
@@ -15,12 +34,12 @@ export async function removeOrphanOrFolderWorktree({
   removalHostId,
   repo
 }: {
-  runtime: unknown
-  store: unknown
-  removalTarget: unknown
-  cleanupHostId?: string
-  removalHostId?: string
-  repo?: unknown
+  runtime: WorkspaceRegistrationRemovalRuntime
+  store: RuntimeStore
+  removalTarget: RuntimeWorktreeRemovalTarget
+  cleanupHostId?: ExecutionHostId
+  removalHostId?: ExecutionHostId
+  repo?: Repo
 }): Promise<{ warning?: string } | undefined> {
   if (!repo) {
     const orphanHost = parseExecutionHostId(store.getWorktreeMeta(removalTarget.id)?.hostId)

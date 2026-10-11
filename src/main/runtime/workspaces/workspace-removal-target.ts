@@ -1,43 +1,60 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithRemoveManagedWorktree } from './orca-runtime-remove-managed-worktree'
-import type { ExecutionHostId } from '../../shared/execution-host'
+import type { ResolvedWorktree } from '../runtime-worktree-path-identity'
+import type { AgentLaunchPreferences } from '../../../shared/agent-session-host-authority'
+import { OrcaRuntimeWithRemoveManagedWorktree } from './workspace-removal'
 import type {
   RemoveManagedWorktreeOptions,
   RuntimeWorktreeRemovalTarget
-} from './runtime-worktree-selection'
-import { resolveRuntimeWorktreeRemovalTarget } from './runtime-worktree-removal-target'
-import type { RuntimeStore } from './runtime-store-contract'
-import { splitWorktreeId } from '../../shared/worktree/id'
-import { runtimeWorktreeIdsEqual } from './runtime-worktree-path-identity'
-import { hasWorktreeRemovalRepoOwnerOnOtherHost } from '../worktree-removal-repo-owner'
-import { advertisedUrlWatcher } from '../ports/advertised-url-watcher'
-import { deleteWorktreeHistoryDir } from '../terminal-history-deletion'
-import { forgetFailedAgentLaunches } from '../agent-launch/agent-launch-pane-attachment'
-import { closeClientHostedBrowserPagesForWorktree } from './worktree-browser-client-page-close'
+} from '../runtime-worktree-selection'
+import { resolveRuntimeWorktreeRemovalTarget } from '../runtime-worktree-removal-target'
+import type { RuntimeStore } from '../runtime-store-contract'
+import { splitWorktreeId } from '../../../shared/worktree/id'
+import { runtimeWorktreeIdsEqual } from '../runtime-worktree-path-identity'
+import { hasWorktreeRemovalRepoOwnerOnOtherHost } from '../../worktree-removal-repo-owner'
+import { advertisedUrlWatcher } from '../../ports/advertised-url-watcher'
+import { deleteWorktreeHistoryDir } from '../../terminal-history-deletion'
+import { forgetFailedAgentLaunches } from '../../agent-launch/agent-launch-pane-attachment'
+import { closeClientHostedBrowserPagesForWorktree } from '../worktree-browser-client-page-close'
 import type {
   ForceDeleteWorktreeBranchResult,
   RemoveWorktreeResult
-} from '../../shared/worktree/create-types'
-import type { RuntimeTerminalRename } from '../../shared/runtime-types'
-import type { TerminalWorkspaceLaunchScope } from './runtime-legacy-worker-terminal-recovery-types'
-import type { TerminalCreateOptions } from './runtime-terminal-contracts'
-import { terminalShellOverrideRefusal } from './terminal-shell-override-host-support'
-import { resolveTerminalStartupCwd } from '../../shared/terminal-startup-cwd'
-import { resolveLocalProjectRuntimeForWorktreeId } from '../local-project-runtime-resolution'
-import { LOCAL_EXECUTION_HOST_ID, parseExecutionHostId } from '../../shared/execution-host'
-import { invalidateAuthorizedRootsCacheForRepo } from '../ipc/filesystem-auth'
+} from '../../../shared/worktree/create-types'
+import type { RuntimeTerminalRename } from '../../../shared/runtime-types'
+import type { TerminalWorkspaceLaunchScope } from '../runtime-legacy-worker-terminal-recovery-types'
+import type { TerminalCreateOptions } from '../runtime-terminal-contracts'
+import { terminalShellOverrideRefusal } from '../terminal-shell-override-host-support'
+import { resolveTerminalStartupCwd } from '../../../shared/terminal-startup-cwd'
+import { resolveLocalProjectRuntimeForWorktreeId } from '../../local-project-runtime-resolution'
+import {
+  LOCAL_EXECUTION_HOST_ID,
+  parseExecutionHostId,
+  type ExecutionHostId
+} from '../../../shared/execution-host'
+import { invalidateAuthorizedRootsCacheForRepo } from '../../ipc/filesystem-auth'
 import {
   resumeInterruptedWorktreeRemovals,
   retryFailedWorktreeRemoval,
   waitForPendingWorktreeRemoval
-} from '../worktree-background-removal'
-import { interruptedLocalWorktreeRemovalJob } from './runtime-interrupted-local-worktree-removal'
-import { retryFailedRemovalUnlessRegistered } from '../worktree-removal-table'
-import type { GitWorktreeInfo } from '../../shared/worktree/types'
-import { resolveQoderTerminalCommandForWorkspace } from './qoder-terminal-command-resolution'
-import { buildRuntimeAgentTerminalStartupOptions } from './runtime-agent-terminal-startup'
+} from '../../worktree-background-removal'
+import { interruptedLocalWorktreeRemovalJob } from '../runtime-interrupted-local-worktree-removal'
+import { retryFailedRemovalUnlessRegistered } from '../../worktree-removal-table'
+import type { GitWorktreeInfo } from '../../../shared/worktree/types'
+import { resolveQoderTerminalCommandForWorkspace } from '../qoder-terminal-command-resolution'
+import { buildRuntimeAgentTerminalStartupOptions } from '../runtime-agent-terminal-startup'
 
-export class OrcaRuntimeWithResolveWorktreeRemovalTarget extends OrcaRuntimeWithRemoveManagedWorktree {
+export abstract class OrcaRuntimeWithResolveWorktreeRemovalTarget extends OrcaRuntimeWithRemoveManagedWorktree {
+  protected abstract resolveExplicitWorktreeIdScoped(
+    worktreeId: string,
+    requiredHostId?: ExecutionHostId
+  ): Promise<ResolvedWorktree | null>
+  abstract invalidateResolvedWorktreeCache(): void
+  abstract invalidateWorktreeScanCacheForRepo(repoId: string): void
+  protected abstract cancelScheduledMobileSessionTabsChanged(worktreeId: string): void
+  protected abstract notifyMobileSessionTabsRemoved(worktreeId: string): void
+  protected abstract assertGraphReady(): void
+  protected abstract toAgentSessionOptions(
+    preferences: AgentLaunchPreferences | undefined
+  ): Record<string, string> | undefined
+
   protected async resolveWorktreeRemovalTarget(
     worktreeSelector: string,
     requiredHostId?: ExecutionHostId
@@ -128,7 +145,7 @@ export class OrcaRuntimeWithResolveWorktreeRemovalTarget extends OrcaRuntimeWith
     invalidateAuthorizedRootsCacheForRepo(store, repoId)
   }
 
-  protected removeWorktreeMetadataAndHistory(
+  removeWorktreeMetadataAndHistory(
     store: RuntimeStore,
     worktreeId: string,
     hostId?: ExecutionHostId

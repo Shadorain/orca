@@ -56,13 +56,10 @@ src/main/runtime/orca-runtime-refresh-pty-worktree-records-from-controller.ts
 src/main/runtime/orca-runtime-refresh-pty-worktree-records-with-controller-inventory.ts
 src/main/runtime/orca-runtime-refuse-unattributed-mobile-session-tab-close.ts
 src/main/runtime/orca-runtime-register-pty.ts
-src/main/runtime/orca-runtime-remove-managed-worktree.ts
-src/main/runtime/orca-runtime-remove-orphan-or-folder-worktree.ts
 src/main/runtime/orca-runtime-resolve-browser-network-execution-host-for-worktree.ts
 src/main/runtime/orca-runtime-resolve-known-workspace-file-target.ts
 src/main/runtime/orca-runtime-resolve-terminal-pane.ts
 src/main/runtime/orca-runtime-resolve-terminal-split-source-authority.ts
-src/main/runtime/orca-runtime-resolve-worktree-removal-target.ts
 src/main/runtime/orca-runtime-restore-live-paired-renderer-session-owned-mobile-terminals.ts
 src/main/runtime/orca-runtime-restore-structured-agent-session-tabs-once.ts
 src/main/runtime/orca-runtime-run-create-mobile-session-terminal.ts
