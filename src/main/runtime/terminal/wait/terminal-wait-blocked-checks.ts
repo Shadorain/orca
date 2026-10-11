@@ -1,27 +1,48 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithOnPtyData } from './orca-runtime-on-pty-data'
+import { OrcaRuntimeWithOnPtyData } from '../../orca-runtime-on-pty-data'
 import {
   WAIT_BLOCKED_CHECK_MIN_INTERVAL_MS,
   WAIT_BLOCKED_KEYWORD_CARRY_CHARS,
   WAIT_BLOCKED_KEYWORD_PATTERN
-} from './orca-runtime-postlude'
+} from '../../orca-runtime-postlude'
 import {
   appendWaitBlockedCarry,
   createWaitBlockedCheckState,
   readWaitBlockedCarry,
   resetWaitBlockedCarry,
   type WaitBlockedCheckState
-} from './wait-blocked-check-state'
+} from '../../wait-blocked-check-state'
 import {
   computeTerminalTailWaitState,
   tailGainedNewerBlockedReason
-} from './terminal-wait-tail-state'
-import { ownRetainedString } from '../../shared/own-retained-string'
-import type { ProcessedAgentStatusChunk } from '../../shared/agent-status-osc'
-import { createAgentStatusOscProcessor } from '../../shared/agent-status-osc'
-import type { RuntimePtyTitleTrackerEntry } from './runtime-terminal-state-records'
+} from '../../terminal-wait-tail-state'
+import { ownRetainedString } from '../../../../shared/own-retained-string'
+import type { ProcessedAgentStatusChunk } from '../../../../shared/agent-status-osc'
+import { createAgentStatusOscProcessor } from '../../../../shared/agent-status-osc'
+import type { RuntimePtyTitleTrackerEntry } from '../../runtime-terminal-state-records'
 
-export class OrcaRuntimeWithScheduleWaitBlockedCheck extends OrcaRuntimeWithOnPtyData {
+import type { OrcaRuntimeWithRecordAgentPromptLifecycleState } from '../../orca-runtime-record-agent-prompt-lifecycle-state'
+import type { OrcaRuntimeWithEmitDaemonPtyTransientFact } from '../../orca-runtime-emit-daemon-pty-transient-fact'
+import type { OrcaRuntimeWithGetUnpersistedTrackedTitleForPty } from '../../orca-runtime-get-unpersisted-tracked-title-for-pty'
+
+export abstract class OrcaRuntimeWithScheduleWaitBlockedCheck extends OrcaRuntimeWithOnPtyData {
+  protected abstract recordAgentPromptPermissionObservation(
+    ...args: Parameters<
+      OrcaRuntimeWithRecordAgentPromptLifecycleState['recordAgentPromptPermissionObservation']
+    >
+  ): ReturnType<
+    OrcaRuntimeWithRecordAgentPromptLifecycleState['recordAgentPromptPermissionObservation']
+  >
+
+  protected abstract emitTerminalSideEffectBatch(
+    ...args: Parameters<OrcaRuntimeWithEmitDaemonPtyTransientFact['emitTerminalSideEffectBatch']>
+  ): ReturnType<OrcaRuntimeWithEmitDaemonPtyTransientFact['emitTerminalSideEffectBatch']>
+
+  protected abstract getOrCreatePtyTitleTrackerEntry(
+    ...args: Parameters<
+      OrcaRuntimeWithGetUnpersistedTrackedTitleForPty['getOrCreatePtyTitleTrackerEntry']
+    >
+  ): ReturnType<OrcaRuntimeWithGetUnpersistedTrackedTitleForPty['getOrCreatePtyTitleTrackerEntry']>
+
   protected scheduleWaitBlockedCheck(ptyId: string, appendedText: string, at: number): void {
     let state = this.waitBlockedCheckStateByPtyId.get(ptyId)
     if (!state) {

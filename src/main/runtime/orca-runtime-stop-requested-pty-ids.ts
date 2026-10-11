@@ -41,7 +41,17 @@ import type { RuntimeSkillCommands } from './runtime-skill-command-surface'
 import { RuntimeTerminalStreamConsumers } from './runtime-terminal-stream-consumers'
 import type { RecentPtyOutputBuffer } from './recent-pty-output-buffer'
 
-export class OrcaRuntimeWithStopRequestedPtyIds extends OrcaRuntimeWithRuntimeId {
+import type { LiveTerminalPty } from './orca-runtime-build-pty-terminal-summary'
+import type { FreshExplicitAgentStatus } from './runtime-hook-agent-row-selection'
+
+export abstract class OrcaRuntimeWithStopRequestedPtyIds extends OrcaRuntimeWithRuntimeId {
+  protected abstract getLivePtyForHandle(handle: string): LiveTerminalPty
+
+  protected abstract getFreshExplicitAgentStatusForHandle(
+    handle: string,
+    paneKeyOverride?: string | null
+  ): FreshExplicitAgentStatus
+
   protected readonly stopRequestedPtyIds = new Set<string>()
 
   protected readonly ptyExitListenersByPtyId = new Map<string, Set<() => void>>()

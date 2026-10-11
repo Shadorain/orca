@@ -1,7 +1,7 @@
 // @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
 import { resolveStructuredCodexAccountKind } from './structured-agent-account-home'
 import { collectRuntimeWorktreeAgentSources } from './runtime-worktree-agent-sources'
-import { OrcaRuntimeWithStartTuiIdleVisibleReadProbe } from './orca-runtime-start-tui-idle-visible-read-probe'
+import { OrcaRuntimeWithStartTuiIdleVisibleReadProbe } from './terminal/wait/terminal-wait-visible-probe'
 import { DEFAULT_WORKTREE_PS_LIMIT } from './orca-runtime-postlude'
 import type { RuntimeWorktreePsResult } from '../../shared/runtime-types'
 import { buildRuntimeWorktreePsSummaries } from './runtime-worktree-ps-summaries'

@@ -1,32 +1,32 @@
-import { OrcaRuntimeWithCreateAgentPromptRenderGate } from './orca-runtime-create-agent-prompt-render-gate'
+import { OrcaRuntimeWithCreateAgentPromptRenderGate } from '../../orca-runtime-create-agent-prompt-render-gate'
 import type {
   RuntimeProviderSnapshotReadOptions,
   TerminalWaiter
-} from './runtime-terminal-contracts'
+} from '../../runtime-terminal-contracts'
 import {
   TUI_IDLE_VISIBLE_PROBE_SETTLE_MARGIN_MS,
   VISIBLE_TERMINAL_SNAPSHOT_TIMEOUT_MS
-} from './orca-runtime-postlude'
-import { withTimeout } from './runtime-async-boundaries'
+} from '../../orca-runtime-postlude'
+import { withTimeout } from '../../runtime-async-boundaries'
 import {
   detectTerminalWaitBlockedReason,
   isKnownReadyPromptBody,
   isKnownReadyPromptSettled
-} from './terminal-wait-detection'
-import { readsTrustedScreen } from './agent-state-rules/agent-state-rules-engine'
-import { restoreProjectedComposerDraft } from './orca-runtime-terminal-projection'
+} from '../../terminal-wait-detection'
+import { readsTrustedScreen } from '../../agent-state-rules/agent-state-rules-engine'
+import { restoreProjectedComposerDraft } from '../../orca-runtime-terminal-projection'
 import type {
   RuntimeTerminalWait,
   RuntimeTerminalWaitBlockedReason
-} from '../../shared/runtime-types'
+} from '../../../../shared/runtime-terminal-contracts'
 import {
   buildPtyTerminalWaitBlockedResult,
   buildPtyTerminalWaitResult,
   buildTerminalWaitBlockedResult,
   buildTerminalWaitResult
-} from './terminal-wait-results'
-import { createSetupCompletionScanner } from './orchestration/setup-completion-signal'
-import type { TuiAgent } from '../../shared/tui-agent'
+} from '../../terminal-wait-results'
+import { createSetupCompletionScanner } from '../../orchestration/setup-completion-signal'
+import type { TuiAgent } from '../../../../shared/tui-agent'
 
 export abstract class OrcaRuntimeWithStartTuiIdleVisibleReadProbe extends OrcaRuntimeWithCreateAgentPromptRenderGate {
   /** One bounded look at the provider's screen for an adopted PTY whose retained

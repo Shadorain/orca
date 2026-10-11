@@ -27,6 +27,10 @@ import { parseAppSshPtyId } from '../../shared/ssh-pty-id'
 import type { PtyProcessInspection } from '../providers/pty-process-inspection'
 import type { StructuredAgentId } from '../../shared/agent-session-provider-handle'
 
+export type AgentLaunchScope = Parameters<
+  OrcaRuntimeWithRestoreStructuredAgentSessionTabsOnce['getAgentLaunchPlatformForWorkspace']
+>[0]
+
 export class OrcaRuntimeWithRestoreStructuredAgentSessionTabsOnce extends OrcaRuntimeWithGetStructuredAgentSessionCreateSupport {
   protected async restoreStructuredAgentSessionTabsOnce(): Promise<void> {
     await this.prepareStructuredAgentSessionStartupRestoration()
@@ -272,7 +276,9 @@ export class OrcaRuntimeWithRestoreStructuredAgentSessionTabsOnce extends OrcaRu
   }
 
   protected getAgentLaunchPlatformForWorkspace(
-    scope: TerminalWorkspaceLaunchScope
+    scope: Pick<TerminalWorkspaceLaunchScope, 'repo' | 'path'> & {
+      connectionId?: string | null
+    }
   ): NodeJS.Platform {
     if (scope.repo) {
       return this.getAgentLaunchPlatformForRepo(scope.repo)

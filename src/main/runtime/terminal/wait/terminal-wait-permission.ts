@@ -1,26 +1,41 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithAgentPromptRequestCorrelation } from './orca-runtime-agent-prompt-request-correlation'
-import type { RuntimeTerminalAgentStatusSnapshot } from './runtime-terminal-agent-status-query'
-import type { AgentStatus } from '../../shared/agent-detection'
-import type { RuntimeTerminalWaitBlockedReason } from '../../shared/runtime-types'
-import { detectTerminalWaitBlockedReason } from './terminal-wait-detection'
-import { isOpenCodeNativeTitle } from '../../shared/agent-detection'
-import type { AgentStatusEntry, AgentStatusIpcPayload } from '../../shared/agent-status-types'
-import type { RuntimePtyWorktreeRecord } from './runtime-terminal-state-records'
-import { renewRuntimeMobileAgentStatusFromPtyTitle } from './runtime-mobile-agent-status-projection'
-import { getDisplayPromptLifecycle } from './runtime-worktree-status-projection'
-import type { RuntimeTerminalWriteOptions } from './runtime-terminal-writer'
-import type { WriteSettlement } from '../../shared/pty-write-settlement'
-import { getRegisteredSshState } from '../ssh/ssh-target-registry'
-import { splitWorktreeIdForFilesystem } from '../../shared/worktree/id'
-import { isWindowsAbsolutePathLike } from '../../shared/cross-platform-path'
-import type { TuiAgent } from '../../shared/tui-agent'
-import type { TerminalAgent } from '../../shared/terminal-agent'
-import type { AgentPromptActivity } from './agent-prompt-submission-verification'
-import { hasExplicitIdleTitle } from './tui-idle-evidence'
-import { readTuiIdleHookTurn, type TuiIdleHookTurn } from './tui-idle-hook-lane'
+import { OrcaRuntimeWithAgentPromptRequestCorrelation } from '../../orca-runtime-agent-prompt-request-correlation'
+import type { RuntimeTerminalAgentStatusSnapshot } from '../../runtime-terminal-agent-status-query'
+import type { AgentStatus } from '../../../../shared/agent-detection'
+import type { RuntimeTerminalWaitBlockedReason } from '../../../../shared/runtime-terminal-contracts'
+import { detectTerminalWaitBlockedReason } from '../../terminal-wait-detection'
+import { isOpenCodeNativeTitle } from '../../../../shared/agent-detection'
+import type { AgentStatusEntry, AgentStatusIpcPayload } from '../../../../shared/agent-status-types'
+import type { RuntimePtyWorktreeRecord } from '../../runtime-terminal-state-records'
+import { renewRuntimeMobileAgentStatusFromPtyTitle } from '../../runtime-mobile-agent-status-projection'
+import { getDisplayPromptLifecycle } from '../../runtime-worktree-status-projection'
+import type { RuntimeTerminalWriteOptions } from '../../runtime-terminal-writer'
+import type { WriteSettlement } from '../../../../shared/pty-write-settlement'
+import { getRegisteredSshState } from '../../../ssh/ssh-target-registry'
+import { splitWorktreeIdForFilesystem } from '../../../../shared/worktree/id'
+import { isWindowsAbsolutePathLike } from '../../../../shared/cross-platform-path'
+import type { TuiAgent } from '../../../../shared/tui-agent'
+import type { TerminalAgent } from '../../../../shared/terminal-agent'
+import type { AgentPromptActivity } from '../../agent-prompt-submission-verification'
+import { hasExplicitIdleTitle } from '../../tui-idle-evidence'
+import { readTuiIdleHookTurn, type TuiIdleHookTurn } from '../../tui-idle-hook-lane'
 
-export class OrcaRuntimeWithResolveAuthoritativeTerminalWaitPermission extends OrcaRuntimeWithAgentPromptRequestCorrelation {
+import type { OrcaRuntimeWithStopExactTerminalsForWorktree } from '../../orca-runtime-stop-exact-terminals-for-worktree'
+
+export type TerminalWaitPermissionInputs = ReturnType<
+  OrcaRuntimeWithResolveAuthoritativeTerminalWaitPermission['getTerminalWaitPermissionInputs']
+>
+
+export type TerminalWaitStatusEvidence = Parameters<
+  OrcaRuntimeWithResolveAuthoritativeTerminalWaitPermission['resolveAuthoritativeTerminalWaitPermission']
+>[1]
+
+export abstract class OrcaRuntimeWithResolveAuthoritativeTerminalWaitPermission extends OrcaRuntimeWithAgentPromptRequestCorrelation {
+  protected abstract getExistingTerminalHandlesForPtyId(
+    ...args: Parameters<
+      OrcaRuntimeWithStopExactTerminalsForWorktree['getExistingTerminalHandlesForPtyId']
+    >
+  ): ReturnType<OrcaRuntimeWithStopExactTerminalsForWorktree['getExistingTerminalHandlesForPtyId']>
+
   readOpenCodeStartupPromptOwner(ptyId: string, incarnationId: string, launchToken: string) {
     const pty = this.ptysById.get(ptyId)
     if (!pty || pty.incarnationId !== incarnationId) {

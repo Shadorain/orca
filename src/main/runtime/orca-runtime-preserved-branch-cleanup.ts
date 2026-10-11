@@ -46,7 +46,15 @@ import { ClaudeAgentTeamsService } from './claude-agent-teams-service'
 import { teardownFolderWorkspacePtys } from './folder-workspace-pty-teardown'
 import { countRepoTerminalsNotKnownExited } from './project-removal-impact'
 
-export class OrcaRuntimeWithPreservedBranchCleanup extends OrcaRuntimeWithTerminalDrivers {
+import type { Worktree } from '../../shared/worktree/types'
+import type { TerminalWorkspaceLaunchScope } from './runtime-legacy-worker-terminal-recovery-types'
+
+export abstract class OrcaRuntimeWithPreservedBranchCleanup extends OrcaRuntimeWithTerminalDrivers {
+  protected abstract resolveTerminalWorkspaceLaunchScope(
+    selector: string,
+    createdWorktree?: Worktree
+  ): Promise<TerminalWorkspaceLaunchScope>
+
   protected readonly preservedBranchCleanup = new RuntimePreservedBranchCleanup(() =>
     this.store ? this.requireStore() : null
   )

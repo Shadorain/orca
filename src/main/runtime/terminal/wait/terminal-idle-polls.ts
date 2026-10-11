@@ -1,22 +1,26 @@
-import { isShellProcess } from '../../shared/agent-detection'
+import { isShellProcess } from '../../../../shared/agent-detection'
 import type {
   RuntimeTerminalWait,
   RuntimeTerminalWaitBlockedReason
-} from '../../shared/runtime-types'
-import { detectTerminalWaitBlockedReason } from './terminal-wait-detection'
+} from '../../../../shared/runtime-terminal-contracts'
+import { detectTerminalWaitBlockedReason } from '../../terminal-wait-detection'
 import {
   buildPtyTerminalWaitBlockedResult,
   buildPtyTerminalWaitResult,
   buildTerminalWaitBlockedResult,
   buildTerminalWaitResult
-} from './terminal-wait-results'
-import { buildTerminalWaitText } from './terminal-wait-tail-state'
-import { evaluateTuiIdle, type QuietForegroundLane, type TuiIdleVerdict } from './tui-idle-evidence'
+} from '../../terminal-wait-results'
+import { buildTerminalWaitText } from '../../terminal-wait-tail-state'
+import {
+  evaluateTuiIdle,
+  type QuietForegroundLane,
+  type TuiIdleVerdict
+} from '../../tui-idle-evidence'
 import {
   leafTuiIdleEvidence,
   ptyTuiIdleEvidence,
   type TuiIdleEvidenceSource
-} from './tui-idle-evidence-source'
+} from '../../tui-idle-evidence-source'
 
 /**
  * Why null counts as quiet on an `open` lane: a record with no output timestamp has produced
@@ -44,8 +48,11 @@ function isQuietForQuiescence(
   }
   return Date.now() - lastOutputAt >= quiescenceMs
 }
-import type { TerminalWaiter } from './runtime-terminal-contracts'
-import type { RuntimeLeafRecord, RuntimePtyWorktreeRecord } from './runtime-terminal-state-records'
+import type { TerminalWaiter } from '../../runtime-terminal-contracts'
+import type {
+  RuntimeLeafRecord,
+  RuntimePtyWorktreeRecord
+} from '../../runtime-terminal-state-records'
 
 type RuntimeTerminalIdlePollDependencies = TuiIdleEvidenceSource & {
   intervalMs: number

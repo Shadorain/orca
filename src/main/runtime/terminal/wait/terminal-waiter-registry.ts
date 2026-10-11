@@ -1,5 +1,5 @@
-import type { RuntimeTerminalWait } from '../../shared/runtime-types'
-import type { TerminalWaiter } from './runtime-terminal-contracts'
+import type { RuntimeTerminalWait } from '../../../../shared/runtime-terminal-contracts'
+import type { TerminalWaiter } from '../../runtime-terminal-contracts'
 
 export class RuntimeTerminalWaiterRegistry {
   private readonly byHandle = new Map<string, Set<TerminalWaiter>>()

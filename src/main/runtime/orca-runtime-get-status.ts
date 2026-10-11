@@ -67,7 +67,7 @@ function supportsDurableTerminalPromptDelivery(): boolean {
   }
 }
 
-export class OrcaRuntimeWithGetStatus extends OrcaRuntimeWithGetRuntimeId {
+export abstract class OrcaRuntimeWithGetStatus extends OrcaRuntimeWithGetRuntimeId {
   private asRuntimeStatusHost(): RuntimeStatusHost {
     return this as unknown as RuntimeStatusHost
   }

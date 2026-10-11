@@ -38,7 +38,6 @@ src/main/runtime/orca-runtime-get-orchestration-dispatch-authority.ts
 src/main/runtime/orca-runtime-get-pty-record-for-pane-key.ts
 src/main/runtime/orca-runtime-get-runtime-id.ts
 src/main/runtime/orca-runtime-get-structured-agent-session-create-support.ts
-src/main/runtime/orca-runtime-get-terminal-interactive-wait.ts
 src/main/runtime/orca-runtime-get-unpersisted-tracked-title-for-pty.ts
 src/main/runtime/orca-runtime-get-worktree-ps.ts
 src/main/runtime/orca-runtime-get-worktree-terminal-provisioning-host.ts
@@ -80,9 +79,7 @@ src/main/runtime/orca-runtime-refuse-unattributed-mobile-session-tab-close.ts
 src/main/runtime/orca-runtime-register-pty.ts
 src/main/runtime/orca-runtime-remove-managed-worktree.ts
 src/main/runtime/orca-runtime-remove-orphan-or-folder-worktree.ts
-src/main/runtime/orca-runtime-resolve-authoritative-terminal-wait-permission.ts
 src/main/runtime/orca-runtime-resolve-browser-network-execution-host-for-worktree.ts
-src/main/runtime/orca-runtime-resolve-exit-waiters.ts
 src/main/runtime/orca-runtime-resolve-known-workspace-file-target.ts
 src/main/runtime/orca-runtime-resolve-terminal-pane.ts
 src/main/runtime/orca-runtime-resolve-terminal-split-source-authority.ts
@@ -92,7 +89,6 @@ src/main/runtime/orca-runtime-restore-structured-agent-session-tabs-once.ts
 src/main/runtime/orca-runtime-run-create-mobile-session-terminal.ts
 src/main/runtime/orca-runtime-runtime-id.ts
 src/main/runtime/orca-runtime-schedule-mobile-session-tabs-changed.ts
-src/main/runtime/orca-runtime-schedule-wait-blocked-check.ts
 src/main/runtime/orca-runtime-serialize-agent-prompt-submission.ts
 src/main/runtime/orca-runtime-serialize-headless-terminal-buffer.ts
 src/main/runtime/orca-runtime-serialize-main-terminal-buffer.ts

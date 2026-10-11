@@ -1,6 +1,6 @@
 import { OrcaRuntimeWithDeliverPendingMessages } from './orca-runtime-deliver-pending-messages'
 import type { TerminalWaiter } from './runtime-terminal-contracts'
-import type { RuntimeTerminalWait } from '../../shared/runtime-types'
+import type { RuntimeTerminalWait } from '../../shared/runtime-terminal-contracts'
 import type { BrowserWindow } from 'electron'
 import { getRuntimeDesktopSurface } from './runtime-desktop-surface'
 

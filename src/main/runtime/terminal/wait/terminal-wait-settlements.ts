@@ -1,21 +1,41 @@
-/* eslint-disable unicorn/no-useless-spread */
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithBindPtyIncarnationHandle } from './terminal/identity/terminal-handle-bindings'
-import type { RuntimeLeafRecord, RuntimePtyWorktreeRecord } from './runtime-terminal-state-records'
+import { OrcaRuntimeWithBindPtyIncarnationHandle } from '../identity/terminal-handle-bindings'
+import type {
+  RuntimeLeafRecord,
+  RuntimePtyWorktreeRecord
+} from '../../runtime-terminal-state-records'
 import {
   buildPtyTerminalWaitBlockedResult,
   buildPtyTerminalWaitResult,
   buildTerminalWaitBlockedResult,
   buildTerminalWaitResult
-} from './terminal-wait-results'
-import type { AgentStatus } from '../../shared/agent-detection'
-import { detectExplicitIdleStatusFromTitle } from './terminal-wait-detection'
-import { buildTerminalWaitText } from './terminal-wait-tail-state'
-import { evaluateTuiIdle, isTuiIdleReadyVerdict, type TuiIdleVerdict } from './tui-idle-evidence'
-import { leafTuiIdleEvidence, ptyTuiIdleEvidence } from './tui-idle-evidence-source'
-import { TUI_IDLE_QUIESCENCE_MS } from './orca-runtime-postlude'
+} from '../../terminal-wait-results'
+import type { AgentStatus } from '../../../../shared/agent-detection'
+import { detectExplicitIdleStatusFromTitle } from '../../terminal-wait-detection'
+import { buildTerminalWaitText } from '../../terminal-wait-tail-state'
+import {
+  evaluateTuiIdle,
+  isTuiIdleReadyVerdict,
+  type TuiIdleVerdict
+} from '../../tui-idle-evidence'
+import { leafTuiIdleEvidence, ptyTuiIdleEvidence } from '../../tui-idle-evidence-source'
+import { TUI_IDLE_QUIESCENCE_MS } from '../../orca-runtime-postlude'
 
-export class OrcaRuntimeWithResolveExitWaiters extends OrcaRuntimeWithBindPtyIncarnationHandle {
+import type { OrcaRuntimeWithResolveWaiter } from '../../orca-runtime-resolve-waiter'
+import type { OrcaRuntimeWithDeliverPendingMessages } from '../../orca-runtime-deliver-pending-messages'
+
+export abstract class OrcaRuntimeWithResolveExitWaiters extends OrcaRuntimeWithBindPtyIncarnationHandle {
+  protected abstract resolveWaiter(
+    ...args: Parameters<OrcaRuntimeWithResolveWaiter['resolveWaiter']>
+  ): ReturnType<OrcaRuntimeWithResolveWaiter['resolveWaiter']>
+
+  protected abstract removeWaiter(
+    ...args: Parameters<OrcaRuntimeWithResolveWaiter['removeWaiter']>
+  ): ReturnType<OrcaRuntimeWithResolveWaiter['removeWaiter']>
+
+  protected abstract deliverPendingMessages(
+    ...args: Parameters<OrcaRuntimeWithDeliverPendingMessages['deliverPendingMessages']>
+  ): ReturnType<OrcaRuntimeWithDeliverPendingMessages['deliverPendingMessages']>
+
   protected resolveExitWaiters(leaf: RuntimeLeafRecord): void {
     const handle = this.issueHandle(leaf)
     if (!handle) {
@@ -25,7 +45,7 @@ export class OrcaRuntimeWithResolveExitWaiters extends OrcaRuntimeWithBindPtyInc
     if (!waiters || waiters.size === 0) {
       return
     }
-    for (const waiter of [...waiters]) {
+    for (const waiter of Array.from(waiters)) {
       if (waiter.condition === 'exit') {
         this.resolveWaiter(waiter, buildTerminalWaitResult(handle, 'exit', leaf))
       } else {
@@ -56,7 +76,7 @@ export class OrcaRuntimeWithResolveExitWaiters extends OrcaRuntimeWithBindPtyInc
     // title sample. Weak ready (a name-only title, #6011) cannot see a dialog the tail lost,
     // so it is left to the poll, which settles it only after a rendered-screen read.
     const verdict = this.evaluateTuiIdleForLeaf(leaf)
-    for (const waiter of [...waiters]) {
+    for (const waiter of Array.from(waiters)) {
       if (waiter.condition !== 'tui-idle') {
         continue
       }
@@ -80,7 +100,7 @@ export class OrcaRuntimeWithResolveExitWaiters extends OrcaRuntimeWithBindPtyInc
     if (!waiters || waiters.size === 0) {
       return
     }
-    for (const waiter of [...waiters]) {
+    for (const waiter of Array.from(waiters)) {
       if (waiter.condition === 'exit') {
         this.resolveWaiter(waiter, buildPtyTerminalWaitResult(handle, 'exit', pty))
       } else {
@@ -101,7 +121,7 @@ export class OrcaRuntimeWithResolveExitWaiters extends OrcaRuntimeWithBindPtyInc
     }
     // Why: same re-ranking as resolveTuiIdleWaiters above.
     const verdict = this.evaluateTuiIdleForPty(pty)
-    for (const waiter of [...waiters]) {
+    for (const waiter of Array.from(waiters)) {
       if (waiter.condition !== 'tui-idle') {
         continue
       }

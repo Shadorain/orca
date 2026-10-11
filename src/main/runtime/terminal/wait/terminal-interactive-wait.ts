@@ -1,39 +1,72 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { resolveStructuredWorkerAuthority } from './structured-worker-authority'
-import { OrcaRuntimeWithAdoptTerminalOrphansFromInventory } from './orca-runtime-adopt-terminal-orphans-from-inventory'
+import { resolveStructuredWorkerAuthority } from '../../structured-worker-authority'
+import { OrcaRuntimeWithAdoptTerminalOrphansFromInventory } from '../../orca-runtime-adopt-terminal-orphans-from-inventory'
 import type {
   RuntimeTerminalAgentStatus,
-  RuntimeTerminalInteractiveWait
-} from '../../shared/runtime-types'
-import type { RuntimeTerminalAgentStatusSnapshot } from './runtime-terminal-agent-status-query'
-import type { AgentStatus } from '../../shared/agent-detection'
-import { withTimeout } from './runtime-async-boundaries'
-import { TERMINAL_INTERACTIVE_WAIT_PROBE_TIMEOUT_MS } from './orca-runtime-core'
-import { parsePaneKey } from '../../shared/stable-pane-id'
-import type { ExactWorkerProviderSession } from '../../shared/orchestration-worker-output'
-import { selectExactWorkerProviderSession } from './orchestration/worker-provider-session'
-import type { TuiAgent } from '../../shared/tui-agent'
-import { isTuiAgentEnabled } from '../../shared/tui-agent-selection'
-import { OrchestrationError } from './orchestration/orchestration-error'
-import { resolveLocalWindowsAgentStartupShell } from '../../shared/windows-terminal-shell'
-import { resolveStartupShell, type AgentStartupShell } from '../../shared/tui-agent-startup-shell'
-import { isTuiAgent } from '../../shared/tui-agent-config'
-import { resolveConfiguredWorkerAgent } from './orchestration/configured-worker-agent-selector'
-import { parseWslUncPath } from '../../shared/wsl-paths'
-import { resolveLocalProjectRuntimeForRepo } from '../project-runtime-git-options'
+  RuntimeTerminalInteractiveWait,
+  RuntimeTerminalWaitBlockedReason
+} from '../../../../shared/runtime-terminal-contracts'
+import type { RuntimeTerminalAgentStatusSnapshot } from '../../runtime-terminal-agent-status-query'
+import type {
+  TerminalWaitPermissionInputs,
+  TerminalWaitStatusEvidence
+} from './terminal-wait-permission'
 
-import { prepareOpenCodeModelStartupInputs } from '../opencode/opencode-model-startup-plan'
-import { resolveAgentStartupPlanInputs } from '../../shared/agent-startup-plan-inputs'
+import type { AgentLaunchScope } from '../../orca-runtime-restore-structured-agent-session-tabs-once'
+import { withTimeout } from '../../runtime-async-boundaries'
+import { TERMINAL_INTERACTIVE_WAIT_PROBE_TIMEOUT_MS } from '../../orca-runtime-core'
+import { parsePaneKey } from '../../../../shared/stable-pane-id'
+import type { ExactWorkerProviderSession } from '../../../../shared/orchestration-worker-output'
+import { selectExactWorkerProviderSession } from '../../orchestration/worker-provider-session'
+import type { TuiAgent } from '../../../../shared/tui-agent'
+import { isTuiAgentEnabled } from '../../../../shared/tui-agent-selection'
+import { OrchestrationError } from '../../orchestration/orchestration-error'
+import { resolveLocalWindowsAgentStartupShell } from '../../../../shared/windows-terminal-shell'
+import {
+  resolveStartupShell,
+  type AgentStartupShell
+} from '../../../../shared/tui-agent-startup-shell'
+import { isTuiAgent } from '../../../../shared/tui-agent-config'
+import { resolveConfiguredWorkerAgent } from '../../orchestration/configured-worker-agent-selector'
+import { parseWslUncPath } from '../../../../shared/wsl-paths'
+import { resolveLocalProjectRuntimeForRepo } from '../../../project-runtime-git-options'
 
-export class OrcaRuntimeWithGetTerminalInteractiveWait extends OrcaRuntimeWithAdoptTerminalOrphansFromInventory {
+import { prepareOpenCodeModelStartupInputs } from '../../../opencode/opencode-model-startup-plan'
+import { resolveAgentStartupPlanInputs } from '../../../../shared/agent-startup-plan-inputs'
+
+import type { RuntimePtyWorktreeRecord } from '../../runtime-terminal-state-records'
+
+import type { OrchestrationDb } from '../../orchestration/db/orchestration-db'
+
+export abstract class OrcaRuntimeWithGetTerminalInteractiveWait extends OrcaRuntimeWithAdoptTerminalOrphansFromInventory {
+  protected abstract getTerminalAgentStatusPtyId(handle: string): string
+
+  protected abstract getTerminalWaitPermissionInputs(
+    handle: string,
+    ptyId: string,
+    waitTextOverride?: string
+  ): TerminalWaitPermissionInputs
+
+  protected abstract resolveAuthoritativeTerminalWaitPermission(
+    terminal: RuntimeTerminalAgentStatusSnapshot,
+    explicitStatus: TerminalWaitStatusEvidence,
+    lifecycle: TerminalWaitPermissionInputs['lifecycle']
+  ): RuntimeTerminalWaitBlockedReason | null
+
+  abstract getTerminalAgentStatus(handle: string): Promise<RuntimeTerminalAgentStatus>
+
+  protected abstract getLeafKey(tabId: string, leafId: string): string
+
+  protected abstract getPtyRecordForPaneKey(paneKey: string): RuntimePtyWorktreeRecord | null
+
+  protected abstract getOrchestrationDbIfAvailable(): OrchestrationDb | null
+
+  protected abstract getAgentLaunchPlatformForWorkspace(scope: AgentLaunchScope): NodeJS.Platform
+
   async getTerminalInteractiveWait(
     handle: string
   ): Promise<RuntimeTerminalInteractiveWait | null | undefined> {
     let ptyId: string
-    let inputs: {
-      terminal: RuntimeTerminalAgentStatusSnapshot
-      lifecycle: { status: AgentStatus | null; updatedAt: number } | null | undefined
-    }
+    let inputs: TerminalWaitPermissionInputs
     try {
       ptyId = this.getTerminalAgentStatusPtyId(handle)
       inputs = this.getTerminalWaitPermissionInputs(handle, ptyId)
@@ -98,10 +131,7 @@ export class OrcaRuntimeWithGetTerminalInteractiveWait extends OrcaRuntimeWithAd
     return leaf?.worktreeId ?? this.getPtyRecordForPaneKey(paneKey)?.worktreeId ?? null
   }
 
-  /** Read-only context of the worktree the user is focused on, for plugin
-   *  panels (workspace.readContext). Prefers the persisted session focus and
-   *  falls back to the last-focused pane's worktree; null when neither
-   *  resolves so panels degrade instead of erroring. */
+  // Prefer stored workspace selection, then the current renderer graph.
   async resolveActiveWorktreeContext(): Promise<{
     worktreeId: string
     path: string
@@ -213,9 +243,10 @@ export class OrcaRuntimeWithGetTerminalInteractiveWait extends OrcaRuntimeWithAd
       return selector
     }
     const repo = target.repo ? await this.resolveRepoSelector(target.repo) : null
+    // SAFETY: Forward an absent target unchanged; the existing resolver owns validation.
     const workspace = repo
       ? { repo, path: repo.path, connectionId: repo.connectionId }
-      : await this.resolveTerminalWorkspaceLaunchScope(target.worktree)
+      : await this.resolveTerminalWorkspaceLaunchScope(target.worktree!)
     const platform = this.getAgentLaunchPlatformForWorkspace(workspace)
     const shell = resolveStartupShell(
       platform,
