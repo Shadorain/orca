@@ -27,7 +27,7 @@ import type { ResolvedWorktree } from './runtime-worktree-path-identity'
 import type { Repo } from '../../shared/repo-types'
 
 export abstract class OrcaRuntimeWithFileCommands extends OrcaRuntimeWithPreservedBranchCleanup {
-  protected abstract requireStore(): RuntimeStore
+  abstract requireStore(): RuntimeStore
 
   protected abstract resolveWorktreeSelector(selector: string): Promise<ResolvedWorktree>
 

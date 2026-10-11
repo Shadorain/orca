@@ -1,22 +1,44 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithCloseMobileSessionTab } from './orca-runtime-close-mobile-session-tab'
+import type { OrcaRuntimeWithPruneMobileSessionTabGroupLayout as PruneMobileSessionTabGroupLayoutMethods } from '../orca-runtime-prune-mobile-session-tab-group-layout'
+import type { OrcaRuntimeWithScheduleMobileSessionTabsChanged as ScheduleMobileSessionTabsChangedMethods } from '../orca-runtime-schedule-mobile-session-tabs-changed'
+import type { RuntimeHeadlessTabGroups as HeadlessTabGroupsMethods } from './headless-tab-group-moves'
+import { OrcaRuntimeWithCloseMobileSessionTab } from '../orca-runtime-close-mobile-session-tab'
 import type {
   RuntimeMobileSessionAgentTab,
   RuntimeMobileSessionBrowserTab,
   RuntimeMobileSessionRetiredTerminalSurface,
   RuntimeMobileSessionTabsSnapshot,
   RuntimeMobileSessionTerminalTab
-} from '../../shared/runtime-types'
-import type { RuntimePtyWorktreeRecord } from './runtime-terminal-state-records'
-import { getMobileSessionSnapshotTabIdentityKeys } from './mobile-session-tab-merge'
-import type { BrowserSessionTabSelectionOptions } from './browser-tab-create-publication'
-import { getRuntimeBrowserPageRegistry } from './runtime-browser-page-registry'
-import { applyBrowserSessionTabSelection } from './browser-session-tab-selection-snapshot'
-import { getStructuredAgentSessionHost } from '../native-chat/agent-session-wire/structured-agent-session-registry'
-import type { StructuredAgentSessionCloseCause } from '../native-chat/agent-session-wire/structured-agent-session-host-lifetime'
-import { retireStructuredAgentSessionTabFrom } from './structured-agent-session-tab-retirement'
+} from '../../../shared/runtime-types'
+import type { RuntimePtyWorktreeRecord } from '../runtime-terminal-state-records'
+import { getMobileSessionSnapshotTabIdentityKeys } from '../mobile-session-tab-merge'
+import type { BrowserSessionTabSelectionOptions } from '../browser-tab-create-publication'
+import { getRuntimeBrowserPageRegistry } from '../runtime-browser-page-registry'
+import { applyBrowserSessionTabSelection } from '../browser-session-tab-selection-snapshot'
+import { getStructuredAgentSessionHost } from '../../native-chat/agent-session-wire/structured-agent-session-registry'
+import type { StructuredAgentSessionCloseCause } from '../../native-chat/agent-session-wire/structured-agent-session-host-lifetime'
+import { retireStructuredAgentSessionTabFrom } from '../structured-agent-session-tab-retirement'
 
-export class OrcaRuntimeWithCloseStructuredAgentSessionTab extends OrcaRuntimeWithCloseMobileSessionTab {
+export abstract class OrcaRuntimeWithCloseStructuredAgentSessionTab extends OrcaRuntimeWithCloseMobileSessionTab {
+  protected abstract findPtyForMobileTerminalTab(
+    ...args: Parameters<PruneMobileSessionTabGroupLayoutMethods['findPtyForMobileTerminalTab']>
+  ): ReturnType<PruneMobileSessionTabGroupLayoutMethods['findPtyForMobileTerminalTab']>
+
+  protected abstract getLiveBrowserTabsByPageId(
+    ...args: Parameters<ScheduleMobileSessionTabsChangedMethods['getLiveBrowserTabsByPageId']>
+  ): ReturnType<ScheduleMobileSessionTabsChangedMethods['getLiveBrowserTabsByPageId']>
+
+  protected abstract getMobileTerminalLeafPtyIds(
+    ...args: Parameters<PruneMobileSessionTabGroupLayoutMethods['getMobileTerminalLeafPtyIds']>
+  ): ReturnType<PruneMobileSessionTabGroupLayoutMethods['getMobileTerminalLeafPtyIds']>
+
+  protected abstract getMobileTerminalPaneKey(
+    ...args: Parameters<PruneMobileSessionTabGroupLayoutMethods['getMobileTerminalPaneKey']>
+  ): ReturnType<PruneMobileSessionTabGroupLayoutMethods['getMobileTerminalPaneKey']>
+
+  protected abstract persistHeadlessTabGroups(
+    ...args: Parameters<HeadlessTabGroupsMethods['persistHeadlessTabGroups']>
+  ): ReturnType<HeadlessTabGroupsMethods['persistHeadlessTabGroups']>
+
   protected async closeStructuredAgentSessionTab(
     tab: RuntimeMobileSessionAgentTab,
     cause: StructuredAgentSessionCloseCause

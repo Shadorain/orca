@@ -1,35 +1,43 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { agentSessionRefusalError } from '../../shared/agent-session-wire-refusals'
-import { OrcaRuntimeWithGetWorktreePs } from './orca-runtime-get-worktree-ps'
-import { getStructuredAgentSessionHost } from '../native-chat/agent-session-wire/structured-agent-session-registry'
+import type { OrcaRuntimeWithRestoreStructuredAgentSessionTabsOnce as RestoreStructuredAgentSessionTabsOnceMethods } from './structured-session-tab-restoration'
+import { agentSessionRefusalError } from '../../../shared/agent-session-wire-refusals'
+import { OrcaRuntimeWithGetWorktreePs } from '../orca-runtime-get-worktree-ps'
+import { getStructuredAgentSessionHost } from '../../native-chat/agent-session-wire/structured-agent-session-registry'
 import {
   resolveCommittedStructuredAgentSessionAdoptionIntent,
   resolveStructuredAgentSessionAdoptionForCreate
-} from './structured-agent-session-create-adoption'
-import { isNativeLocalLocation, LOCAL_EXECUTION_HOST_ID } from '../../shared/execution-host'
-import { getLocalProjectWorktreeGitOptions } from '../project-runtime-git-options'
-import type { AgentSessionAttachParams } from '../native-chat/agent-session-wire/structured-agent-session-attach'
-import { resolveTuiAgentLaunchEnv } from '../../shared/tui-agent-launch-defaults'
-import { resolveHostStructuredAgentCreateSupport } from './structured-agent-launch-support'
-import { structuredAgentRuntimeRegistration } from './structured-agent-runtime-registrations'
-import { structuredLaunchSeedOptions } from '../../shared/native-chat-session-option-defaults'
-import { hasPersistedStructuredAgentSessionStore as hasPersistedStructuredAgentSessionStoreOnDisk } from './structured-agent-session-runtime'
-import { ensureStructuredAgentSessionHostUnlessRefused } from './structured-agent-session-host-refusal'
-import { getProfileUserDataPath } from '../orca-profiles/profile-storage-paths'
-import { parseWslUncPath } from '../../shared/wsl-paths'
+} from '../structured-agent-session-create-adoption'
+import { isNativeLocalLocation, LOCAL_EXECUTION_HOST_ID } from '../../../shared/execution-host'
+import { getLocalProjectWorktreeGitOptions } from '../../project-runtime-git-options'
+import type { AgentSessionAttachParams } from '../../native-chat/agent-session-wire/structured-agent-session-attach'
+import { resolveTuiAgentLaunchEnv } from '../../../shared/tui-agent-launch-defaults'
+import { resolveHostStructuredAgentCreateSupport } from '../structured-agent-launch-support'
+import { structuredAgentRuntimeRegistration } from '../structured-agent-runtime-registrations'
+import { structuredLaunchSeedOptions } from '../../../shared/native-chat-session-option-defaults'
+import { hasPersistedStructuredAgentSessionStore as hasPersistedStructuredAgentSessionStoreOnDisk } from '../structured-agent-session-runtime'
+import { ensureStructuredAgentSessionHostUnlessRefused } from '../structured-agent-session-host-refusal'
+import { getProfileUserDataPath } from '../../orca-profiles/profile-storage-paths'
+import { parseWslUncPath } from '../../../shared/wsl-paths'
 import {
   isFloatingWorkspaceId,
   isFloatingWorkspaceSelector
-} from '../../shared/floating-workspace-worktree'
-import { parseWorkspaceKey } from '../../shared/workspace-scope'
+} from '../../../shared/floating-workspace-worktree'
+import { parseWorkspaceKey } from '../../../shared/workspace-scope'
 import {
   isLegacyAgentSessionAccountHome,
   type AgentSessionAccountHome
-} from '../../shared/agent-session-account-home'
-import type { StructuredAgentId } from '../../shared/agent-session-provider-handle'
-import { agentSessionWireProviderHandle } from '../../shared/agent-session-provider-handle-encoding'
+} from '../../../shared/agent-session-account-home'
+import type { StructuredAgentId } from '../../../shared/agent-session-provider-handle'
+import { agentSessionWireProviderHandle } from '../../../shared/agent-session-provider-handle-encoding'
 
-export class OrcaRuntimeWithGetStructuredAgentSessionCreateSupport extends OrcaRuntimeWithGetWorktreePs {
+export abstract class OrcaRuntimeWithGetStructuredAgentSessionCreateSupport extends OrcaRuntimeWithGetWorktreePs {
+  protected abstract restoreStructuredAgentSessionTabsOnce(
+    ...args: Parameters<
+      RestoreStructuredAgentSessionTabsOnceMethods['restoreStructuredAgentSessionTabsOnce']
+    >
+  ): ReturnType<
+    RestoreStructuredAgentSessionTabsOnceMethods['restoreStructuredAgentSessionTabsOnce']
+  >
+
   async getStructuredAgentSessionCreateSupport(
     worktreeSelector: string,
     agent: StructuredAgentId
@@ -272,7 +280,7 @@ export class OrcaRuntimeWithGetStructuredAgentSessionCreateSupport extends OrcaR
                 transport: definition.handleTransport,
                 agent: definition.agent,
                 nativeId: input.resumeFrom.providerSessionId
-              }),
+              })!,
               transcriptPath: adoption.transcriptPath
             }
           }

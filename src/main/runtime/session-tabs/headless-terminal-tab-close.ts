@@ -1,19 +1,58 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithCloseStructuredAgentSessionTab } from './orca-runtime-close-structured-agent-session-tab'
+import type { RuntimeHeadlessTabProperties as HeadlessTabPropertiesMethods } from './headless-tab-properties'
+import type { RuntimeHeadlessTabGroups as HeadlessTabGroupsMethods } from './headless-tab-group-moves'
+import type { OrcaRuntimeWithPersistHeadlessTerminalTitle as PersistHeadlessTerminalTitleMethods } from '../orca-runtime-persist-headless-terminal-title'
+import type { OrcaRuntimeWithRestoreLivePairedRendererSessionOwnedMobileTerminals as RestoreLivePairedRendererSessionOwnedMobileTerminalsMethods } from './renderer-session-terminal-rescue'
+import { OrcaRuntimeWithCloseStructuredAgentSessionTab } from './structured-session-tab-close'
 import type {
   RuntimeMobileSessionTabMove,
   RuntimeMobileSessionTabMoveResult,
   RuntimeMobileSessionTabsSnapshot,
   RuntimeMobileSessionTerminalTab
-} from '../../shared/runtime-types'
-import { parseAppSshPtyId } from '../../shared/ssh-pty-id'
-import { buildHeadlessMobileSessionTabGroups } from './mobile-session-layout-projection'
-import { appendRetiredTerminalSurfaceProofs } from './mobile-session-terminal-retirement-proof'
-import type { RuntimePtyWorktreeRecord } from './runtime-terminal-state-records'
-import type { TerminalPaneLayoutNode } from '../../shared/terminal-tab-types'
-import type { RuntimeSessionTabCloseReason } from '../../shared/runtime-session-contracts'
+} from '../../../shared/runtime-types'
+import { parseAppSshPtyId } from '../../../shared/ssh-pty-id'
+import { buildHeadlessMobileSessionTabGroups } from '../mobile-session-layout-projection'
+import { appendRetiredTerminalSurfaceProofs } from '../mobile-session-terminal-retirement-proof'
+import type { RuntimePtyWorktreeRecord } from '../runtime-terminal-state-records'
+import type { TerminalPaneLayoutNode } from '../../../shared/terminal-tab-types'
+import type { RuntimeSessionTabCloseReason } from '../../../shared/runtime-session-contracts'
 
-export class OrcaRuntimeWithCloseHeadlessMobileTerminalTab extends OrcaRuntimeWithCloseStructuredAgentSessionTab {
+export abstract class OrcaRuntimeWithCloseHeadlessMobileTerminalTab extends OrcaRuntimeWithCloseStructuredAgentSessionTab {
+  protected abstract applyHeadlessSessionTabPropsToSnapshot(
+    ...args: Parameters<HeadlessTabPropertiesMethods['applyHeadlessSessionTabPropsToSnapshot']>
+  ): ReturnType<HeadlessTabPropertiesMethods['applyHeadlessSessionTabPropsToSnapshot']>
+
+  protected abstract applyHeadlessTerminalPaneLayoutToSnapshot(
+    ...args: Parameters<HeadlessTabPropertiesMethods['applyHeadlessTerminalPaneLayoutToSnapshot']>
+  ): ReturnType<HeadlessTabPropertiesMethods['applyHeadlessTerminalPaneLayoutToSnapshot']>
+
+  protected abstract moveHeadlessMobileSessionTab(
+    ...args: Parameters<HeadlessTabGroupsMethods['moveHeadlessMobileSessionTab']>
+  ): ReturnType<HeadlessTabGroupsMethods['moveHeadlessMobileSessionTab']>
+
+  protected abstract normalizeMobileSessionTabOrder(
+    ...args: Parameters<PersistHeadlessTerminalTitleMethods['normalizeMobileSessionTabOrder']>
+  ): ReturnType<PersistHeadlessTerminalTitleMethods['normalizeMobileSessionTabOrder']>
+
+  protected abstract persistHeadlessSessionTabProps(
+    ...args: Parameters<HeadlessTabPropertiesMethods['persistHeadlessSessionTabProps']>
+  ): ReturnType<HeadlessTabPropertiesMethods['persistHeadlessSessionTabProps']>
+
+  protected abstract persistHeadlessTerminalPaneLayout(
+    ...args: Parameters<HeadlessTabPropertiesMethods['persistHeadlessTerminalPaneLayout']>
+  ): ReturnType<HeadlessTabPropertiesMethods['persistHeadlessTerminalPaneLayout']>
+
+  protected abstract resolveMobileSessionHostTabId(
+    ...args: Parameters<PersistHeadlessTerminalTitleMethods['resolveMobileSessionHostTabId']>
+  ): ReturnType<PersistHeadlessTerminalTitleMethods['resolveMobileSessionHostTabId']>
+
+  protected abstract setPairedRendererSessionOwnership(
+    ...args: Parameters<
+      RestoreLivePairedRendererSessionOwnedMobileTerminalsMethods['setPairedRendererSessionOwnership']
+    >
+  ): ReturnType<
+    RestoreLivePairedRendererSessionOwnedMobileTerminalsMethods['setPairedRendererSessionOwnership']
+  >
+
   protected async closeHeadlessMobileTerminalTab(
     worktreeId: string,
     snapshot: RuntimeMobileSessionTabsSnapshot,

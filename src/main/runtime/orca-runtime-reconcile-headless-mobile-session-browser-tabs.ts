@@ -1,5 +1,5 @@
 // @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithHydrateHeadlessMobileSessionTabsFromWorkspaceSession } from './orca-runtime-hydrate-headless-mobile-session-tabs-from-workspace-session'
+import { OrcaRuntimeWithHydrateHeadlessMobileSessionTabsFromWorkspaceSession } from './session-tabs/mobile-session-hydration'
 import type {
   RuntimeMobileSessionBrowserTab,
   RuntimeMobileSessionSnapshotTab,

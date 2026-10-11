@@ -1,35 +1,97 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
+import type { OrcaRuntimeWithBuildHeadlessMobileSessionBrowserTabs as BuildHeadlessMobileSessionBrowserTabsMethods } from '../orca-runtime-build-headless-mobile-session-browser-tabs'
+import type { OrcaRuntimeWithStoredMobileSnapshotHasStalePreservedTab as StoredMobileSnapshotHasStalePreservedTabMethods } from './mobile-session-publication-preservation'
+import type { OrcaRuntimeWithReconcileHeadlessMobileSessionBrowserTabs as ReconcileHeadlessMobileSessionBrowserTabsMethods } from '../orca-runtime-reconcile-headless-mobile-session-browser-tabs'
 import type { BrowserWindow } from 'electron'
-import { RuntimeSessionTabsInventoryPublication } from './session-tabs/session-tabs-inventory-publication'
-import type { WorkspaceSessionState } from '../../shared/workspace-session-state-types'
-import { getRuntimeBrowserPageRegistry } from './runtime-browser-page-registry'
-import { splitWorktreeIdForFilesystem } from '../../shared/worktree/id'
-import { buildHeadlessMobileSessionTerminalTabs } from './mobile-session-terminal-projection'
-import { buildHeadlessMobileSessionEditorTabs } from './mobile-session-editor-projection'
+import { RuntimeSessionTabsInventoryPublication } from './session-tabs-inventory-publication'
+import type { WorkspaceSessionState } from '../../../shared/workspace-session-state-types'
+import { getRuntimeBrowserPageRegistry } from '../runtime-browser-page-registry'
+import { splitWorktreeIdForFilesystem } from '../../../shared/worktree/id'
+import { buildHeadlessMobileSessionTerminalTabs } from '../mobile-session-terminal-projection'
+import { buildHeadlessMobileSessionEditorTabs } from '../mobile-session-editor-projection'
 import type {
   RuntimeMobileSessionSnapshotTab,
   RuntimeMobileSessionTabGroup,
   RuntimeMobileSessionTabsSnapshot,
   RuntimeMobileSessionTerminalTab
-} from '../../shared/runtime-types'
+} from '../../../shared/runtime-types'
 import {
   collectHeadlessParentTabOrder,
   distributeHeadlessTabsAcrossGroups,
   getHeadlessMobileSessionGroupId,
   pickHeadlessActiveTerminalTab,
   pickRestoredActiveGroupId
-} from './mobile-session-layout-projection'
+} from '../mobile-session-layout-projection'
 import {
   mergeMobileSessionSnapshotTabs,
   mergeMobileSessionTabGroups
-} from './mobile-session-tab-merge'
+} from '../mobile-session-tab-merge'
 import {
   appendBrowserTabOrder,
   collectBrowserGroupAssignment
-} from './mobile-session-browser-group-projection'
-import { headlessMobileSnapshotContentUnchanged } from './mobile-session-snapshot-equality'
+} from '../mobile-session-browser-group-projection'
+import { headlessMobileSnapshotContentUnchanged } from '../mobile-session-snapshot-equality'
 
 export abstract class OrcaRuntimeWithHydrateHeadlessMobileSessionTabsFromWorkspaceSession extends RuntimeSessionTabsInventoryPublication {
+  protected abstract buildHeadlessMobileSessionBrowserTabs(
+    ...args: Parameters<
+      BuildHeadlessMobileSessionBrowserTabsMethods['buildHeadlessMobileSessionBrowserTabs']
+    >
+  ): ReturnType<
+    BuildHeadlessMobileSessionBrowserTabsMethods['buildHeadlessMobileSessionBrowserTabs']
+  >
+
+  protected abstract getMergedMobileSessionPublicationEpoch(
+    ...args: Parameters<
+      StoredMobileSnapshotHasStalePreservedTabMethods['getMergedMobileSessionPublicationEpoch']
+    >
+  ): ReturnType<
+    StoredMobileSnapshotHasStalePreservedTabMethods['getMergedMobileSessionPublicationEpoch']
+  >
+
+  protected abstract hasRecentExpiredSshLeasePane(
+    ...args: Parameters<
+      ReconcileHeadlessMobileSessionBrowserTabsMethods['hasRecentExpiredSshLeasePane']
+    >
+  ): ReturnType<ReconcileHeadlessMobileSessionBrowserTabsMethods['hasRecentExpiredSshLeasePane']>
+
+  protected abstract hasServeOrSshOwnedBinding(
+    ...args: Parameters<
+      ReconcileHeadlessMobileSessionBrowserTabsMethods['hasServeOrSshOwnedBinding']
+    >
+  ): ReturnType<ReconcileHeadlessMobileSessionBrowserTabsMethods['hasServeOrSshOwnedBinding']>
+
+  protected abstract isHeadlessBuiltMobileSessionPublicationBase(
+    ...args: Parameters<
+      StoredMobileSnapshotHasStalePreservedTabMethods['isHeadlessBuiltMobileSessionPublicationBase']
+    >
+  ): ReturnType<
+    StoredMobileSnapshotHasStalePreservedTabMethods['isHeadlessBuiltMobileSessionPublicationBase']
+  >
+
+  protected abstract reconcileHeadlessMobileSessionBrowserTabs(
+    ...args: Parameters<
+      ReconcileHeadlessMobileSessionBrowserTabsMethods['reconcileHeadlessMobileSessionBrowserTabs']
+    >
+  ): ReturnType<
+    ReconcileHeadlessMobileSessionBrowserTabsMethods['reconcileHeadlessMobileSessionBrowserTabs']
+  >
+
+  protected abstract workspaceSessionHasRuntimeOwnedPtyCandidate(
+    ...args: Parameters<
+      ReconcileHeadlessMobileSessionBrowserTabsMethods['workspaceSessionHasRuntimeOwnedPtyCandidate']
+    >
+  ): ReturnType<
+    ReconcileHeadlessMobileSessionBrowserTabsMethods['workspaceSessionHasRuntimeOwnedPtyCandidate']
+  >
+
+  protected abstract workspaceSessionWorktreeHasRuntimeOwnedPtyCandidate(
+    ...args: Parameters<
+      ReconcileHeadlessMobileSessionBrowserTabsMethods['workspaceSessionWorktreeHasRuntimeOwnedPtyCandidate']
+    >
+  ): ReturnType<
+    ReconcileHeadlessMobileSessionBrowserTabsMethods['workspaceSessionWorktreeHasRuntimeOwnedPtyCandidate']
+  >
+
   protected abstract getAvailableAuthoritativeWindow(): BrowserWindow | null
 
   protected hydrateHeadlessMobileSessionTabsFromWorkspaceSession(

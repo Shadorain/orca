@@ -186,7 +186,7 @@ export abstract class RuntimeWorkspaceSelectors extends OrcaRuntimeWithResolveBr
     throw new Error('repo_not_found')
   }
 
-  protected requireStore(): RuntimeStore {
+  requireStore(): RuntimeStore {
     if (!this.store) {
       throw new Error('runtime_unavailable')
     }

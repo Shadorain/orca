@@ -1,14 +1,13 @@
 /* eslint-disable unicorn/no-useless-spread */
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithAttachWindow } from './orca-runtime-attach-window'
+import { OrcaRuntimeWithAttachWindow } from './session-graph-promotion'
 import type {
   RuntimeRendererSyncWindowGraph,
   RuntimeSyncedTab,
   RuntimeSyncWindowGraph,
   RuntimeSyncWindowGraphResult
-} from '../../shared/runtime-types'
-import { HEADLESS_RUNTIME_WINDOW_ID } from '../../shared/runtime-types'
-import type { RuntimeLeafRecord } from './runtime-terminal-state-records'
+} from '../../../shared/runtime-types'
+import { HEADLESS_RUNTIME_WINDOW_ID } from '../../../shared/runtime-types'
+import type { RuntimeLeafRecord } from '../runtime-terminal-state-records'
 
 /** The runtime indexes graph tabs by bare id, so duplicate ids cannot be routed safely. */
 function assertUniqueRuntimeGraphTabIds(tabs: readonly RuntimeSyncedTab[]): void {
@@ -21,7 +20,7 @@ function assertUniqueRuntimeGraphTabIds(tabs: readonly RuntimeSyncedTab[]): void
   }
 }
 
-export class OrcaRuntimeWithSyncWindowGraph extends OrcaRuntimeWithAttachWindow {
+export abstract class OrcaRuntimeWithSyncWindowGraph extends OrcaRuntimeWithAttachWindow {
   shouldRelayTerminalBrowserOpens(): boolean {
     return this.authoritativeWindowId === HEADLESS_RUNTIME_WINDOW_ID
   }

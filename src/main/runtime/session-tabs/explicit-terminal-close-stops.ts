@@ -1,18 +1,17 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithFocusTerminal } from './orca-runtime-focus-terminal'
-import { EXPLICIT_TERMINAL_CLOSE_STOP_TIMEOUT_MS } from './orca-runtime-core'
-import { SSH_PROVIDER_UNREGISTERED_REASON } from '../../shared/pty-liveness-verdict'
-import type { RuntimeTerminalClose } from '../../shared/runtime-types'
-import type { RuntimePtyTabCloseAuthority } from './runtime-terminal-state-records'
-import { parsePaneKey } from '../../shared/stable-pane-id'
-import { errorMessage } from '../../shared/error-message'
+import { OrcaRuntimeWithFocusTerminal } from '../orca-runtime-focus-terminal'
+import { EXPLICIT_TERMINAL_CLOSE_STOP_TIMEOUT_MS } from '../orca-runtime-core'
+import { SSH_PROVIDER_UNREGISTERED_REASON } from '../../../shared/pty-liveness-verdict'
+import type { RuntimeTerminalClose } from '../../../shared/runtime-types'
+import type { RuntimePtyTabCloseAuthority } from '../runtime-terminal-state-records'
+import { parsePaneKey } from '../../../shared/stable-pane-id'
+import { errorMessage } from '../../../shared/error-message'
 
 /** How an explicit close's stop of its addressed PTY ended. */
 type ExplicitCloseStop = { stopped: boolean }
 
 const NO_STOP: ExplicitCloseStop = { stopped: false }
 
-export class OrcaRuntimeWithStopExplicitlyClosedTabPtys extends OrcaRuntimeWithFocusTerminal {
+export abstract class OrcaRuntimeWithStopExplicitlyClosedTabPtys extends OrcaRuntimeWithFocusTerminal {
   protected async stopExplicitlyClosedTabPtys(
     ptyIds: readonly string[],
     addressedPtyId: string

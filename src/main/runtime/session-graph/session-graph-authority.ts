@@ -1,23 +1,31 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithHasTerminalsForWorktree } from './orca-runtime-has-terminals-for-worktree'
-import { HEADLESS_RUNTIME_WINDOW_ID } from '../../shared/runtime-types'
-import type { FolderWorkspace } from '../../shared/folder-workspace-types'
+import type { OrcaRuntimeWithResolveBrowserNetworkExecutionHostForWorktree as ResolveBrowserNetworkExecutionHostForWorktreeMethods } from '../orca-runtime-resolve-browser-network-execution-host-for-worktree'
+import { OrcaRuntimeWithHasTerminalsForWorktree } from './session-graph-reload-lifecycle'
+import { HEADLESS_RUNTIME_WINDOW_ID } from '../../../shared/runtime-types'
+import type { FolderWorkspace } from '../../../shared/folder-workspace-types'
 import {
   assertFolderWorkspacePathUsable,
   getFolderWorkspacePathStatus,
   inferFolderWorkspacePathConnection
-} from '../project-groups/folder-workspace-path-status'
-import type { TerminalWorkspaceLaunchScope } from './runtime-legacy-worker-terminal-recovery-types'
-import { folderWorkspaceKey, parseWorkspaceKey } from '../../shared/workspace-scope'
-import type { ResolvedWorktree } from './runtime-worktree-path-identity'
-import type { BrowserExecutionHostKeyResolution } from './runtime-browser-client-page-adoption'
-import { browserNetworkExecutionHostKey } from '../browser/browser-network-execution-route'
-import type { ClientHostedBrowserRpcRoute } from './runtime-browser-client-automation'
-import { routeRuntimeBrowserClientAutomation } from './runtime-browser-client-automation'
-import { getRuntimeBrowserPageRegistry } from './runtime-browser-page-registry'
-import { getBrowserHostLeaseRegistry } from './browser-host-lease-registry-instance'
+} from '../../project-groups/folder-workspace-path-status'
+import type { TerminalWorkspaceLaunchScope } from '../runtime-legacy-worker-terminal-recovery-types'
+import { folderWorkspaceKey, parseWorkspaceKey } from '../../../shared/workspace-scope'
+import type { ResolvedWorktree } from '../runtime-worktree-path-identity'
+import type { BrowserExecutionHostKeyResolution } from '../runtime-browser-client-page-adoption'
+import { browserNetworkExecutionHostKey } from '../../browser/browser-network-execution-route'
+import type { ClientHostedBrowserRpcRoute } from '../runtime-browser-client-automation'
+import { routeRuntimeBrowserClientAutomation } from '../runtime-browser-client-automation'
+import { getRuntimeBrowserPageRegistry } from '../runtime-browser-page-registry'
+import { getBrowserHostLeaseRegistry } from '../browser-host-lease-registry-instance'
 
-export class OrcaRuntimeWithTransitionGraphReloadToTerminalState extends OrcaRuntimeWithHasTerminalsForWorktree {
+export abstract class OrcaRuntimeWithTransitionGraphReloadToTerminalState extends OrcaRuntimeWithHasTerminalsForWorktree {
+  protected abstract resolveBrowserNetworkExecutionHostForWorktree(
+    ...args: Parameters<
+      ResolveBrowserNetworkExecutionHostForWorktreeMethods['resolveBrowserNetworkExecutionHostForWorktree']
+    >
+  ): ReturnType<
+    ResolveBrowserNetworkExecutionHostForWorktreeMethods['resolveBrowserNetworkExecutionHostForWorktree']
+  >
+
   protected transitionGraphReloadToTerminalState(windowId: number): void {
     if (this.shouldRestoreHeadlessGraph(windowId)) {
       this.restoreHeadlessGraphAuthority()

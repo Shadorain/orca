@@ -1,11 +1,13 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithRefreshPtyWorktreeRecordsWithControllerInventory } from './orca-runtime-refresh-pty-worktree-records-with-controller-inventory'
-import { FLOATING_TERMINAL_WORKTREE_ID } from '../../shared/constants'
-import { indexFloatingSnapshotPtyBindings } from './floating-snapshot-pty-bindings'
-import type { RuntimeLeafRecord, RuntimePtyWorktreeRecord } from './runtime-terminal-state-records'
-import { DISCONNECTED_PTY_RECORD_MAX } from './orca-runtime-postlude'
+import { OrcaRuntimeWithRefreshPtyWorktreeRecordsWithControllerInventory } from '../../orca-runtime-refresh-pty-worktree-records-with-controller-inventory'
+import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../../shared/constants'
+import { indexFloatingSnapshotPtyBindings } from '../../floating-snapshot-pty-bindings'
+import type {
+  RuntimeLeafRecord,
+  RuntimePtyWorktreeRecord
+} from '../../runtime-terminal-state-records'
+import { DISCONNECTED_PTY_RECORD_MAX } from '../../orca-runtime-postlude'
 
-export class OrcaRuntimeWithRefreshFloatingWorkspacePtyLiveness extends OrcaRuntimeWithRefreshPtyWorktreeRecordsWithControllerInventory {
+export abstract class OrcaRuntimeWithRefreshFloatingWorkspacePtyLiveness extends OrcaRuntimeWithRefreshPtyWorktreeRecordsWithControllerInventory {
   protected refreshFloatingWorkspacePtyLiveness(): Set<string> | null {
     const controller = this.ptyController
     if (!controller?.hasPty) {

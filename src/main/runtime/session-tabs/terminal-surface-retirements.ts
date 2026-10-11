@@ -1,14 +1,18 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithTouchMobileSessionTabsForWorktree } from './orca-runtime-touch-mobile-session-tabs-for-worktree'
-import type { RetiredTerminalSurface } from './mobile-session-terminal-retirement'
-import type { RuntimeMobileSessionRetiredTerminalSurface } from '../../shared/runtime-types'
-import { LOCAL_EXECUTION_HOST_ID } from '../../shared/execution-host'
-import { retireTerminalSurfaceFromPersistence } from './mobile-session-terminal-persistence-retirement'
-import { retireTerminalSurfacesFromSnapshot } from './mobile-session-terminal-retirement'
-import { attachRetirementProofsToSnapshot } from './mobile-session-terminal-retirement-proof'
-import { getRepoIdFromWorktreeId } from '../../shared/worktree/id'
+import type { OrcaRuntimeWithBindPtyIncarnationHandle as BindPtyIncarnationHandleMethods } from '../terminal/identity/terminal-handle-bindings'
+import { OrcaRuntimeWithTouchMobileSessionTabsForWorktree } from '../orca-runtime-touch-mobile-session-tabs-for-worktree'
+import type { RetiredTerminalSurface } from '../mobile-session-terminal-retirement'
+import type { RuntimeMobileSessionRetiredTerminalSurface } from '../../../shared/runtime-types'
+import { LOCAL_EXECUTION_HOST_ID } from '../../../shared/execution-host'
+import { retireTerminalSurfaceFromPersistence } from '../mobile-session-terminal-persistence-retirement'
+import { retireTerminalSurfacesFromSnapshot } from '../mobile-session-terminal-retirement'
+import { attachRetirementProofsToSnapshot } from '../mobile-session-terminal-retirement-proof'
+import { getRepoIdFromWorktreeId } from '../../../shared/worktree/id'
 
-export class OrcaRuntimeWithPersistTerminalSurfaceRetirements extends OrcaRuntimeWithTouchMobileSessionTabsForWorktree {
+export abstract class OrcaRuntimeWithPersistTerminalSurfaceRetirements extends OrcaRuntimeWithTouchMobileSessionTabsForWorktree {
+  protected abstract findHandleForPtyRecord(
+    ...args: Parameters<BindPtyIncarnationHandleMethods['findHandleForPtyRecord']>
+  ): ReturnType<BindPtyIncarnationHandleMethods['findHandleForPtyRecord']>
+
   /**
    * Retires each surface in the in-memory session partition of the host that owns its worktree.
    * Why: an SSH pane's durable surface lives in that connection's partition; retiring it
@@ -34,7 +38,8 @@ export class OrcaRuntimeWithPersistTerminalSurfaceRetirements extends OrcaRuntim
         continue
       }
       try {
-        this.store.setWorkspaceSession(next, hostId)
+        // The existing catch handles a missing store setter.
+        this.store!.setWorkspaceSession!(next, hostId)
         accepted.push(surface)
       } catch (error) {
         // Why: the process is gone whether or not the profile admits the write (quit, maintenance).

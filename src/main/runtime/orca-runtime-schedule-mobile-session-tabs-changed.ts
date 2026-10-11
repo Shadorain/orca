@@ -1,5 +1,5 @@
 // @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithStoredMobileSnapshotHasStalePreservedTab } from './orca-runtime-stored-mobile-snapshot-has-stale-preserved-tab'
+import { OrcaRuntimeWithStoredMobileSnapshotHasStalePreservedTab } from './session-tabs/mobile-session-publication-preservation'
 import type {
   BrowserTabInfo,
   RuntimeMobileSessionClientTab,

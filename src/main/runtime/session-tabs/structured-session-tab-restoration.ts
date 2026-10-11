@@ -1,37 +1,41 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { defaultAgentChatLabel } from '../../shared/agent-session-chat-label'
-import { OrcaRuntimeWithGetStructuredAgentSessionCreateSupport } from './orca-runtime-get-structured-agent-session-create-support'
-import { getStructuredAgentSessionHost } from '../native-chat/agent-session-wire/structured-agent-session-registry'
-import { collectSavedStructuredAgentSessionIds } from './saved-structured-agent-session-restoration'
-import { seedStructuredAgentSessionTabIndex } from './structured-agent-session-tab-index-seed'
-import { LOCAL_EXECUTION_HOST_ID } from '../../shared/execution-host'
+import type { OrcaRuntimeWithScheduleMobileSessionTabsChanged as ScheduleMobileSessionTabsChangedMethods } from '../orca-runtime-schedule-mobile-session-tabs-changed'
+import { defaultAgentChatLabel } from '../../../shared/agent-session-chat-label'
+import { OrcaRuntimeWithGetStructuredAgentSessionCreateSupport } from './structured-session-create-support'
+import { getStructuredAgentSessionHost } from '../../native-chat/agent-session-wire/structured-agent-session-registry'
+import { collectSavedStructuredAgentSessionIds } from '../saved-structured-agent-session-restoration'
+import { seedStructuredAgentSessionTabIndex } from '../structured-agent-session-tab-index-seed'
+import { LOCAL_EXECUTION_HOST_ID } from '../../../shared/execution-host'
 import type {
   RuntimeMobileSessionAgentTab,
   RuntimeMobileSessionTabsSnapshot,
   RuntimeRepoSearchRefs
-} from '../../shared/runtime-types'
-import { getHeadlessMobileSessionGroupId } from './mobile-session-layout-projection'
-import { DEFAULT_REPO_SEARCH_REFS_LIMIT } from './orca-runtime-postlude'
-import type { Repo } from '../../shared/repo-types'
-import type { GitAdmissionTier } from '../git/command-runner/git-exec-options'
+} from '../../../shared/runtime-types'
+import { getHeadlessMobileSessionGroupId } from '../mobile-session-layout-projection'
+import { DEFAULT_REPO_SEARCH_REFS_LIMIT } from '../orca-runtime-postlude'
+import type { Repo } from '../../../shared/repo-types'
+import type { GitAdmissionTier } from '../../git/command-runner/git-exec-options'
 import {
   getLocalProjectGhExecOptions,
   resolveLocalProjectRuntimeForRepo,
   type LocalProjectGhExecOptions
-} from '../project-runtime-git-options'
-import { getAgentLaunchPlatformForRepo } from './runtime-agent-launch-resolution'
-import type { TerminalWorkspaceLaunchScope } from './runtime-legacy-worker-terminal-recovery-types'
-import { isWindowsAbsolutePathLike } from '../../shared/cross-platform-path'
-import { isWslUncPath } from '../../shared/wsl-paths'
-import { parseAppSshPtyId } from '../../shared/ssh-pty-id'
-import type { PtyProcessInspection } from '../providers/pty-process-inspection'
-import type { StructuredAgentId } from '../../shared/agent-session-provider-handle'
+} from '../../project-runtime-git-options'
+import { getAgentLaunchPlatformForRepo } from '../runtime-agent-launch-resolution'
+import type { TerminalWorkspaceLaunchScope } from '../runtime-legacy-worker-terminal-recovery-types'
+import { isWindowsAbsolutePathLike } from '../../../shared/cross-platform-path'
+import { isWslUncPath } from '../../../shared/wsl-paths'
+import { parseAppSshPtyId } from '../../../shared/ssh-pty-id'
+import type { PtyProcessInspection } from '../../providers/pty-process-inspection'
+import type { StructuredAgentId } from '../../../shared/agent-session-provider-handle'
 
 export type AgentLaunchScope = Parameters<
   OrcaRuntimeWithRestoreStructuredAgentSessionTabsOnce['getAgentLaunchPlatformForWorkspace']
 >[0]
 
-export class OrcaRuntimeWithRestoreStructuredAgentSessionTabsOnce extends OrcaRuntimeWithGetStructuredAgentSessionCreateSupport {
+export abstract class OrcaRuntimeWithRestoreStructuredAgentSessionTabsOnce extends OrcaRuntimeWithGetStructuredAgentSessionCreateSupport {
+  protected abstract notifyMobileSessionTabSnapshots(
+    ...args: Parameters<ScheduleMobileSessionTabsChangedMethods['notifyMobileSessionTabSnapshots']>
+  ): ReturnType<ScheduleMobileSessionTabsChangedMethods['notifyMobileSessionTabSnapshots']>
+
   protected async restoreStructuredAgentSessionTabsOnce(): Promise<void> {
     await this.prepareStructuredAgentSessionStartupRestoration()
     const host = getStructuredAgentSessionHost()

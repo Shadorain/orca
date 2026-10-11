@@ -1,20 +1,28 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithSyncMobileSessionTabs } from './orca-runtime-sync-mobile-session-tabs'
+import type { OrcaRuntimeWithStoredMobileSnapshotHasStalePreservedTab as StoredMobileSnapshotHasStalePreservedTabMethods } from './mobile-session-publication-preservation'
+import { OrcaRuntimeWithSyncMobileSessionTabs } from './mobile-session-reconciliation'
 import type {
   RuntimeMobileSessionSnapshotTab,
   RuntimeMobileSessionTabGroup,
   RuntimeMobileSessionTabsSnapshot,
   RuntimeMobileSessionTerminalTab
-} from '../../shared/runtime-types'
+} from '../../../shared/runtime-types'
 import {
   getMobileSessionSnapshotTabIdentityKeys,
   mergeMobileSessionSnapshotTabs,
   mergeMobileSessionTabGroups
-} from './mobile-session-tab-merge'
-import { terminalLayoutContainsLeaf } from '../../shared/workspace-session-pane-ownership'
-import { getHeadlessMobileSessionGroupId } from './mobile-session-layout-projection'
+} from '../mobile-session-tab-merge'
+import { terminalLayoutContainsLeaf } from '../../../shared/workspace-session-pane-ownership'
+import { getHeadlessMobileSessionGroupId } from '../mobile-session-layout-projection'
 
-export class OrcaRuntimeWithMergePreservedHeadlessMobileSessionTabs extends OrcaRuntimeWithSyncMobileSessionTabs {
+export abstract class OrcaRuntimeWithMergePreservedHeadlessMobileSessionTabs extends OrcaRuntimeWithSyncMobileSessionTabs {
+  protected abstract collectPreservedHeadlessMobileSessionTabs(
+    ...args: Parameters<
+      StoredMobileSnapshotHasStalePreservedTabMethods['collectPreservedHeadlessMobileSessionTabs']
+    >
+  ): ReturnType<
+    StoredMobileSnapshotHasStalePreservedTabMethods['collectPreservedHeadlessMobileSessionTabs']
+  >
+
   protected mergePreservedHeadlessMobileSessionTabs(
     snapshot: RuntimeMobileSessionTabsSnapshot,
     existing: RuntimeMobileSessionTabsSnapshot | undefined

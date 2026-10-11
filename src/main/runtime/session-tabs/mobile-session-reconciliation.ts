@@ -1,11 +1,44 @@
+import type { OrcaRuntimeWithMergePreservedHeadlessMobileSessionTabs as MergePreservedHeadlessMobileSessionTabsMethods } from './mobile-session-preservation'
+import type { OrcaRuntimeWithStoredMobileSnapshotHasStalePreservedTab as StoredMobileSnapshotHasStalePreservedTabMethods } from './mobile-session-publication-preservation'
 /* eslint-disable unicorn/no-useless-spread */
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithWriteOrchestrationPointerPty } from './orca-runtime-write-orchestration-pointer-pty'
-import type { RuntimeMobileSessionTabsSnapshot } from '../../shared/runtime-types'
-import type { WorkspaceSessionState } from '../../shared/workspace-session-state-types'
-import { getMobileSessionSnapshotTabIdentityKeys } from './mobile-session-tab-merge'
+import { OrcaRuntimeWithWriteOrchestrationPointerPty } from '../orca-runtime-write-orchestration-pointer-pty'
+import type { RuntimeMobileSessionTabsSnapshot } from '../../../shared/runtime-types'
+import type { WorkspaceSessionState } from '../../../shared/workspace-session-state-types'
+import { getMobileSessionSnapshotTabIdentityKeys } from '../mobile-session-tab-merge'
 
-export class OrcaRuntimeWithSyncMobileSessionTabs extends OrcaRuntimeWithWriteOrchestrationPointerPty {
+export abstract class OrcaRuntimeWithSyncMobileSessionTabs extends OrcaRuntimeWithWriteOrchestrationPointerPty {
+  protected abstract buildPreservedHeadlessMobileSessionSnapshot(
+    ...args: Parameters<
+      MergePreservedHeadlessMobileSessionTabsMethods['buildPreservedHeadlessMobileSessionSnapshot']
+    >
+  ): ReturnType<
+    MergePreservedHeadlessMobileSessionTabsMethods['buildPreservedHeadlessMobileSessionSnapshot']
+  >
+
+  protected abstract mergePreservedHeadlessMobileSessionTabs(
+    ...args: Parameters<
+      MergePreservedHeadlessMobileSessionTabsMethods['mergePreservedHeadlessMobileSessionTabs']
+    >
+  ): ReturnType<
+    MergePreservedHeadlessMobileSessionTabsMethods['mergePreservedHeadlessMobileSessionTabs']
+  >
+
+  protected abstract releaseRuntimeSessionOwnershipForRendererRetiredTabs(
+    ...args: Parameters<
+      MergePreservedHeadlessMobileSessionTabsMethods['releaseRuntimeSessionOwnershipForRendererRetiredTabs']
+    >
+  ): ReturnType<
+    MergePreservedHeadlessMobileSessionTabsMethods['releaseRuntimeSessionOwnershipForRendererRetiredTabs']
+  >
+
+  protected abstract storedMobileSnapshotHasStalePreservedTab(
+    ...args: Parameters<
+      StoredMobileSnapshotHasStalePreservedTabMethods['storedMobileSnapshotHasStalePreservedTab']
+    >
+  ): ReturnType<
+    StoredMobileSnapshotHasStalePreservedTabMethods['storedMobileSnapshotHasStalePreservedTab']
+  >
+
   // Returns the worktrees whose stored snapshot object changed during this
   // sync, so the caller can fan out only actually-changed worktrees.
   protected syncMobileSessionTabs(

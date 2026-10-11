@@ -28,7 +28,7 @@ describe('runtime migration catalog capabilities', () => {
   it('re-enters requireStore after checking the captured store capabilities', () => {
     const seen: OrcaRuntimeService[] = []
     class Probe extends OrcaRuntimeService {
-      protected override requireStore(): RuntimeStore {
+      override requireStore(): RuntimeStore {
         seen.push(this)
         return super.requireStore()
       }
@@ -41,7 +41,7 @@ describe('runtime migration catalog capabilities', () => {
   it('retains the native missing-method error on a different returned store', () => {
     const seen: OrcaRuntimeService[] = []
     class Probe extends OrcaRuntimeService {
-      protected override requireStore(): RuntimeStore {
+      override requireStore(): RuntimeStore {
         seen.push(this)
         return store
       }
@@ -54,7 +54,7 @@ describe('runtime migration catalog capabilities', () => {
   it('mutates the returned store before its native missing-flush rejection', async () => {
     const stage = vi.fn(() => staged)
     class Probe extends OrcaRuntimeService {
-      protected override requireStore(): RuntimeStore {
+      override requireStore(): RuntimeStore {
         return { ...store, stageOrcadMigrationCatalog: stage }
       }
     }

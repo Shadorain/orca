@@ -11,7 +11,7 @@ import type {
   TerminalWaitStatusEvidence
 } from './terminal-wait-permission'
 
-import type { AgentLaunchScope } from '../../orca-runtime-restore-structured-agent-session-tabs-once'
+import type { AgentLaunchScope } from '../../session-tabs/structured-session-tab-restoration'
 import { withTimeout } from '../../runtime-async-boundaries'
 import { TERMINAL_INTERACTIVE_WAIT_PROBE_TIMEOUT_MS } from '../../orca-runtime-core'
 import { parsePaneKey } from '../../../../shared/stable-pane-id'

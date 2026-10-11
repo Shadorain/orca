@@ -1,11 +1,82 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithSyncWindowGraph } from './orca-runtime-sync-window-graph'
-import type { RuntimeMobileSessionTabsResult, RuntimeSyncedTab } from '../../shared/runtime-types'
-import type { RuntimeLeafRecord } from './runtime-terminal-state-records'
-import type { PtyControllerInventory } from './runtime-pty-controller-contract'
-import { parseExecutionHostId } from '../../shared/execution-host'
+import type { RuntimeSessionTabsInventoryPublication as SessionTabsInventoryPublicationMethods } from './session-tabs-inventory-publication'
+import type { OrcaRuntimeWithScheduleMobileSessionTabsChanged as ScheduleMobileSessionTabsChangedMethods } from '../orca-runtime-schedule-mobile-session-tabs-changed'
+import type { OrcaRuntimeWithResolveBrowserNetworkExecutionHostForWorktree as ResolveBrowserNetworkExecutionHostForWorktreeMethods } from '../orca-runtime-resolve-browser-network-execution-host-for-worktree'
+import type { OrcaRuntimeWithHydrateHeadlessMobileSessionTabsFromWorkspaceSession as HydrateHeadlessMobileSessionTabsFromWorkspaceSessionMethods } from './mobile-session-hydration'
+import type { OrcaRuntimeWithBuildHeadlessMobileSessionBrowserTabs as BuildHeadlessMobileSessionBrowserTabsMethods } from '../orca-runtime-build-headless-mobile-session-browser-tabs'
+import type { OrcaRuntimeWithRestoreLivePairedRendererSessionOwnedMobileTerminals as RestoreLivePairedRendererSessionOwnedMobileTerminalsMethods } from './renderer-session-terminal-rescue'
+import type { OrcaRuntimeWithPruneMobileSessionTabGroupLayout as PruneMobileSessionTabGroupLayoutMethods } from '../orca-runtime-prune-mobile-session-tab-group-layout'
+import { OrcaRuntimeWithSyncWindowGraph } from '../session-graph/session-window-graph'
+import type {
+  RuntimeMobileSessionTabsResult,
+  RuntimeSyncedTab
+} from '../../../shared/runtime-types'
+import type { RuntimeLeafRecord } from '../runtime-terminal-state-records'
+import type { PtyControllerInventory } from '../runtime-pty-controller-contract'
+import { parseExecutionHostId } from '../../../shared/execution-host'
 
-export class OrcaRuntimeWithCollectMobileVisibleGraphChangedWorktrees extends OrcaRuntimeWithSyncWindowGraph {
+export abstract class OrcaRuntimeWithCollectMobileVisibleGraphChangedWorktrees extends OrcaRuntimeWithSyncWindowGraph {
+  protected abstract getAuthoritativeSessionTabsInventoryEpoch(
+    ...args: Parameters<
+      SessionTabsInventoryPublicationMethods['getAuthoritativeSessionTabsInventoryEpoch']
+    >
+  ): ReturnType<SessionTabsInventoryPublicationMethods['getAuthoritativeSessionTabsInventoryEpoch']>
+
+  protected abstract getMobileSessionTabsForWorktree(
+    ...args: Parameters<ScheduleMobileSessionTabsChangedMethods['getMobileSessionTabsForWorktree']>
+  ): ReturnType<ScheduleMobileSessionTabsChangedMethods['getMobileSessionTabsForWorktree']>
+
+  protected abstract getValidatedExplicitWorktreeIdSelector(
+    ...args: Parameters<
+      ResolveBrowserNetworkExecutionHostForWorktreeMethods['getValidatedExplicitWorktreeIdSelector']
+    >
+  ): ReturnType<
+    ResolveBrowserNetworkExecutionHostForWorktreeMethods['getValidatedExplicitWorktreeIdSelector']
+  >
+
+  protected abstract hydrateHeadlessMobileSessionTabsFromWorkspaceSession(
+    ...args: Parameters<
+      HydrateHeadlessMobileSessionTabsFromWorkspaceSessionMethods['hydrateHeadlessMobileSessionTabsFromWorkspaceSession']
+    >
+  ): ReturnType<
+    HydrateHeadlessMobileSessionTabsFromWorkspaceSessionMethods['hydrateHeadlessMobileSessionTabsFromWorkspaceSession']
+  >
+
+  protected abstract projectMobileSessionTabsForClient(
+    ...args: Parameters<
+      BuildHeadlessMobileSessionBrowserTabsMethods['projectMobileSessionTabsForClient']
+    >
+  ): ReturnType<BuildHeadlessMobileSessionBrowserTabsMethods['projectMobileSessionTabsForClient']>
+
+  protected abstract refreshMobileSessionPtyInventory(
+    ...args: Parameters<
+      BuildHeadlessMobileSessionBrowserTabsMethods['refreshMobileSessionPtyInventory']
+    >
+  ): ReturnType<BuildHeadlessMobileSessionBrowserTabsMethods['refreshMobileSessionPtyInventory']>
+
+  protected abstract refreshMobileSessionPtyRecords(
+    ...args: Parameters<
+      BuildHeadlessMobileSessionBrowserTabsMethods['refreshMobileSessionPtyRecords']
+    >
+  ): ReturnType<BuildHeadlessMobileSessionBrowserTabsMethods['refreshMobileSessionPtyRecords']>
+
+  protected abstract restoreLivePairedRendererSessionOwnedMobileTerminals(
+    ...args: Parameters<
+      RestoreLivePairedRendererSessionOwnedMobileTerminalsMethods['restoreLivePairedRendererSessionOwnedMobileTerminals']
+    >
+  ): ReturnType<
+    RestoreLivePairedRendererSessionOwnedMobileTerminalsMethods['restoreLivePairedRendererSessionOwnedMobileTerminals']
+  >
+
+  protected abstract toMobileSessionTabsResult(
+    ...args: Parameters<PruneMobileSessionTabGroupLayoutMethods['toMobileSessionTabsResult']>
+  ): ReturnType<PruneMobileSessionTabGroupLayoutMethods['toMobileSessionTabsResult']>
+
+  protected abstract waitForSessionTabsInventoryPublication(
+    ...args: Parameters<
+      SessionTabsInventoryPublicationMethods['waitForSessionTabsInventoryPublication']
+    >
+  ): ReturnType<SessionTabsInventoryPublicationMethods['waitForSessionTabsInventoryPublication']>
+
   // Why: toMobileSessionTabsResult resolves handles/titles from this.tabs and
   // this.leaves, so any tab/leaf delta a graph sync installs can flip the
   // client payload (pending-handle → ready, tab title) with zero change to the

@@ -1,11 +1,15 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithWaitForMobileTerminalSurface } from './orca-runtime-wait-for-mobile-terminal-surface'
-import { runtimeWorktreeIdsEqual } from './runtime-worktree-path-identity'
-import { parsePaneKey } from '../../shared/stable-pane-id'
-import type { RuntimePtyWorktreeRecord } from './runtime-terminal-state-records'
-import type { RuntimeMobileSessionCreateTerminalResult } from '../../shared/runtime-types'
+import type { OrcaRuntimeWithWaitForLeafPtyId as WaitForLeafPtyIdMethods } from '../orca-runtime-wait-for-leaf-pty-id'
+import { OrcaRuntimeWithWaitForMobileTerminalSurface } from '../orca-runtime-wait-for-mobile-terminal-surface'
+import { runtimeWorktreeIdsEqual } from '../runtime-worktree-path-identity'
+import { parsePaneKey } from '../../../shared/stable-pane-id'
+import type { RuntimePtyWorktreeRecord } from '../runtime-terminal-state-records'
+import type { RuntimeMobileSessionCreateTerminalResult } from '../../../shared/runtime-types'
 
-export class OrcaRuntimeWithRestoreLivePairedRendererSessionOwnedMobileTerminals extends OrcaRuntimeWithWaitForMobileTerminalSurface {
+export abstract class OrcaRuntimeWithRestoreLivePairedRendererSessionOwnedMobileTerminals extends OrcaRuntimeWithWaitForMobileTerminalSurface {
+  protected abstract resolveHandleForTab(
+    ...args: Parameters<WaitForLeafPtyIdMethods['resolveHandleForTab']>
+  ): ReturnType<WaitForLeafPtyIdMethods['resolveHandleForTab']>
+
   protected restoreLivePairedRendererSessionOwnedMobileTerminals(
     worktreeId: string | null,
     options: { missingSnapshotOnly?: boolean; notify?: boolean } = {}

@@ -1,16 +1,22 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithMergePreservedHeadlessMobileSessionTabs } from './orca-runtime-merge-preserved-headless-mobile-session-tabs'
+import type { OrcaRuntimeWithScheduleMobileSessionTabsChanged as ScheduleMobileSessionTabsChangedMethods } from '../orca-runtime-schedule-mobile-session-tabs-changed'
+import { OrcaRuntimeWithMergePreservedHeadlessMobileSessionTabs } from './mobile-session-preservation'
 import type {
   RuntimeMobileSessionSnapshotTab,
   RuntimeMobileSessionTabsRemovedResult,
   RuntimeMobileSessionTabsSnapshot
-} from '../../shared/runtime-types'
-import { getMobileSessionSnapshotTabIdentityKeys } from './mobile-session-tab-merge'
-import { getRuntimeBrowserPageRegistry } from './runtime-browser-page-registry'
-import { sameRuntimeBrowserPlacement } from '../../shared/runtime-browser-placement'
-import type { ClientHostedBrowserRowsEvent } from '../../shared/client-hosted-browser-rows'
+} from '../../../shared/runtime-types'
+import { getMobileSessionSnapshotTabIdentityKeys } from '../mobile-session-tab-merge'
+import { getRuntimeBrowserPageRegistry } from '../runtime-browser-page-registry'
+import { sameRuntimeBrowserPlacement } from '../../../shared/runtime-browser-placement'
+import type { ClientHostedBrowserRowsEvent } from '../../../shared/client-hosted-browser-rows'
 
-export class OrcaRuntimeWithStoredMobileSnapshotHasStalePreservedTab extends OrcaRuntimeWithMergePreservedHeadlessMobileSessionTabs {
+export abstract class OrcaRuntimeWithStoredMobileSnapshotHasStalePreservedTab extends OrcaRuntimeWithMergePreservedHeadlessMobileSessionTabs {
+  protected abstract notifyMobileSessionTabsChangedNow(
+    ...args: Parameters<
+      ScheduleMobileSessionTabsChangedMethods['notifyMobileSessionTabsChangedNow']
+    >
+  ): ReturnType<ScheduleMobileSessionTabsChangedMethods['notifyMobileSessionTabsChangedNow']>
+
   // Why: the accepted-revision no-op gate must not fossilize preserved runtime
   // tabs. A stored merged snapshot's tabs absent from the accepted renderer
   // publication exist only via preservation; if any such tab no longer

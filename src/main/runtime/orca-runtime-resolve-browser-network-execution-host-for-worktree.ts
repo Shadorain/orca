@@ -1,5 +1,5 @@
 // @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithTransitionGraphReloadToTerminalState } from './orca-runtime-transition-graph-reload-to-terminal-state'
+import { OrcaRuntimeWithTransitionGraphReloadToTerminalState } from './session-graph/session-graph-authority'
 import type { ExecutionHostId } from '../../shared/execution-host'
 import {
   floatingWorkspaceToWorktree,

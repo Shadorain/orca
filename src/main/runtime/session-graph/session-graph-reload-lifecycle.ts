@@ -1,9 +1,59 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithStopExactTerminalsForWorktree } from './orca-runtime-stop-exact-terminals-for-worktree'
-import type { RuntimeRendererReloadFence } from './orca-runtime-core'
-import { HEADLESS_RUNTIME_WINDOW_ID } from '../../shared/runtime-types'
+import type { OrcaRuntimeWithTransitionGraphReloadToTerminalState as TransitionGraphReloadToTerminalStateMethods } from './session-graph-authority'
+import type { OrcaRuntimeWithBindPtyIncarnationHandle as BindPtyIncarnationHandleMethods } from '../terminal/identity/terminal-handle-bindings'
+import type { OrcaRuntimeWithResolveWaiter as ResolveWaiterMethods } from '../orca-runtime-resolve-waiter'
+import { OrcaRuntimeWithStopExactTerminalsForWorktree } from '../orca-runtime-stop-exact-terminals-for-worktree'
+import type { RuntimeRendererReloadFence } from '../orca-runtime-core'
+import { HEADLESS_RUNTIME_WINDOW_ID } from '../../../shared/runtime-types'
 
-export class OrcaRuntimeWithHasTerminalsForWorktree extends OrcaRuntimeWithStopExactTerminalsForWorktree {
+export abstract class OrcaRuntimeWithHasTerminalsForWorktree extends OrcaRuntimeWithStopExactTerminalsForWorktree {
+  protected abstract assertStableReadyGraph(
+    ...args: Parameters<TransitionGraphReloadToTerminalStateMethods['assertStableReadyGraph']>
+  ): ReturnType<TransitionGraphReloadToTerminalStateMethods['assertStableReadyGraph']>
+
+  protected abstract captureReadyGraphEpoch(
+    ...args: Parameters<TransitionGraphReloadToTerminalStateMethods['captureReadyGraphEpoch']>
+  ): ReturnType<TransitionGraphReloadToTerminalStateMethods['captureReadyGraphEpoch']>
+
+  protected abstract clearPtyIncarnationHandles(
+    ...args: Parameters<BindPtyIncarnationHandleMethods['clearPtyIncarnationHandles']>
+  ): ReturnType<BindPtyIncarnationHandleMethods['clearPtyIncarnationHandles']>
+
+  protected abstract invalidatePtyIncarnationHandle(
+    ...args: Parameters<BindPtyIncarnationHandleMethods['invalidatePtyIncarnationHandle']>
+  ): ReturnType<BindPtyIncarnationHandleMethods['invalidatePtyIncarnationHandle']>
+
+  protected abstract refreshWritableFlags(
+    ...args: Parameters<BindPtyIncarnationHandleMethods['refreshWritableFlags']>
+  ): ReturnType<BindPtyIncarnationHandleMethods['refreshWritableFlags']>
+
+  protected abstract rejectAllWaiters(
+    ...args: Parameters<ResolveWaiterMethods['rejectAllWaiters']>
+  ): ReturnType<ResolveWaiterMethods['rejectAllWaiters']>
+
+  protected abstract rejectWaitersForHandle(
+    ...args: Parameters<ResolveWaiterMethods['rejectWaitersForHandle']>
+  ): ReturnType<ResolveWaiterMethods['rejectWaitersForHandle']>
+
+  protected abstract rememberDetachedPreAllocatedLeaves(
+    ...args: Parameters<BindPtyIncarnationHandleMethods['rememberDetachedPreAllocatedLeaves']>
+  ): ReturnType<BindPtyIncarnationHandleMethods['rememberDetachedPreAllocatedLeaves']>
+
+  protected abstract restoreHeadlessGraphAuthority(
+    ...args: Parameters<
+      TransitionGraphReloadToTerminalStateMethods['restoreHeadlessGraphAuthority']
+    >
+  ): ReturnType<TransitionGraphReloadToTerminalStateMethods['restoreHeadlessGraphAuthority']>
+
+  protected abstract shouldRestoreHeadlessGraph(
+    ...args: Parameters<TransitionGraphReloadToTerminalStateMethods['shouldRestoreHeadlessGraph']>
+  ): ReturnType<TransitionGraphReloadToTerminalStateMethods['shouldRestoreHeadlessGraph']>
+
+  protected abstract transitionGraphReloadToTerminalState(
+    ...args: Parameters<
+      TransitionGraphReloadToTerminalStateMethods['transitionGraphReloadToTerminalState']
+    >
+  ): ReturnType<TransitionGraphReloadToTerminalStateMethods['transitionGraphReloadToTerminalState']>
+
   async hasTerminalsForWorktree(worktreeSelector: string): Promise<boolean> {
     const graphEpoch = this.captureReadyGraphEpoch()
     const worktree = await this.resolveWorktreeSelector(worktreeSelector)
