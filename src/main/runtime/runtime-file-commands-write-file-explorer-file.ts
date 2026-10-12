@@ -1,7 +1,7 @@
 // @ts-nocheck -- mechanically split class members.
 import { RuntimeFileCommandsWithReadFileExplorerPreview } from './runtime-file-commands-read-file-explorer-preview'
 import { assertRuntimeFileMutationExpectation } from './runtime-file-commands-mobile-file-list-limit'
-import { requireRuntimeFileProvider } from './runtime-file-command-target'
+import { requireRuntimeFileProvider } from './files/file-target'
 
 export class RuntimeFileCommandsWithWriteFileExplorerFile extends RuntimeFileCommandsWithReadFileExplorerPreview {
   async writeFileExplorerFile(

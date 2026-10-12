@@ -11,10 +11,7 @@ import {
   provenancePathCandidate,
   resolveTerminalAbsolutePath
 } from './runtime-file-commands-terminal-file-paths'
-import {
-  requireRuntimeFileProvider,
-  runtimeFileRouteForTarget
-} from './runtime-file-command-target'
+import { requireRuntimeFileProvider, runtimeFileRouteForTarget } from './files/file-target'
 import { isSafeMobileRelativePath } from './runtime-file-command-host'
 import { isENOENT } from '../ipc/filesystem-path-containment'
 

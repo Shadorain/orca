@@ -7,7 +7,7 @@ import {
 import { constants } from 'node:fs/promises'
 import { getSshTargetIdForExecutionHost, type ExecutionHostId } from '../../shared/execution-host'
 import { assertSshMutationExpectation } from '../ssh/ssh-connection-generation'
-import { basenameFromRelativePath } from './runtime-file-paths'
+import { basenameFromRelativePath } from './files/file-paths'
 import { normalizeRuntimePathForComparison } from '../../shared/cross-platform-path'
 
 export const MOBILE_FILE_LIST_LIMIT = 5000

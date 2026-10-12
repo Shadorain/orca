@@ -1,18 +1,18 @@
 import { chmod, constants, rename, rm, writeFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
 import { randomUUID } from 'node:crypto'
-import type { RuntimeTerminalFileGrants } from './runtime-terminal-file-grants'
-import { MOBILE_FILE_READ_MAX_BYTES } from './runtime-file-commands-mobile-file-list-limit'
-import { isMobileBinaryPath } from './runtime-file-command-host'
-import { isBinaryBuffer } from '../../shared/binary-buffer'
-import { openLocalTerminalArtifactGrant } from './runtime-file-commands-terminal-file-paths'
+import type { RuntimeTerminalFileGrants } from './file-grants'
+import { MOBILE_FILE_READ_MAX_BYTES } from '../../runtime-file-commands-mobile-file-list-limit'
+import { isMobileBinaryPath } from '../../runtime-file-command-host'
+import { isBinaryBuffer } from '../../../../shared/binary-buffer'
+import { openLocalTerminalArtifactGrant } from '../../runtime-file-commands-terminal-file-paths'
 import {
   assertTerminalArtifactContentUnchanged,
   assertTerminalFileGrantFresh,
   readFileHandleBufferBounded,
   terminalFileStatIdentity
-} from './runtime-terminal-artifact-integrity'
-import { statLocalTerminalArtifact } from './runtime-terminal-artifact-stat'
+} from './artifact-integrity'
+import { statLocalTerminalArtifact } from './artifact-stat'
 
 export async function writeTerminalArtifactFile(
   grants: Pick<RuntimeTerminalFileGrants, 'requireTerminalFileGrant' | 'refreshTerminalFileGrant'>,

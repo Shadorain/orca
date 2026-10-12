@@ -3,8 +3,8 @@ import type { RuntimeFileReadResult } from '../../shared/runtime-types'
 import { isMobileBinaryPath, isSafeMobileRelativePath } from './runtime-file-command-host'
 import { joinWorktreeRelativePath } from './runtime-relative-paths'
 import { readLocalMobileFile } from './runtime-file-commands-terminal-file-paths'
-import { truncateMobileFilePreview } from './runtime-terminal-artifact-integrity'
-import { requireLocalRuntimeFileRoute } from './runtime-file-command-target'
+import { truncateMobileFilePreview } from './terminal/artifacts/artifact-integrity'
+import { requireLocalRuntimeFileRoute } from './files/file-target'
 
 export class RuntimeFileCommandsWithReadMobileFile extends RuntimeFileCommandAccess {
   async readMobileFile(

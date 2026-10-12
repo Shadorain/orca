@@ -1,16 +1,16 @@
-import type { ExecutionHostId } from '../../shared/execution-host'
-import type { GitWorktreeInfo, Worktree } from '../../shared/worktree/types'
+import type { ExecutionHostId } from '../../../shared/execution-host'
+import type { GitWorktreeInfo, Worktree } from '../../../shared/worktree/types'
 import {
   ExecutionHostNotDispatchableError,
   resolveFilesystemRouteForHost
-} from '../providers/execution-host-provider-dispatch'
-import { resolveAuthorizedPath } from '../ipc/filesystem-auth'
+} from '../../providers/execution-host-provider-dispatch'
+import { resolveAuthorizedPath } from '../../ipc/filesystem-auth'
 import type {
   createLocalFilesystemProvider,
   LocalFilesystemProvider,
   LocalFilesystemProviderOptions
-} from '../providers/local-filesystem-provider'
-import { SshHostNotServedError } from '../providers/ssh-host-not-served-error'
+} from '../../providers/local-filesystem-provider'
+import { SshHostNotServedError } from '../../providers/ssh-host-not-served-error'
 
 export type ResolvedRuntimeFileWorktree = Worktree & { git: GitWorktreeInfo }
 

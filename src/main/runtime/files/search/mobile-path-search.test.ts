@@ -3,7 +3,7 @@ import {
   rankRuntimeMobileFilePaths,
   type RuntimeMobileFilePathInventory,
   RuntimeMobileFilePathSearchCache
-} from './runtime-mobile-file-path-search'
+} from './mobile-path-search'
 
 describe('rankRuntimeMobileFilePaths', () => {
   it('preserves basename matching, ordering and total counts for unusual paths', () => {

@@ -1,7 +1,7 @@
 import { open } from 'node:fs/promises'
-import { assertLocalTerminalArtifactPathStillCanonical } from './runtime-file-commands-terminal-file-paths'
-import { localTerminalArtifactContentDigest } from './runtime-terminal-artifact-integrity'
-import type { RuntimeFileStatLike } from './runtime-terminal-file-grants'
+import { assertLocalTerminalArtifactPathStillCanonical } from '../../runtime-file-commands-terminal-file-paths'
+import { localTerminalArtifactContentDigest } from './artifact-integrity'
+import type { RuntimeFileStatLike } from './file-grants'
 
 /** Stat and content digest come from one handle to retain the existing swap protection. */
 export async function statLocalTerminalArtifact(absolutePath: string): Promise<{

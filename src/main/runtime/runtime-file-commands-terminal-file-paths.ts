@@ -3,7 +3,7 @@ import { open, stat } from 'node:fs/promises'
 import { extname } from 'node:path'
 import type { Store } from '../persistence'
 import { resolveAuthorizedPath } from '../ipc/filesystem-auth'
-import type { TerminalFileGrant } from './runtime-terminal-file-grants'
+import type { TerminalFileGrant } from './terminal/artifacts/file-grants'
 import {
   LOCAL_PREVIEWABLE_BINARY_MAX_BYTES,
   MOBILE_FILE_READ_MAX_BYTES,
@@ -18,7 +18,7 @@ import {
   canonicalPathForArtifactComparison,
   localTerminalArtifactRoots,
   readFileHandleBufferBounded
-} from './runtime-terminal-artifact-integrity'
+} from './terminal/artifacts/artifact-integrity'
 import { isBinaryBuffer } from '../../shared/binary-buffer'
 import type { RuntimeFilePreviewResult } from '../../shared/runtime-types'
 import {

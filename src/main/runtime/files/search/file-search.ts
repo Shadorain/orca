@@ -1,30 +1,30 @@
 import {
   QUICK_OPEN_SEARCH_VERSION,
   isQuickOpenQueryTooLarge
-} from '../../shared/quick-open-path-search'
-import type { RuntimeFileListResult } from '../../shared/runtime-types'
-import type { SearchOptions, SearchResult } from '../../shared/code-search-types'
-import { throwIfSignalAborted, waitForPromiseWithSignal } from '../../shared/abort-signal-reason'
-import { listQuickOpenFiles } from '../ipc/filesystem-list-files'
-import { searchQuickOpenFilePaths as searchHostQuickOpenFilePaths } from '../ipc/filesystem-search-file-paths'
-import { isMobileBinaryPath, isSafeMobileRelativePath } from './runtime-file-command-host'
+} from '../../../../shared/quick-open-path-search'
+import type { RuntimeFileListResult } from '../../../../shared/runtime-types'
+import type { SearchOptions, SearchResult } from '../../../../shared/code-search-types'
+import {
+  throwIfSignalAborted,
+  waitForPromiseWithSignal
+} from '../../../../shared/abort-signal-reason'
+import { listQuickOpenFiles } from '../../../ipc/filesystem-list-files'
+import { searchQuickOpenFilePaths as searchHostQuickOpenFilePaths } from '../../../ipc/filesystem-search-file-paths'
+import { isMobileBinaryPath, isSafeMobileRelativePath } from '../../runtime-file-command-host'
 import {
   requireRuntimeFileProvider,
   runtimeFileRouteForTarget,
   type RuntimeLocalFileHost,
   type ResolvedRuntimeFileTarget
-} from './runtime-file-command-target'
+} from '../file-target'
 import {
   MOBILE_FILE_LIST_LIMIT,
   MOBILE_FILE_PATH_SEARCH_CACHE_LIMIT,
   MOBILE_FILE_PATH_SEARCH_CACHE_ENTRIES,
   MOBILE_FILE_PATH_SEARCH_CACHE_TTL_MS
-} from './runtime-file-commands-mobile-file-list-limit'
-import { basenameFromRelativePath } from './runtime-file-paths'
-import {
-  RuntimeMobileFilePathSearchCache,
-  rankRuntimeMobileFilePaths
-} from './runtime-mobile-file-path-search'
+} from '../../runtime-file-commands-mobile-file-list-limit'
+import { basenameFromRelativePath } from '../file-paths'
+import { RuntimeMobileFilePathSearchCache, rankRuntimeMobileFilePaths } from './mobile-path-search'
 
 type RuntimeFileSearchTarget = {
   worktree: Pick<ResolvedRuntimeFileTarget['worktree'], 'id' | 'path'>

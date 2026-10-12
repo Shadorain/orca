@@ -1,12 +1,6 @@
 import { randomUUID } from 'node:crypto'
-import {
-  assertTerminalArtifactNotHardLinked,
-  terminalFileStatIdentity
-} from './runtime-terminal-artifact-integrity'
-import {
-  runtimeFileSshTargetId,
-  type ResolvedRuntimeFileTarget
-} from './runtime-file-command-target'
+import { assertTerminalArtifactNotHardLinked, terminalFileStatIdentity } from './artifact-integrity'
+import { runtimeFileSshTargetId, type ResolvedRuntimeFileTarget } from '../../files/file-target'
 
 const TERMINAL_FILE_GRANT_TTL_MS = 10 * 60 * 1000
 

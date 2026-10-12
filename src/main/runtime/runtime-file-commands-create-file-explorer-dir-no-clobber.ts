@@ -1,10 +1,7 @@
 // @ts-nocheck -- mechanically split class members.
 import { RuntimeFileCommandsWithWriteFileExplorerFile } from './runtime-file-commands-write-file-explorer-file'
 import { assertRuntimeFileMutationExpectation } from './runtime-file-commands-mobile-file-list-limit'
-import {
-  requireLocalRuntimeFileRoute,
-  requireRuntimeFileProvider
-} from './runtime-file-command-target'
+import { requireLocalRuntimeFileRoute, requireRuntimeFileProvider } from './files/file-target'
 import { resolveAuthorizedPath } from '../ipc/filesystem-auth'
 import { constants, copyFile, mkdir, rm } from 'node:fs/promises'
 import { dirname } from 'node:path'

@@ -3,30 +3,30 @@ import {
   RuntimeTerminalFileGrants,
   type RuntimeTerminalFileGrantHost,
   type TerminalFileGrant
-} from './runtime-terminal-file-grants'
+} from './file-grants'
 import type {
   RuntimeFilePreviewResult,
   RuntimeFileReadResult,
   RuntimeTerminalPathResolution
-} from '../../shared/runtime-file-contracts'
+} from '../../../../shared/runtime-file-contracts'
 import {
   canonicalPathForArtifactComparison,
   isTerminalArtifactHardLinked,
   truncateMobileFilePreview
-} from './runtime-terminal-artifact-integrity'
+} from './artifact-integrity'
 import {
   resolveAllowedLocalTerminalArtifactPath,
   openLocalTerminalArtifactGrant,
   readLocalTerminalArtifactFileFromHandle,
   readLocalTerminalArtifactPreviewFromHandle
-} from './runtime-file-commands-terminal-file-paths'
-import { statLocalTerminalArtifact } from './runtime-terminal-artifact-stat'
-import { requireReachableFilesystemRoute } from '../providers/execution-host-provider-dispatch'
-import { getConnectionExecutionHostId } from '../../shared/execution-host'
-import { assertPreviewWithinTransportBudget } from './runtime-file-commands-mobile-file-list-limit'
-import { SshHostNotServedError } from '../providers/ssh-host-not-served-error'
-import { isMobileBinaryPath } from './runtime-file-command-host'
-import { writeTerminalArtifactFile } from './runtime-terminal-artifact-write'
+} from '../../runtime-file-commands-terminal-file-paths'
+import { statLocalTerminalArtifact } from './artifact-stat'
+import { requireReachableFilesystemRoute } from '../../../providers/execution-host-provider-dispatch'
+import { getConnectionExecutionHostId } from '../../../../shared/execution-host'
+import { assertPreviewWithinTransportBudget } from '../../runtime-file-commands-mobile-file-list-limit'
+import { SshHostNotServedError } from '../../../providers/ssh-host-not-served-error'
+import { isMobileBinaryPath } from '../../runtime-file-command-host'
+import { writeTerminalArtifactFile } from './artifact-write'
 
 export class RuntimeTerminalArtifacts {
   private readonly grants: RuntimeTerminalFileGrants

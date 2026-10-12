@@ -11,10 +11,7 @@ import {
   assertPreviewWithinTransportBudget,
   previewableBinaryByteLimit
 } from './runtime-file-commands-mobile-file-list-limit'
-import {
-  requireLocalRuntimeFileRoute,
-  requireRuntimeFileProvider
-} from './runtime-file-command-target'
+import { requireLocalRuntimeFileRoute, requireRuntimeFileProvider } from './files/file-target'
 import { readLocalFileRange } from '../ipc/filesystem/local-file-range-read'
 import { resolveAuthorizedPath } from '../ipc/filesystem-auth'
 import { extname } from 'node:path'

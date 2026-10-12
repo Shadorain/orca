@@ -1,13 +1,13 @@
 import { tmpdir } from 'node:os'
 import { createHash } from 'node:crypto'
-import { parseWslPath, toWindowsWslPath } from '../wsl'
+import { parseWslPath, toWindowsWslPath } from '../../../wsl'
 import { realpath } from 'node:fs/promises'
 import type { FileHandle } from 'node:fs/promises'
-import type { RuntimeFileStatLike, TerminalFileGrant } from './runtime-terminal-file-grants'
+import type { RuntimeFileStatLike, TerminalFileGrant } from './file-grants'
 import {
   LOCAL_PREVIEWABLE_BINARY_MAX_BYTES,
   MOBILE_FILE_READ_MAX_BYTES
-} from './runtime-file-commands-mobile-file-list-limit'
+} from '../../runtime-file-commands-mobile-file-list-limit'
 
 export async function localTerminalArtifactRoots(worktreePath: string): Promise<string[]> {
   const roots = new Set<string>([tmpdir()])

@@ -22,7 +22,7 @@ vi.mock('./runtime-file-commands-read-file-explorer-preview', () => ({
 vi.mock('./runtime-file-commands-mobile-file-list-limit', () => ({
   assertRuntimeFileMutationExpectation: mocks.expectation
 }))
-vi.mock('./runtime-file-command-target', () => ({ requireRuntimeFileProvider: mocks.provider }))
+vi.mock('./files/file-target', () => ({ requireRuntimeFileProvider: mocks.provider }))
 vi.mock('../ipc/filesystem-auth', () => ({ resolveAuthorizedPath: mocks.authorize }))
 vi.mock('node:fs/promises', async (importOriginal) => ({
   ...(await importOriginal()),

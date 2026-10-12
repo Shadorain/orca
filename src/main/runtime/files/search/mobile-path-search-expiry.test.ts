@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { MAX_TIMER_DELAY_MS } from '../../shared/timer-delay'
+import { MAX_TIMER_DELAY_MS } from '../../../../shared/timer-delay'
 import {
   RuntimeMobileFilePathSearchCache,
   type RuntimeMobileFilePathInventory
-} from './runtime-mobile-file-path-search'
+} from './mobile-path-search'
 
 const TTL_MS = 30_000
 

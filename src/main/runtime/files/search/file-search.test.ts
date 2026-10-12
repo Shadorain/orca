@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
-import { ExecutionHostNotDispatchableError } from '../providers/execution-host-provider-dispatch'
-import { SSH_HOST_NOT_SERVED_MESSAGE } from '../providers/ssh-host-not-served-error'
-import { RuntimeFileSearch, type RuntimeFileSearchHost } from './runtime-file-search'
+import { ExecutionHostNotDispatchableError } from '../../../providers/execution-host-provider-dispatch'
+import { SSH_HOST_NOT_SERVED_MESSAGE } from '../../../providers/ssh-host-not-served-error'
+import { RuntimeFileSearch, type RuntimeFileSearchHost } from './file-search'
 
 function createSearch(executionHostId: 'local' | 'ssh:unavailable' | 'runtime:other' = 'local') {
   const requireStore = vi.fn(() => {

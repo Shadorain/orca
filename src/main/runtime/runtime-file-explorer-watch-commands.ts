@@ -7,7 +7,7 @@ import {
   requireLocalRuntimeFileRoute,
   requireRuntimeFileProvider,
   runtimeFileSshTargetId
-} from './runtime-file-command-target'
+} from './files/file-target'
 import { stat } from 'node:fs/promises'
 import type { DirEntry, FsChangeEvent } from '../../shared/filesystem-entry-types'
 import { sortDirEntries } from '../../shared/file-name-sort'

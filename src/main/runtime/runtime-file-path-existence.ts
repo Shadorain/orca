@@ -4,7 +4,7 @@ import {
   requireRuntimeFileProvider,
   type RuntimeFileExplorerPath,
   type RuntimeLocalFileHost
-} from './runtime-file-command-target'
+} from './files/file-target'
 
 export async function readRuntimeFilePathExistence(
   targets: readonly RuntimeFileExplorerPath[],
