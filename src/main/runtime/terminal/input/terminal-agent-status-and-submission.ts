@@ -1,21 +1,22 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { selectFreshExplicitAgentStatus } from './runtime-hook-agent-row-selection'
-import { OrcaRuntimeWithControllerKnowsPtyIsLive } from './orca-runtime-controller-knows-pty-is-live'
-import type { RuntimeTerminalAgentStatus } from '../../shared/runtime-types'
-import type { RuntimeTerminalAgentStatusSnapshot } from './runtime-terminal-agent-status-query'
-import { getDisplayPromptLifecycle } from './runtime-worktree-status-projection'
-import type { RuntimePtyWorktreeRecord } from './runtime-terminal-state-records'
-import { hasCompatibleAgentTitleIdentity } from '../../shared/agent-title-owner'
-import type { PtyForegroundProcessRead } from './runtime-terminal-contracts'
-import { recognizeAgentProcess } from '../../shared/agent-process-recognition'
+import { selectFreshExplicitAgentStatus } from '../../runtime-hook-agent-row-selection'
+import { OrcaRuntimeWithControllerKnowsPtyIsLive } from './terminal-input-dispatch'
+import type { RuntimeTerminalAgentStatus } from '../../../../shared/runtime-types'
+import type { RuntimeTerminalAgentStatusSnapshot } from '../../runtime-terminal-agent-status-query'
+import { getDisplayPromptLifecycle } from '../../runtime-worktree-status-projection'
+import type { RuntimePtyWorktreeRecord } from '../../runtime-terminal-state-records'
+import { hasCompatibleAgentTitleIdentity } from '../../../../shared/agent-title-owner'
+import type { PtyForegroundProcessRead } from '../../runtime-terminal-contracts'
+import { recognizeAgentProcess } from '../../../../shared/agent-process-recognition'
 import type {
   AgentPromptActivity,
   AgentPromptWaitTextCache
-} from './agent-prompt-submission-verification'
-import { readAgentPromptWaitText } from './agent-prompt-submission-verification'
-import type { AgentStatus } from '../../shared/agent-detection'
+} from '../../agent-prompt-submission-verification'
+import { readAgentPromptWaitText } from '../../agent-prompt-submission-verification'
+import type { AgentStatus } from '../../../../shared/agent-detection'
 
-export class OrcaRuntimeWithSerializeAgentPromptSubmission extends OrcaRuntimeWithControllerKnowsPtyIsLive {
+export abstract class OrcaRuntimeWithSerializeAgentPromptSubmission extends OrcaRuntimeWithControllerKnowsPtyIsLive {
+  protected abstract getPaneKeyForTerminalHandle(handle: string): string | null
+
   protected async serializeAgentPromptSubmission<T>(
     ptyId: string,
     generation: number,
@@ -79,7 +80,8 @@ export class OrcaRuntimeWithSerializeAgentPromptSubmission extends OrcaRuntimeWi
     }
     const verdicts = await Promise.all(
       Array.from(this.collectAgentStatusPaneKeysForPty(ptyId), (paneKey) =>
-        this.checkHookAgentPresenceFn(paneKey)
+        // SAFETY: Keep the original TypeError if collecting pane keys invalidates this callback.
+        this.checkHookAgentPresenceFn!(paneKey)
       )
     )
     if (verdicts.includes('live')) {
@@ -183,7 +185,8 @@ export class OrcaRuntimeWithSerializeAgentPromptSubmission extends OrcaRuntimeWi
       if (
         recoverCompletedHook &&
         (!current.lastAgentStatusObservedLive ||
-          this.getFreshExplicitAgentStatusForPty(handle, ptyId)?.status !== 'idle')
+          // SAFETY: The unchanged recovery-mode entry guard validated this captured const handle.
+          this.getFreshExplicitAgentStatusForPty(handle!, ptyId)?.status !== 'idle')
       ) {
         return
       }

@@ -1,21 +1,51 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithResolveTerminalPane } from './orca-runtime-resolve-terminal-pane'
-import { wrapTerminalBracketedPasteText } from '../../shared/terminal-bracketed-paste-text'
-import { PROVEN_ABSENT_LEAF_PTY_TTL_MS } from './orca-runtime-core'
-import { pruneExpiredProvenAbsentLeafPtyVerdicts } from './proven-absent-leaf-pty-verdicts'
-import type { RuntimeTerminalSend } from '../../shared/runtime-types'
-import type { TerminalInputKind } from '../../shared/terminal-input-kind'
-import type { RuntimeAgentPromptWriteOptions } from './runtime-terminal-contracts'
+import type { RuntimeTerminalWriteOptions } from '../../runtime-terminal-writer'
+import type { WriteSettlement } from '../../../../shared/pty-write-settlement'
+import type { RuntimeLeafRecord } from '../../runtime-terminal-state-records'
+import type { RuntimeTerminalPromptDelivery } from '../../../../shared/runtime-terminal-send-contract'
+import { OrcaRuntimeWithResolveTerminalPane } from '../../orca-runtime-resolve-terminal-pane'
+import { wrapTerminalBracketedPasteText } from '../../../../shared/terminal-bracketed-paste-text'
+import { PROVEN_ABSENT_LEAF_PTY_TTL_MS } from '../../orca-runtime-core'
+import { pruneExpiredProvenAbsentLeafPtyVerdicts } from '../../proven-absent-leaf-pty-verdicts'
+import type { RuntimeTerminalSend } from '../../../../shared/runtime-types'
+import type { TerminalInputKind } from '../../../../shared/terminal-input-kind'
+import type {
+  RuntimeAgentPromptWriteOptions,
+  TerminalHandleRecord
+} from '../../runtime-terminal-contracts'
 import {
   assertTerminalInputWithinLimitWithYield,
   buildTerminalSendPayload
-} from './terminal-send-payload'
+} from '../../terminal-send-payload'
 import {
   agentPromptTakesLeadLine,
   buildAgentPromptPasteBytes
-} from '../../shared/agent-prompt-injection'
+} from '../../../../shared/agent-prompt-injection'
 
-export class OrcaRuntimeWithControllerKnowsPtyIsLive extends OrcaRuntimeWithResolveTerminalPane {
+export abstract class OrcaRuntimeWithControllerKnowsPtyIsLive extends OrcaRuntimeWithResolveTerminalPane {
+  protected abstract writeTerminalAction(
+    ptyId: string,
+    action: { text?: string; enter?: boolean; interrupt?: boolean },
+    payload: string,
+    options: RuntimeTerminalWriteOptions
+  ): Promise<WriteSettlement | undefined>
+  protected abstract getLiveLeafForHandle(handle: string): {
+    record: TerminalHandleRecord
+    leaf: RuntimeLeafRecord
+  }
+  protected abstract serializeAgentPromptSubmission<T>(
+    ptyId: string,
+    generation: number,
+    submit: () => Promise<T>
+  ): Promise<T>
+  protected abstract assertAgentPromptGeneration(ptyId: string, expected: number): void
+  protected abstract writeTerminalAgentPrompt(
+    handle: string,
+    ptyId: string,
+    generation: number,
+    pastePayload: string,
+    options: RuntimeAgentPromptWriteOptions
+  ): Promise<{ submits: number; prompt?: RuntimeTerminalPromptDelivery }>
+
   private lastProvenAbsentLeafPtyVerdictPruneAt: number | undefined
 
   private pruneExpiredLeafPtyVerdicts(now: number): void {

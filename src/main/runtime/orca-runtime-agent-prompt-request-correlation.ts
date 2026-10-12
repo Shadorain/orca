@@ -1,4 +1,4 @@
-import { OrcaRuntimeWithSerializeAgentPromptSubmission } from './orca-runtime-serialize-agent-prompt-submission'
+import { OrcaRuntimeWithSerializeAgentPromptSubmission } from './terminal/input/terminal-agent-status-and-submission'
 import type { RuntimeTerminalPromptDelivery } from '../../shared/runtime-types'
 import type { RuntimeLeafRecord, RuntimePtyWorktreeRecord } from './runtime-terminal-state-records'
 import type { TerminalHandleRecord } from './runtime-terminal-contracts'

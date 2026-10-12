@@ -8,14 +8,12 @@ src/main/runtime/orca-runtime-apply-mobile-session-tab-navigation.ts
 src/main/runtime/orca-runtime-build-headless-mobile-session-browser-tabs.ts
 src/main/runtime/orca-runtime-build-pty-terminal-summary.ts
 src/main/runtime/orca-runtime-close-mobile-session-tab.ts
-src/main/runtime/orca-runtime-controller-knows-pty-is-live.ts
 src/main/runtime/orca-runtime-deliver-pending-messages.ts
 src/main/runtime/orca-runtime-automation-operations.ts
 src/main/runtime/orca-runtime-file-commands.ts
 src/main/runtime/orca-runtime-fit-override-listeners.ts
 src/main/runtime/orca-runtime-focus-terminal.ts
 src/main/runtime/orca-runtime-get-agent-session-execution-namespace.ts
-src/main/runtime/orca-runtime-get-pty-record-for-pane-key.ts
 src/main/runtime/orca-runtime-get-runtime-id.ts
 src/main/runtime/orca-runtime-get-worktree-ps.ts
 src/main/runtime/orca-runtime-get-worktree-terminal-provisioning-host.ts
@@ -42,7 +40,6 @@ src/main/runtime/orca-runtime-resolve-terminal-pane.ts
 src/main/runtime/orca-runtime-resolve-terminal-split-source-authority.ts
 src/main/runtime/orca-runtime-runtime-id.ts
 src/main/runtime/orca-runtime-schedule-mobile-session-tabs-changed.ts
-src/main/runtime/orca-runtime-serialize-agent-prompt-submission.ts
 src/main/runtime/orca-runtime-sleep-resolved-worktree-terminals.ts
 src/main/runtime/orca-runtime-state-fields.ts
 src/main/runtime/orca-runtime-stop-exact-terminals-for-worktree.ts
@@ -54,4 +51,3 @@ src/main/runtime/orca-runtime-verify-orchestration-compatibility-caller.ts
 src/main/runtime/orca-runtime-wait-for-leaf-pty-id.ts
 src/main/runtime/orca-runtime-wait-for-mobile-terminal-surface.ts
 src/main/runtime/orca-runtime-write-orchestration-pointer-pty.ts
-src/main/runtime/orca-runtime-write-terminal-agent-prompt.ts

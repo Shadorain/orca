@@ -1,12 +1,14 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithResolveAuthoritativeTerminalWaitPermission } from './terminal/wait/terminal-wait-permission'
-import type { RuntimeAgentPromptWriteOptions } from './runtime-terminal-contracts'
-import type { RuntimeTerminalPromptDelivery, RuntimeTerminalSend } from '../../shared/runtime-types'
+import { OrcaRuntimeWithResolveAuthoritativeTerminalWaitPermission } from '../wait/terminal-wait-permission'
+import type { RuntimeAgentPromptWriteOptions } from '../../runtime-terminal-contracts'
+import type {
+  RuntimeTerminalPromptDelivery,
+  RuntimeTerminalSend
+} from '../../../../shared/runtime-types'
 import {
   assertAgentPromptRequestActive,
   waitForAgentPromptDelay,
   waitForAgentPromptPromise
-} from './orca-runtime-core'
+} from '../../orca-runtime-core'
 import {
   AGENT_PROMPT_POST_PASTE_SUBMIT_DELAY_MS,
   AGENT_PROMPT_SUBMIT,
@@ -14,16 +16,21 @@ import {
   getAgentPromptSubmitDelayMs,
   getTerminalPasteIngestMs,
   resolveAgentPromptSubmitDelayForAgent
-} from '../../shared/agent-prompt-injection'
-import type { AgentPromptWaitTextCache } from './agent-prompt-submission-verification'
+} from '../../../../shared/agent-prompt-injection'
+import type { AgentPromptWaitTextCache } from '../../agent-prompt-submission-verification'
 import {
   isTerminalSendSettlementAgent,
   resolveAgentPromptEffectTimeoutMs,
   verifyAgentPromptSubmission
-} from './agent-prompt-submission-verification'
-import { TUI_AGENT_CONFIG } from '../../shared/tui-agent-config'
+} from '../../agent-prompt-submission-verification'
+import { TUI_AGENT_CONFIG } from '../../../../shared/tui-agent-config'
 
-export class OrcaRuntimeWithWriteTerminalAgentPrompt extends OrcaRuntimeWithResolveAuthoritativeTerminalWaitPermission {
+export abstract class OrcaRuntimeWithWriteTerminalAgentPrompt extends OrcaRuntimeWithResolveAuthoritativeTerminalWaitPermission {
+  protected abstract createAgentPromptRenderGate(
+    ptyId: string,
+    pasteIngestMs: number
+  ): { arm: () => void; wait: () => Promise<void>; dispose: () => void } | null
+
   protected async writeTerminalAgentPrompt(
     handle: string,
     ptyId: string,

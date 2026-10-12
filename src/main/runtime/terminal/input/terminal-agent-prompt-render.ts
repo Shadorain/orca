@@ -1,10 +1,13 @@
-import { OrcaRuntimeWithWriteTerminalAgentPrompt } from './orca-runtime-write-terminal-agent-prompt'
+import { OrcaRuntimeWithWriteTerminalAgentPrompt } from './terminal-agent-prompt'
 import {
   CLAUDE_AGENT_PROMPT_RENDER_MARKER,
   CLAUDE_AGENT_PROMPT_RENDER_QUIET_MS,
   CLAUDE_AGENT_PROMPT_RENDER_TIMEOUT_MS
-} from './orca-runtime-core'
-import type { RuntimeTerminalWait, RuntimeTerminalWaitCondition } from '../../shared/runtime-types'
+} from '../../orca-runtime-core'
+import type {
+  RuntimeTerminalWait,
+  RuntimeTerminalWaitCondition
+} from '../../../../shared/runtime-types'
 
 export abstract class OrcaRuntimeWithCreateAgentPromptRenderGate extends OrcaRuntimeWithWriteTerminalAgentPrompt {
   protected createAgentPromptRenderGate(

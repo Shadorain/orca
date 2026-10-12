@@ -1,29 +1,29 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithPruneMobileSessionTabGroupLayout } from './orca-runtime-prune-mobile-session-tab-group-layout'
-import type { RuntimeLeafRecord, RuntimePtyWorktreeRecord } from './runtime-terminal-state-records'
-import { isTerminalLeafId, makePaneKey, parsePaneKey } from '../../shared/stable-pane-id'
-import { detectAgentStatusFromTitle, isClaudeManagementTitle } from '../../shared/agent-detection'
-import { recognizeAgentProcess } from '../../shared/agent-process-recognition'
+import type { RuntimeTerminalAgentPresenceOptions } from '../runtime-terminal-agent-presence'
+import { OrcaRuntimeWithPruneMobileSessionTabGroupLayout } from '../orca-runtime-prune-mobile-session-tab-group-layout'
+import type { RuntimeLeafRecord, RuntimePtyWorktreeRecord } from '../runtime-terminal-state-records'
+import { isTerminalLeafId, makePaneKey, parsePaneKey } from '../../../shared/stable-pane-id'
+import {
+  detectAgentStatusFromTitle,
+  isClaudeManagementTitle
+} from '../../../shared/agent-detection'
+import { recognizeAgentProcess } from '../../../shared/agent-process-recognition'
 import {
   resolveStructuredWorkerAuthority,
   resolveStructuredWorkerIdentityForSession
-} from './structured-worker-authority'
-import type { StructuredPointerTarget } from './orchestration/structured-mailbox-pointer-delivery'
+} from '../structured-worker-authority'
+import type { StructuredPointerTarget } from './structured-mailbox-pointer-delivery'
 import {
   chatDispatchMailTarget,
   handleLessCoordinatorSessionId,
   structuredSessionAddressTarget,
   structuredSessionMailTarget,
   structuredSessionIdleEdgeMailboxes
-} from './orchestration/structured-session-mail-target'
-import { exitedChatDispatchesForSession } from './orchestration/chat-assignee'
-import { OPERATOR_CLOSE_EXIT_CAUSE } from '../../shared/terminal-exit-cause'
-import {
-  resolveTerminalIdentityFromProbes,
-  type RuntimeTerminalIdentity
-} from './terminal-identity-probe'
+} from './structured-session-mail-target'
+import { exitedChatDispatchesForSession } from './chat-assignee'
+import { OPERATOR_CLOSE_EXIT_CAUSE } from '../../../shared/terminal-exit-cause'
+import { resolveTerminalIdentityFromProbes } from '../terminal-identity-probe'
 
-export class OrcaRuntimeWithGetPtyRecordForPaneKey extends OrcaRuntimeWithPruneMobileSessionTabGroupLayout {
+export abstract class OrcaRuntimeWithGetPtyRecordForPaneKey extends OrcaRuntimeWithPruneMobileSessionTabGroupLayout {
   protected getPtyRecordForPaneKey(paneKey: string): RuntimePtyWorktreeRecord | null {
     const parsed = parsePaneKey(paneKey)
     let leafPty: RuntimePtyWorktreeRecord | null = null
@@ -116,7 +116,7 @@ export class OrcaRuntimeWithGetPtyRecordForPaneKey extends OrcaRuntimeWithPruneM
   // Why: title is the tightest agent-presence signal, but a Claude management title is negative evidence for task activity.
   async isTerminalRunningAgent(
     handle: string,
-    options?: { retryForegroundWrappers?: boolean }
+    options?: RuntimeTerminalAgentPresenceOptions
   ): Promise<boolean> {
     return this.terminalAgentPresence.isRunning(handle, options)
   }
@@ -164,7 +164,7 @@ export class OrcaRuntimeWithGetPtyRecordForPaneKey extends OrcaRuntimeWithPruneM
    * Read-only by construction — a handle and a boolean — so it can serve the CLI's sender
    * validation without `terminal.show`'s writable-looking pane payload.
    */
-  resolveTerminalIdentity(handle: string): RuntimeTerminalIdentity {
+  resolveTerminalIdentity(handle: string) {
     return resolveTerminalIdentityFromProbes(handle, {
       isLiveStructuredWorker: () =>
         Boolean(resolveStructuredWorkerAuthority(handle, this._orchestrationDb)),
