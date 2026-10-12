@@ -62,8 +62,6 @@ export const WINDOWS_RUNTIME_FILE_WATCH_DEBOUNCE_MS = 150
 
 export const WINDOWS_RUNTIME_FILE_WATCH_CLOSE_DEADLINE_MS = 10_000
 
-export const TERMINAL_FILE_GRANT_TTL_MS = 10 * 60 * 1000
-
 export const OPEN_NOFOLLOW = typeof constants.O_NOFOLLOW === 'number' ? constants.O_NOFOLLOW : 0
 
 export const RUNTIME_FILE_MUTATION_UPDATE_REQUIRED =
@@ -130,32 +128,6 @@ export const MOBILE_PREVIEWABLE_IMAGE_EXTENSIONS = new Set([
   '.bmp',
   '.ico'
 ])
-
-export type RuntimeFileStatLike = {
-  size?: number
-  dev?: number
-  ino?: number
-  nlink?: number
-  mtime?: number | Date
-  mtimeMs?: number
-  isDirectory?: () => boolean
-}
-
-export type TerminalFileGrant = {
-  id: string
-  worktreeId: string
-  absolutePath: string
-  provider: 'local'
-  clientId?: string
-  expiresAt: number
-  statIdentity: string | null
-  // Why: on Linux an unlink+recreate in the same directory reuses the inode and the mtime clock is
-  // tick-quantized, so statIdentity alone cannot see a same-size swap. Local grants pin content too.
-  contentDigest: string | null
-  readOnly: boolean
-  provenance: 'terminal-output' | 'native-chat'
-  expiryTimer?: ReturnType<typeof setTimeout>
-}
 
 export function isMobilePreviewableImagePath(relativePath: string): boolean {
   const basename = basenameFromRelativePath(relativePath)

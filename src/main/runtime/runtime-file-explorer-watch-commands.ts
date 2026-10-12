@@ -1,5 +1,4 @@
-// @ts-nocheck -- mechanically split class members.
-import { RuntimeFileCommandsWithWriteTerminalArtifactFile } from './runtime-file-commands-write-terminal-artifact-file'
+import { RuntimeFileCommandsWithResolveTerminalPath } from './runtime-file-commands-resolve-terminal-path'
 import {
   runtimeFileWatcherLeasesByOwnerAndRoot,
   runtimeWatcherReleaseKey
@@ -21,7 +20,7 @@ import {
 } from './file-watcher-host'
 import { registerRuntimeFileWatcherRelease } from './runtime-file-watcher-leases'
 
-export class RuntimeFileCommandsWithAssertRemoteTerminalFileGrantPathStillCanonical extends RuntimeFileCommandsWithWriteTerminalArtifactFile {
+export class RuntimeFileExplorerWatchCommands extends RuntimeFileCommandsWithResolveTerminalPath {
   async readFileExplorerDir(
     worktreeSelector: string,
     relativePath: string,

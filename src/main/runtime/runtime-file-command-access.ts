@@ -1,3 +1,4 @@
+import { RuntimeTerminalArtifacts } from './runtime-terminal-artifacts'
 import { RuntimeFileSearch } from './runtime-file-search'
 import { listFilesystemMarkdownDocuments } from '../providers/filesystem-markdown-listing'
 import type { MarkdownDocument } from '../../shared/filesystem-entry-types'
@@ -14,10 +15,7 @@ import {
 } from './runtime-file-command-host'
 import type { RuntimeFileOpenResult } from '../../shared/runtime-types'
 import type { RuntimeNavigationTarget } from '../../shared/runtime-navigation'
-import {
-  isMobilePreviewableImagePath,
-  type TerminalFileGrant
-} from './runtime-file-commands-mobile-file-list-limit'
+import { isMobilePreviewableImagePath } from './runtime-file-commands-mobile-file-list-limit'
 import { joinWorktreeRelativePath, normalizeRuntimeRelativePath } from './runtime-relative-paths'
 import { isENOENT } from '../ipc/filesystem-path-containment'
 import {
@@ -28,11 +26,12 @@ import { parseExecutionHostId, type ExecutionHostId } from '../../shared/executi
 import type { FileStat } from '../providers/filesystem-provider-contract'
 
 export class RuntimeFileCommandAccess {
-  protected readonly terminalFileGrants = new Map<string, TerminalFileGrant>()
+  private readonly terminalArtifacts: RuntimeTerminalArtifacts
   private readonly search: RuntimeFileSearch
 
   constructor(protected readonly host: RuntimeFileCommandHost) {
     this.search = new RuntimeFileSearch(host)
+    this.terminalArtifacts = new RuntimeTerminalArtifacts(host)
   }
 
   listMobileFiles(...args: Parameters<RuntimeFileSearch['listMobileFiles']>) {
@@ -53,6 +52,74 @@ export class RuntimeFileCommandAccess {
 
   listRuntimeFiles(...args: Parameters<RuntimeFileSearch['listRuntimeFiles']>) {
     return this.search.listRuntimeFiles(...args)
+  }
+
+  protected resolveAllowedTerminalArtifactPath(
+    ...args: Parameters<RuntimeTerminalArtifacts['resolveAllowedTerminalArtifactPath']>
+  ) {
+    return this.terminalArtifacts.resolveAllowedTerminalArtifactPath(...args)
+  }
+
+  protected resolveNativeChatArtifactPath(
+    ...args: Parameters<RuntimeTerminalArtifacts['resolveNativeChatArtifactPath']>
+  ) {
+    return this.terminalArtifacts.resolveNativeChatArtifactPath(...args)
+  }
+
+  protected resolveAbsoluteFileGrant(
+    ...args: Parameters<RuntimeTerminalArtifacts['resolveAbsoluteFileGrant']>
+  ) {
+    return this.terminalArtifacts.resolveAbsoluteFileGrant(...args)
+  }
+
+  readTerminalArtifactFile(
+    worktreeSelector: string,
+    grantId: string,
+    absolutePath: string,
+    clientId?: string
+  ) {
+    return this.terminalArtifacts.readTerminalArtifactFile(
+      worktreeSelector,
+      grantId,
+      absolutePath,
+      clientId
+    )
+  }
+
+  readTerminalArtifactPreview(
+    worktreeSelector: string,
+    grantId: string,
+    absolutePath: string,
+    clientId?: string,
+    maxContentBytes?: number
+  ) {
+    return this.terminalArtifacts.readTerminalArtifactPreview(
+      worktreeSelector,
+      grantId,
+      absolutePath,
+      clientId,
+      maxContentBytes
+    )
+  }
+
+  writeTerminalArtifactFile(
+    worktreeSelector: string,
+    grantId: string,
+    absolutePath: string,
+    content: string,
+    clientId?: string
+  ) {
+    return this.terminalArtifacts.writeTerminalArtifactFile(
+      worktreeSelector,
+      grantId,
+      absolutePath,
+      content,
+      clientId
+    )
+  }
+
+  revokeTerminalFileGrantsForClient(clientId: string) {
+    return this.terminalArtifacts.revokeTerminalFileGrantsForClient(clientId)
   }
 
   async openMobileFile(

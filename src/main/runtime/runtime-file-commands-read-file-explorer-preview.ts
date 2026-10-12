@@ -1,5 +1,5 @@
 // @ts-nocheck -- mechanically split class members.
-import { RuntimeFileCommandsWithAssertRemoteTerminalFileGrantPathStillCanonical } from './runtime-file-commands-assert-remote-terminal-file-grant-path-still-canonical'
+import { RuntimeFileExplorerWatchCommands } from './runtime-file-explorer-watch-commands'
 import type {
   RuntimeFilePreviewResult,
   RuntimeFileReadChunkResult
@@ -28,7 +28,7 @@ import type {
   DocPreviewFileAccessResult
 } from '../../shared/doc-preview-file-access'
 
-export class RuntimeFileCommandsWithReadFileExplorerPreview extends RuntimeFileCommandsWithAssertRemoteTerminalFileGrantPathStillCanonical {
+export class RuntimeFileCommandsWithReadFileExplorerPreview extends RuntimeFileExplorerWatchCommands {
   async readFileExplorerPreview(
     worktreeSelector: string,
     relativePath: string,

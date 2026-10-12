@@ -1,13 +1,9 @@
-// @ts-nocheck -- mechanically split declarations.
 import { tmpdir } from 'node:os'
 import { createHash } from 'node:crypto'
 import { parseWslPath, toWindowsWslPath } from '../wsl'
 import { realpath } from 'node:fs/promises'
 import type { FileHandle } from 'node:fs/promises'
-import type {
-  RuntimeFileStatLike,
-  TerminalFileGrant
-} from './runtime-file-commands-mobile-file-list-limit'
+import type { RuntimeFileStatLike, TerminalFileGrant } from './runtime-terminal-file-grants'
 import {
   LOCAL_PREVIEWABLE_BINARY_MAX_BYTES,
   MOBILE_FILE_READ_MAX_BYTES
@@ -46,11 +42,7 @@ export async function readFileHandleBufferBounded(
   return buffer.subarray(0, bytesRead)
 }
 
-/**
- * Content fingerprint pinned into a local grant. Bounded by the largest previewable size so any
- * artifact an access path can return is covered whole; larger files digest to null because both
- * read paths reject them on size before any content leaves the host.
- */
+/** Pin all returnable bytes; size-rejected files need no digest. */
 export async function localTerminalArtifactContentDigest(
   handle: FileHandle,
   size: number
@@ -66,11 +58,7 @@ export function terminalArtifactContentDigest(buffer: Buffer): string {
   return createHash('sha256').update(buffer).digest('hex')
 }
 
-/**
- * Rejects a local artifact whose bytes changed since the grant was minted. `buffer` must hold the
- * whole file — every local access path size-checks before it reads, so a buffer that reaches here
- * is the complete artifact.
- */
+/** Callers size-check first, so this compares the entire granted file. */
 export function assertTerminalArtifactContentUnchanged(
   grant: Pick<TerminalFileGrant, 'contentDigest'>,
   buffer: Buffer
@@ -83,10 +71,7 @@ export function assertTerminalArtifactContentUnchanged(
   }
 }
 
-// Wire contract: the relay recomputes this exact string from its own stat to honour
-// expectedStatIdentity, so the format cannot change without a negotiated capability.
-// What this identity cannot distinguish, and which windows stay open after the digest:
-// docs/reference/terminal-artifact-grant-integrity.md
+// Remote peers recompute this identity; changes require capability negotiation.
 export function terminalFileStatIdentity(stats: RuntimeFileStatLike): string | null {
   const dev = typeof stats.dev === 'number' ? stats.dev : null
   const ino = typeof stats.ino === 'number' ? stats.ino : null
