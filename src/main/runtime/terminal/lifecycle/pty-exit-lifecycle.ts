@@ -1,17 +1,40 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithOnClientDisconnected } from './terminal/layout/terminal-client-disconnect'
-import type { PtyIncarnationId } from '../../shared/pty-incarnation'
-import type { TerminalExitCause } from '../../shared/terminal-exit-cause'
+import { OrcaRuntimeWithOnClientDisconnected } from '../layout/terminal-client-disconnect'
+import type { PtyIncarnationId } from '../../../../shared/pty-incarnation'
+import type { TerminalExitCause } from '../../../../shared/terminal-exit-cause'
 import {
   OPERATOR_CLOSE_EXIT_CAUSE,
   resolveUnreportedExitCause
-} from '../../shared/terminal-exit-cause'
-import { SSH_EXIT_UNCONFIRMED_REASON } from '../../shared/pty-liveness-verdict'
-import type { RetiredTerminalSurface } from './mobile-session-terminal-retirement'
-import { parsePaneKey } from '../../shared/stable-pane-id'
-import { advertisedUrlWatcher } from '../ports/advertised-url-watcher'
+} from '../../../../shared/terminal-exit-cause'
+import { SSH_EXIT_UNCONFIRMED_REASON } from '../../../../shared/pty-liveness-verdict'
+import type { RetiredTerminalSurface } from '../../mobile-session-terminal-retirement'
+import { parsePaneKey } from '../../../../shared/stable-pane-id'
+import { advertisedUrlWatcher } from '../../../ports/advertised-url-watcher'
+import type { PtyLivenessVerdict } from '../../../../shared/pty-liveness-verdict'
+import type {
+  RuntimePtyWorktreeRecord,
+  RuntimeLeafRecord
+} from '../../runtime-terminal-state-records'
 
-export class OrcaRuntimeWithOnPtyExit extends OrcaRuntimeWithOnClientDisconnected {
+export abstract class OrcaRuntimeWithOnPtyExit extends OrcaRuntimeWithOnClientDisconnected {
+  protected abstract pruneDisconnectedPtyRecords(): void
+
+  protected abstract failActiveDispatchOnExit(
+    handle: string,
+    paneKey: string | null,
+    exitCode: number,
+    cause: TerminalExitCause
+  ): void
+
+  protected abstract resolveExitWaiters(leaf: RuntimeLeafRecord): void
+
+  protected abstract pruneDisconnectedPtyTranscript(pty: RuntimePtyWorktreeRecord): void
+
+  protected abstract resolvePtyExitWaiters(pty: RuntimePtyWorktreeRecord, ptyId: string): void
+
+  protected abstract cancelPendingDriverMutations(ptyId: string): void
+
+  protected abstract rememberPtyLivenessVerdict(ptyId: string, verdict: PtyLivenessVerdict): void
+
   onPtyExit(
     ptyId: string,
     exitCode: number,

@@ -18,11 +18,9 @@ src/main/runtime/orca-runtime-get-runtime-id.ts
 src/main/runtime/orca-runtime-get-worktree-ps.ts
 src/main/runtime/orca-runtime-has-exact-persisted-terminal-surface-identity.ts
 src/main/runtime/orca-runtime-has-live-or-persisted-serve-or-ssh-owned-pty-binding.ts
-src/main/runtime/orca-runtime-invalidate-all-handles-for-pty.ts
 src/main/runtime/orca-runtime-linear-commands.ts
 src/main/runtime/orca-runtime-list-managed-worktrees.ts
 src/main/runtime/orca-runtime-notify-ssh-state-changed.ts
-src/main/runtime/orca-runtime-on-pty-exit.ts
 src/main/runtime/orca-runtime-perform-mobile-session-pty-records-refresh.ts
 src/main/runtime/orca-runtime-persist-headless-terminal-title.ts
 src/main/runtime/orca-runtime-preserved-branch-cleanup.ts
@@ -30,10 +28,7 @@ src/main/runtime/orca-runtime-prune-mobile-session-tab-group-layout.ts
 src/main/runtime/orca-runtime-pty-foreground-process-reads.ts
 src/main/runtime/orca-runtime-publish-pty-backed-mobile-session-terminal.ts
 src/main/runtime/orca-runtime-reconcile-headless-mobile-session-browser-tabs.ts
-src/main/runtime/orca-runtime-refresh-pty-worktree-records-from-controller.ts
-src/main/runtime/orca-runtime-refresh-pty-worktree-records-with-controller-inventory.ts
 src/main/runtime/orca-runtime-refuse-unattributed-mobile-session-tab-close.ts
-src/main/runtime/orca-runtime-register-pty.ts
 src/main/runtime/orca-runtime-resolve-known-workspace-file-target.ts
 src/main/runtime/orca-runtime-resolve-terminal-pane.ts
 src/main/runtime/orca-runtime-resolve-terminal-split-source-authority.ts

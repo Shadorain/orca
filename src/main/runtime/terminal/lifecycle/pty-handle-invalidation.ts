@@ -1,10 +1,17 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithResolveKnownWorkspaceFileTarget } from './orca-runtime-resolve-known-workspace-file-target'
-import type { PtyIncarnationId } from '../../shared/pty-incarnation'
-import { getPtyExecutionHost } from '../../shared/terminal-execution-host'
-import { getConnectionExecutionHostId, parseExecutionHostId } from '../../shared/execution-host'
+import { OrcaRuntimeWithResolveKnownWorkspaceFileTarget } from '../../orca-runtime-resolve-known-workspace-file-target'
+import type { PtyIncarnationId } from '../../../../shared/pty-incarnation'
+import { getPtyExecutionHost } from '../../../../shared/terminal-execution-host'
+import {
+  getConnectionExecutionHostId,
+  parseExecutionHostId
+} from '../../../../shared/execution-host'
+import type { RuntimePtyWorktreeRecord } from '../../runtime-terminal-state-records'
 
-export class OrcaRuntimeWithInvalidateAllHandlesForPty extends OrcaRuntimeWithResolveKnownWorkspaceFileTarget {
+export abstract class OrcaRuntimeWithInvalidateAllHandlesForPty extends OrcaRuntimeWithResolveKnownWorkspaceFileTarget {
+  protected abstract getOrCreatePtyWorktreeRecord(ptyId: string): RuntimePtyWorktreeRecord | null
+
+  protected abstract rejectWaitersForHandle(handle: string, code: string): void
+
   protected invalidateAllHandlesForPty(ptyId: string, preserveHandle?: string): Set<string> {
     const incarnationHandle = this.handleByPtyIncarnation.get(ptyId)?.handle
     const preallocatedHandle = this.handleByPtyId.get(ptyId)

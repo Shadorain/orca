@@ -1,13 +1,24 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithInvalidateAllHandlesForPty } from './orca-runtime-invalidate-all-handles-for-pty'
-import type { PtyIncarnationId } from '../../shared/pty-incarnation'
-import type { TuiAgent } from '../../shared/tui-agent'
-import { isValidTerminalTabId } from '../../shared/terminal-tab-id'
-import { isTerminalLeafId, makePaneKey } from '../../shared/stable-pane-id'
-import { isTuiAgent } from '../../shared/tui-agent-config'
-import { spawnSurfaceClaimSequence } from './pty-recorded-surface-topology'
+import { OrcaRuntimeWithInvalidateAllHandlesForPty } from './pty-handle-invalidation'
+import type { PtyIncarnationId } from '../../../../shared/pty-incarnation'
+import type { TuiAgent } from '../../../../shared/tui-agent'
+import { isValidTerminalTabId } from '../../../../shared/terminal-tab-id'
+import { isTerminalLeafId, makePaneKey } from '../../../../shared/stable-pane-id'
+import { isTuiAgent } from '../../../../shared/tui-agent-config'
+import { spawnSurfaceClaimSequence } from '../../pty-recorded-surface-topology'
+import type { RuntimePtyWorktreeRecord } from '../../runtime-terminal-state-records'
+import type { OrchestrationCompatibilityTerminalAuthority } from '../../runtime-terminal-contracts'
+import type { RuntimeMobileSessionCreateTerminalResult } from '../../../../shared/runtime-session-contracts'
 
-export class OrcaRuntimeWithRegisterPty extends OrcaRuntimeWithInvalidateAllHandlesForPty {
+export abstract class OrcaRuntimeWithRegisterPty extends OrcaRuntimeWithInvalidateAllHandlesForPty {
+  protected abstract ensurePtyBackedMobileSurfaceForRendererTab(
+    worktreeId: string,
+    tabId: string
+  ): RuntimeMobileSessionCreateTerminalResult | null
+
+  protected abstract getOrchestrationCompatibilityHostScope(
+    pty: RuntimePtyWorktreeRecord
+  ): OrchestrationCompatibilityTerminalAuthority['hostScope'] | null
+
   registerPty(
     ptyId: string,
     worktreeId: string,

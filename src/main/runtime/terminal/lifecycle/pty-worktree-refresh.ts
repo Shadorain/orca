@@ -1,8 +1,9 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithRecordPtyWorktree } from './terminal/identity/pty-worktree-record'
-import type { ResolvedWorktree } from './runtime-worktree-path-identity'
+import { OrcaRuntimeWithRecordPtyWorktree } from '../identity/pty-worktree-record'
+import type { ResolvedWorktree } from '../../runtime-worktree-path-identity'
 
-export class OrcaRuntimeWithRefreshPtyWorktreeRecordsFromController extends OrcaRuntimeWithRecordPtyWorktree {
+export abstract class OrcaRuntimeWithRefreshPtyWorktreeRecordsFromController extends OrcaRuntimeWithRecordPtyWorktree {
+  protected abstract refreshFloatingWorkspacePtyLiveness(): Set<string> | null
+
   /** Synchronizes PTY tracking records with running daemon sessions, querying their foreground agent states. */
   protected async refreshPtyWorktreeRecordsFromController(
     resolvedWorktrees: ResolvedWorktree[],
