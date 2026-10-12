@@ -1,17 +1,37 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithActivateManagedWorktree } from './workspaces/workspace-activation'
-import type { WorktreeTerminalProvisioningHost } from './runtime-worktree-terminal-provisioning'
-import type { WorktreeStartupReadinessHost } from './runtime-worktree-startup-readiness'
-import { prefetchWorktreeCreateBase } from '../worktree-create-base-prefetch'
-import { prepareWorktreeCreateForRepo } from '../worktree-create-preparation'
-import { getWorktreeCreatePrefetchGitOptions } from '../project-runtime-git-options'
-import type { Worktree } from '../../shared/worktree/types'
+import type { RuntimeRemoteFetchController } from '../../runtime-remote-fetch-controller'
+import type { TerminalSplitOptions } from '../../terminal/launch/terminal-split-surface'
+import type { RuntimeTerminalSplit } from '../../../../shared/runtime-terminal-contracts'
+import { OrcaRuntimeWithActivateManagedWorktree } from '../workspace-activation'
+import type { WorktreeTerminalProvisioningHost } from '../../runtime-worktree-terminal-provisioning'
+import type { WorktreeStartupReadinessHost } from '../../runtime-worktree-startup-readiness'
+import { prefetchWorktreeCreateBase } from '../../../worktree-create-base-prefetch'
+import { prepareWorktreeCreateForRepo } from '../../../worktree-create-preparation'
+import { getWorktreeCreatePrefetchGitOptions } from '../../../project-runtime-git-options'
+import type { Worktree } from '../../../../shared/worktree/types'
 import {
   navigationTargetsHost,
   type RuntimeNavigationTarget
-} from '../../shared/runtime-navigation'
+} from '../../../../shared/runtime-navigation'
 
-export class OrcaRuntimeWithGetWorktreeTerminalProvisioningHost extends OrcaRuntimeWithActivateManagedWorktree {
+export abstract class OrcaRuntimeWithGetWorktreeTerminalProvisioningHost extends OrcaRuntimeWithActivateManagedWorktree {
+  abstract splitTerminal(
+    handle: string,
+    opts?: TerminalSplitOptions,
+    createdWorktree?: Worktree
+  ): Promise<RuntimeTerminalSplit>
+  abstract resolveRemoteTrackingBase(
+    ...args: Parameters<RuntimeRemoteFetchController['resolveRemoteTrackingBase']>
+  ): ReturnType<RuntimeRemoteFetchController['resolveRemoteTrackingBase']>
+  abstract hasRemoteTrackingRef(
+    ...args: Parameters<RuntimeRemoteFetchController['hasRemoteTrackingRef']>
+  ): ReturnType<RuntimeRemoteFetchController['hasRemoteTrackingRef']>
+  abstract getOrStartRemoteTrackingBaseRefresh(
+    ...args: Parameters<RuntimeRemoteFetchController['getOrStartRemoteTrackingBaseRefresh']>
+  ): ReturnType<RuntimeRemoteFetchController['getOrStartRemoteTrackingBaseRefresh']>
+  abstract fetchRemoteWithCache(
+    ...args: Parameters<RuntimeRemoteFetchController['fetchRemoteWithCache']>
+  ): ReturnType<RuntimeRemoteFetchController['fetchRemoteWithCache']>
+
   protected shouldProvisionWorktreeInBackground(navigation?: RuntimeNavigationTarget): boolean {
     return (
       navigationTargetsHost(navigation ?? 'host') &&
