@@ -1,26 +1,30 @@
-// @ts-nocheck -- mechanically split class members.
-import type {
-  BrowserCommandTargetParams,
-  ResolvedBrowserCommandTarget,
-  ResolvedBrowserPageWebContents,
-  RuntimeBrowserCommandHost
-} from './runtime-browser-commands-browser-command-target-params'
-import type { AgentBrowserBridge } from '../browser/agent-browser-bridge'
-import { BrowserError } from '../browser/browser-error'
+import type { AgentBrowserBridge } from '../../browser/agent-browser-bridge'
+import { BrowserError } from '../../browser/browser-error'
 import { webContents } from 'electron'
 import {
   waitForTabRegistration,
   waitForWorktreeTabRegistration
-} from '../ipc/browser-tab-registration-wait'
-import type { BrowserSnapshotResult } from '../../shared/runtime-types'
-import { RuntimeBrowserCommandsState } from './runtime-browser-commands-state'
+} from '../../ipc/browser-tab-registration-wait'
+import type { BrowserSnapshotResult } from '../../../shared/runtime-types'
+import type {
+  BrowserCommandTargetParams,
+  RuntimeBrowserCommandHost,
+  ResolvedBrowserCommandTarget,
+  ResolvedBrowserPageWebContents
+} from './browser-command-contracts'
 
-export class RuntimeBrowserCommandsWithActiveScreencastsByPageId extends RuntimeBrowserCommandsState {
-  constructor(private readonly host: RuntimeBrowserCommandHost) {
-    super()
-  }
+export class RuntimeBrowserCommandTargets {
+  constructor(
+    private readonly host: Pick<
+      RuntimeBrowserCommandHost,
+      | 'getAgentBrowserBridge'
+      | 'resolveWorktreeSelector'
+      | 'getAuthoritativeWindow'
+      | 'retireRuntimeOwnedBrowserSessionTab'
+    >
+  ) {}
 
-  protected requireAgentBrowserBridge(): AgentBrowserBridge {
+  requireAgentBrowserBridge(): AgentBrowserBridge {
     const bridge = this.host.getAgentBrowserBridge()
     if (!bridge) {
       throw new BrowserError('browser_no_tab', 'No browser session is active')
@@ -28,25 +32,15 @@ export class RuntimeBrowserCommandsWithActiveScreencastsByPageId extends Runtime
     return bridge
   }
 
-  /**
-   * Retires a session row for a page nothing here can close any more.
-   *
-   * A client-hosted page whose runtime record is gone -- released as unrecoverable, or created by a
-   * build that kept its records in memory only -- still leaves a row every paired device can see,
-   * and every close path below is keyed on a live guest this runtime does not have. Without this
-   * the row's X fails closed and the ghost outlives the browser it named.
-   */
-  private retireGhostBrowserSessionRow(
-    worktreeId: string | undefined,
-    browserPageId: string
-  ): boolean {
+  // A retained session row can outlive the page its host was able to close.
+  retireGhostBrowserSessionRow(worktreeId: string | undefined, browserPageId: string): boolean {
     return (
       worktreeId !== undefined &&
       this.host.retireRuntimeOwnedBrowserSessionTab?.(worktreeId, browserPageId) === true
     )
   }
 
-  protected hasLiveRegisteredBrowserTab(
+  private hasLiveRegisteredBrowserTab(
     bridge: AgentBrowserBridge,
     worktreeId: string | undefined
   ): boolean {
@@ -59,7 +53,7 @@ export class RuntimeBrowserCommandsWithActiveScreencastsByPageId extends Runtime
     return false
   }
 
-  protected hasLiveRegisteredBrowserPage(
+  private hasLiveRegisteredBrowserPage(
     bridge: AgentBrowserBridge,
     worktreeId: string | undefined,
     browserPageId: string
@@ -73,7 +67,7 @@ export class RuntimeBrowserCommandsWithActiveScreencastsByPageId extends Runtime
   }
 
   // Why: the CLI sends selectors (e.g. "path:/...") but the bridge keys tabs by "repoId::path"; resolve to that store-compatible id.
-  private async resolveBrowserWorktreeId(selector?: string): Promise<string | undefined> {
+  async resolveBrowserWorktreeId(selector?: string): Promise<string | undefined> {
     if (!selector) {
       // Why: after restart, webviews mount only when the pane is visible; activate the view so persisted tabs become operable via registerGuest.
       const bridge = this.host.getAgentBrowserBridge()
@@ -100,7 +94,7 @@ export class RuntimeBrowserCommandsWithActiveScreencastsByPageId extends Runtime
     return worktreeId
   }
 
-  protected async resolveBrowserCommandTarget(
+  async resolveBrowserCommandTarget(
     params: BrowserCommandTargetParams
   ): Promise<ResolvedBrowserCommandTarget> {
     const browserPageId =
@@ -129,7 +123,7 @@ export class RuntimeBrowserCommandsWithActiveScreencastsByPageId extends Runtime
     }
   }
 
-  protected resolveBrowserPageWebContents(
+  resolveBrowserPageWebContents(
     worktreeId: string | undefined,
     browserPageId: string | undefined
   ): ResolvedBrowserPageWebContents {
@@ -164,7 +158,7 @@ export class RuntimeBrowserCommandsWithActiveScreencastsByPageId extends Runtime
     await waitForWorktreeTabRegistration(worktreeId)
   }
 
-  protected async ensureBrowserPageActive(
+  async ensureBrowserPageActive(
     worktreeId: string | undefined,
     browserPageId: string
   ): Promise<void> {
@@ -176,8 +170,8 @@ export class RuntimeBrowserCommandsWithActiveScreencastsByPageId extends Runtime
     await waitForTabRegistration(browserPageId)
   }
 
-  // Why: helper-driven clicks can bypass Electron navigation events; push authoritative URL/title updates after automation.
-  private notifyRendererNavigation(browserPageId: string, url: string, title: string): void {
+  // Why: automation clicks can bypass Electron navigation events; push authoritative URL/title updates after automation.
+  notifyRendererNavigation(browserPageId: string, url: string, title: string): void {
     try {
       const win = this.host.getAuthoritativeWindow()
       win.webContents.send('browser:navigation-update', { browserPageId, url, title })
@@ -187,10 +181,7 @@ export class RuntimeBrowserCommandsWithActiveScreencastsByPageId extends Runtime
   }
 
   // Why: carry worktreeId (not a global setActiveWorktree) so one agent's --focus can't steal the screen from another agent's parallel worktree.
-  private notifyRendererBrowserPaneFocus(
-    worktreeId: string | undefined,
-    browserPageId: string
-  ): void {
+  notifyRendererBrowserPaneFocus(worktreeId: string | undefined, browserPageId: string): void {
     try {
       const win = this.host.getAuthoritativeWindow()
       win.webContents.send('browser:pane-focus', {

@@ -1,6 +1,4 @@
-// @ts-nocheck -- mechanically split class members.
-import { RuntimeBrowserCommandsWithBrowserTabCreate } from './runtime-browser-commands-browser-tab-create'
-import type { BrowserCommandTargetParams } from './runtime-browser-commands-browser-command-target-params'
+import { createBrowserTabInRenderer } from './browser-tab-renderer-create'
 import type {
   BrowserDetectProfilesResult,
   BrowserProfileCreateResult,
@@ -8,25 +6,47 @@ import type {
   BrowserProfileListResult,
   BrowserTabProfileCloneResult,
   BrowserTabProfileShowResult,
-  BrowserTabSetProfileResult
-} from '../../shared/runtime-types'
-import { BrowserError } from '../browser/browser-error'
-import { browserSessionRegistry } from '../browser/browser-session-registry'
-import { browserManager } from '../browser/browser-manager'
+  BrowserTabSetProfileResult,
+  BrowserProfileClearDefaultCookiesResult,
+  BrowserProfileImportFromBrowserResult
+} from '../../../shared/runtime-types'
+import { BrowserError } from '../../browser/browser-error'
+import { browserSessionRegistry } from '../../browser/browser-session-registry'
+import { browserManager } from '../../browser/browser-manager'
 import { randomUUID } from 'node:crypto'
 import { ipcMain } from 'electron'
-import { waitForTabRegistration } from '../ipc/browser-tab-registration-wait'
-import { detectInstalledBrowsers } from '../browser/browser-cookie-import'
+import { waitForTabRegistration } from '../../ipc/browser-tab-registration-wait'
+import {
+  detectInstalledBrowsers,
+  importCookiesFromBrowser,
+  selectBrowserProfile
+} from '../../browser/browser-cookie-import'
+import type {
+  BrowserCommandTargetParams,
+  RuntimeBrowserCommandHost
+} from './browser-command-contracts'
+import type { RuntimeBrowserCommandTargets } from './browser-command-targets'
+import type { RuntimeBrowserTabCatalog } from './browser-tab-catalog'
 
-export class RuntimeBrowserCommandsWithBrowserTabSetProfile extends RuntimeBrowserCommandsWithBrowserTabCreate {
+export class RuntimeBrowserProfiles {
+  constructor(
+    private readonly host: Pick<RuntimeBrowserCommandHost, 'getAuthoritativeWindow'>,
+    private readonly targets: Pick<
+      RuntimeBrowserCommandTargets,
+      'requireAgentBrowserBridge' | 'resolveBrowserCommandTarget'
+    >,
+    private readonly catalog: Pick<RuntimeBrowserTabCatalog, 'describeBrowserTab'>
+  ) {}
+
   async browserTabSetProfile(
     params: {
       profileId: string
     } & BrowserCommandTargetParams
   ): Promise<BrowserTabSetProfileResult> {
-    const target = await this.resolveBrowserCommandTarget(params)
+    const target = await this.targets.resolveBrowserCommandTarget(params)
     const browserPageId =
-      target.browserPageId ?? this.requireAgentBrowserBridge().getActivePageId(target.worktreeId)
+      target.browserPageId ??
+      this.targets.requireAgentBrowserBridge().getActivePageId(target.worktreeId)
     if (!browserPageId) {
       throw new BrowserError('browser_no_tab', 'No browser tab open in this worktree')
     }
@@ -101,8 +121,8 @@ export class RuntimeBrowserCommandsWithBrowserTabSetProfile extends RuntimeBrows
     page: string
     worktree?: string
   }): Promise<BrowserTabProfileShowResult> {
-    const target = await this.resolveBrowserCommandTarget(params)
-    const tab = this.describeBrowserTab(params.page, target.worktreeId)
+    const target = await this.targets.resolveBrowserCommandTarget(params)
+    const tab = this.catalog.describeBrowserTab(params.page, target.worktreeId)
     return {
       browserPageId: tab.browserPageId,
       worktreeId: tab.worktreeId ?? null,
@@ -116,13 +136,14 @@ export class RuntimeBrowserCommandsWithBrowserTabSetProfile extends RuntimeBrows
       profileId: string
     } & BrowserCommandTargetParams
   ): Promise<BrowserTabProfileCloneResult> {
-    const target = await this.resolveBrowserCommandTarget(params)
+    const target = await this.targets.resolveBrowserCommandTarget(params)
     const sourceBrowserPageId =
-      target.browserPageId ?? this.requireAgentBrowserBridge().getActivePageId(target.worktreeId)
+      target.browserPageId ??
+      this.targets.requireAgentBrowserBridge().getActivePageId(target.worktreeId)
     if (!sourceBrowserPageId) {
       throw new BrowserError('browser_no_tab', 'No browser tab open in this worktree')
     }
-    const sourceTab = this.describeBrowserTab(sourceBrowserPageId, target.worktreeId)
+    const sourceTab = this.catalog.describeBrowserTab(sourceBrowserPageId, target.worktreeId)
     const profile = browserSessionRegistry.getProfile(params.profileId)
     if (!profile) {
       throw new BrowserError(
@@ -130,7 +151,8 @@ export class RuntimeBrowserCommandsWithBrowserTabSetProfile extends RuntimeBrows
         `Browser profile ${params.profileId} was not found`
       )
     }
-    const created = await this.createBrowserTabInRenderer(
+    const created = await createBrowserTabInRenderer(
+      this.host,
       sourceTab.url,
       sourceTab.worktreeId ?? target.worktreeId,
       profile.id,
@@ -180,5 +202,61 @@ export class RuntimeBrowserCommandsWithBrowserTabSetProfile extends RuntimeBrows
         selectedProfile: browser.selectedProfile
       }))
     }
+  }
+
+  async browserProfileImportFromBrowser(params: {
+    profileId: string
+    browserFamily: string
+    browserProfile?: string
+    supportsPartitionSkippedCookies?: true
+  }): Promise<BrowserProfileImportFromBrowserResult> {
+    const profile = browserSessionRegistry.getProfile(params.profileId)
+    if (!profile) {
+      return { ok: false, reason: 'Session profile not found.' }
+    }
+    if (
+      params.browserProfile &&
+      (/[/\\]/.test(params.browserProfile) || params.browserProfile.includes('..'))
+    ) {
+      return { ok: false, reason: 'Invalid browser profile name.' }
+    }
+
+    const browsers = detectInstalledBrowsers()
+    let browser = browsers.find((candidate) => candidate.family === params.browserFamily)
+    if (!browser) {
+      return { ok: false, reason: 'Browser not found on this system.' }
+    }
+
+    if (params.browserProfile && params.browserProfile !== browser.selectedProfile) {
+      const reselected = selectBrowserProfile(browser, params.browserProfile)
+      if (!reselected) {
+        return {
+          ok: false,
+          reason: `No cookies database found for profile "${params.browserProfile}".`
+        }
+      }
+      browser = reselected
+    }
+
+    const result = await importCookiesFromBrowser(browser, profile.partition, {
+      canReportPartitionSkippedCookies: params.supportsPartitionSkippedCookies === true
+    })
+    if (!result.ok) {
+      return result
+    }
+
+    const profileName =
+      browser.profiles.find((candidate) => candidate.directory === browser.selectedProfile)?.name ??
+      browser.selectedProfile
+    browserSessionRegistry.updateProfileSource(params.profileId, {
+      browserFamily: browser.family,
+      profileName,
+      importedAt: Date.now()
+    })
+    return { ...result, profileId: params.profileId }
+  }
+
+  async browserProfileClearDefaultCookies(): Promise<BrowserProfileClearDefaultCookiesResult> {
+    return { cleared: await browserSessionRegistry.clearDefaultSessionCookies() }
   }
 }

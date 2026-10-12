@@ -1,16 +1,24 @@
-// @ts-nocheck -- mechanically split class members.
-import { RuntimeBrowserCommandsWithBrowserTabClose } from './runtime-browser-commands-browser-tab-close'
-import type { RuntimeBrowserClientPage } from './runtime-browser-page-registry'
-import type { BrowserTabListResult } from '../../shared/runtime-types'
-import { browserSessionRegistry } from '../browser/browser-session-registry'
-import { BrowserError } from '../browser/browser-error'
-import type { BrowserCommandTargetParams } from './runtime-browser-commands-browser-command-target-params'
-import { browserManager } from '../browser/browser-manager'
-import { randomUUID } from 'node:crypto'
-import { ipcMain } from 'electron'
+import type { RuntimeBrowserClientPage } from '../runtime-browser-page-registry'
+import type { BrowserTabListResult } from '../../../shared/runtime-types'
+import { browserSessionRegistry } from '../../browser/browser-session-registry'
+import { BrowserError } from '../../browser/browser-error'
+import { browserManager } from '../../browser/browser-manager'
+import type {
+  BrowserCommandTargetParams,
+  RuntimeBrowserCommandHost
+} from './browser-command-contracts'
+import type { RuntimeBrowserCommandTargets } from './browser-command-targets'
 
-export class RuntimeBrowserCommandsWithListLogicalBrowserTabs extends RuntimeBrowserCommandsWithBrowserTabClose {
-  protected listLogicalBrowserTabs(
+export class RuntimeBrowserTabCatalog {
+  constructor(
+    private readonly host: Pick<
+      RuntimeBrowserCommandHost,
+      'getAgentBrowserBridge' | 'resolveBrowserWorkspace' | 'getRuntimeBrowserPageRegistry'
+    >,
+    private readonly targets: Pick<RuntimeBrowserCommandTargets, 'requireAgentBrowserBridge'>
+  ) {}
+
+  listLogicalBrowserTabs(
     worktreeId: string | undefined,
     clientPages: readonly RuntimeBrowserClientPage[]
   ): BrowserTabListResult['tabs'] {
@@ -47,7 +55,7 @@ export class RuntimeBrowserCommandsWithListLogicalBrowserTabs extends RuntimeBro
     return tabs.map((tab, index) => ({ ...tab, index }))
   }
 
-  protected async assertClientPageWorkspace(
+  async assertClientPageWorkspace(
     page: RuntimeBrowserClientPage,
     selector: string | undefined
   ): Promise<void> {
@@ -63,7 +71,7 @@ export class RuntimeBrowserCommandsWithListLogicalBrowserTabs extends RuntimeBro
     }
   }
 
-  protected async resolveClientHostedBrowserPage(
+  async resolveClientHostedBrowserPage(
     params: BrowserCommandTargetParams
   ): Promise<RuntimeBrowserClientPage | undefined> {
     const pages = this.host.getRuntimeBrowserPageRegistry()
@@ -80,12 +88,13 @@ export class RuntimeBrowserCommandsWithListLogicalBrowserTabs extends RuntimeBro
     return pages.listPages(workspaceId).find((page) => page.active)
   }
 
-  protected describeBrowserTab(
+  describeBrowserTab(
     browserPageId: string,
     explicitWorktreeId?: string
   ): BrowserTabListResult['tabs'][number] {
     const worktreeId = explicitWorktreeId ?? browserManager.getWorktreeIdForTab(browserPageId)
-    const tab = this.requireAgentBrowserBridge()
+    const tab = this.targets
+      .requireAgentBrowserBridge()
       .tabList(worktreeId)
       .tabs.find((entry) => entry.browserPageId === browserPageId)
     if (!tab) {
@@ -98,51 +107,18 @@ export class RuntimeBrowserCommandsWithListLogicalBrowserTabs extends RuntimeBro
     return this.enrichBrowserTabInfo(tab)
   }
 
-  protected async createBrowserTabInRenderer(
-    url: string,
-    worktreeId: string | undefined,
-    profileId: string | undefined,
-    sessionPartition: string | undefined,
-    activate?: boolean,
-    requestedPageId?: string
-  ): Promise<{ browserPageId: string }> {
-    const win = this.host.getAuthoritativeWindow()
-    const requestId = randomUUID()
-
-    const browserPageId = await new Promise<string>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        ipcMain.removeListener('browser:tabCreateReply', handler)
-        reject(new Error('Tab creation timed out'))
-      }, 10_000)
-
-      const handler = (
-        event: Electron.IpcMainEvent,
-        reply: { requestId: string; browserPageId?: string; error?: string }
-      ): void => {
-        if (event.sender !== win.webContents || reply.requestId !== requestId) {
-          return
-        }
-        clearTimeout(timer)
-        ipcMain.removeListener('browser:tabCreateReply', handler)
-        if (reply.error) {
-          reject(new Error(reply.error))
-        } else {
-          resolve(reply.browserPageId!)
-        }
-      }
-      ipcMain.on('browser:tabCreateReply', handler)
-      win.webContents.send('browser:requestTabCreate', {
-        requestId,
-        url,
-        worktreeId,
-        ...(requestedPageId ? { browserPageId: requestedPageId } : {}),
-        // Why: keep these undefined (not null) when no profile is chosen so the renderer still applies default-profile inheritance.
-        sessionProfileId: profileId,
-        sessionPartition,
-        activate
-      })
-    })
-
-    return { browserPageId }
+  private enrichBrowserTabInfo(
+    tab: BrowserTabListResult['tabs'][number]
+  ): BrowserTabListResult['tabs'][number] {
+    const rawProfileId = browserManager.getSessionProfileIdForTab(tab.browserPageId)
+    const profile =
+      browserSessionRegistry.getProfile(rawProfileId ?? 'default') ??
+      browserSessionRegistry.getDefaultProfile()
+    return {
+      ...tab,
+      worktreeId: browserManager.getWorktreeIdForTab(tab.browserPageId) ?? null,
+      profileId: profile.id,
+      profileLabel: profile.label
+    }
   }
 }

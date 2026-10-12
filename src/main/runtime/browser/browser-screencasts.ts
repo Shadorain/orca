@@ -1,35 +1,50 @@
-// @ts-nocheck -- mechanically split class members.
-import { RuntimeBrowserCommandsWithBrowserClick } from './runtime-browser-commands-browser-click'
-import type {
-  ActiveBrowserScreencastPage,
-  ActiveBrowserScreencastSubscriber,
-  BrowserCommandTargetParams,
-  BrowserScreencastParams,
-  BrowserScreencastStartResult
-} from './runtime-browser-commands-browser-command-target-params'
-import {
-  applySharedScreencastFrameBudget,
-  hasScreencastViewportSize,
-  normalizeScreencastFrameBudget,
-  normalizeScreencastViewport
-} from './runtime-browser-commands-browser-command-target-params'
-import type { BrowserEvalResult, BrowserScreencastResult } from '../../shared/runtime-types'
-import { BrowserError } from '../browser/browser-error'
+import { settleBrowserDialogOnLiveScreencast } from '../browser-dialog-settlement'
+import type { BrowserScreencastResult } from '../../../shared/runtime-types'
+import { BrowserError } from '../../browser/browser-error'
 import { randomUUID } from 'node:crypto'
-import { startBrowserScreencast } from '../browser/browser-screencast-stream'
-import { rendererPublicationThrottle } from '../window/renderer-publication-throttle'
+import { startBrowserScreencast } from '../../browser/browser-screencast-stream'
+import { rendererPublicationThrottle } from '../../window/renderer-publication-throttle'
 import {
   cancelScreencastSubscriberFrameRetry,
   deliverScreencastSubscriberFrame
-} from './browser-screencast-subscriber-frame-delivery'
+} from '../browser-screencast-subscriber-frame-delivery'
 import {
   INITIAL_SCREENCAST_SUBSCRIBER_DELIVERY,
   screencastSubscriberIsGhost
-} from './browser-screencast-ghost-subscriber-eviction'
-import type { BrowserScreencastSession } from '../browser/browser-screencast-stream-types'
-import type { RpcBinarySender } from './rpc/rpc-binary-sender'
+} from '../browser-screencast-ghost-subscriber-eviction'
+import type { BrowserScreencastSession } from '../../browser/browser-screencast-stream-types'
+import type { RpcBinarySender } from '../rpc/rpc-binary-sender'
+import type { RuntimeBrowserCommandHost } from './browser-command-contracts'
+import type { RuntimeBrowserCommandTargets } from './browser-command-targets'
+import type { RuntimeBrowserTabCatalog } from './browser-tab-catalog'
+import {
+  applySharedScreencastFrameBudget,
+  normalizeScreencastViewport,
+  normalizeScreencastFrameBudget,
+  hasScreencastViewportSize
+} from './browser-screencast-budget'
+import type {
+  BrowserScreencastParams,
+  BrowserScreencastStartResult,
+  ActiveBrowserScreencastSubscriber,
+  ActiveBrowserScreencastPage
+} from './browser-screencast-contracts'
 
-export class RuntimeBrowserCommandsWithBrowserScreencast extends RuntimeBrowserCommandsWithBrowserClick {
+export class RuntimeBrowserScreencasts {
+  private readonly activeScreencastsByPageId = new Map<string, ActiveBrowserScreencastPage>()
+
+  constructor(
+    private readonly host: Pick<RuntimeBrowserCommandHost, 'getAvailableAuthoritativeWindow'>,
+    private readonly targets: Pick<
+      RuntimeBrowserCommandTargets,
+      'resolveBrowserCommandTarget' | 'resolveBrowserPageWebContents'
+    >,
+    private readonly catalog: Pick<
+      RuntimeBrowserTabCatalog,
+      'resolveClientHostedBrowserPage' | 'describeBrowserTab'
+    >
+  ) {}
+
   async browserScreencast(
     params: BrowserScreencastParams,
     stream: {
@@ -38,14 +53,14 @@ export class RuntimeBrowserCommandsWithBrowserScreencast extends RuntimeBrowserC
       pairedDeviceId?: string
     }
   ): Promise<BrowserScreencastStartResult> {
-    if (await this.resolveClientHostedBrowserPage(params)) {
+    if (await this.catalog.resolveClientHostedBrowserPage(params)) {
       throw new BrowserError(
         'browser_error',
         'Client-hosted browser pages do not support server screencast.'
       )
     }
-    const target = await this.resolveBrowserCommandTarget(params)
-    const { browserPageId, webContents: guest } = this.resolveBrowserPageWebContents(
+    const target = await this.targets.resolveBrowserCommandTarget(params)
+    const { browserPageId, webContents: guest } = this.targets.resolveBrowserPageWebContents(
       target.worktreeId,
       target.browserPageId
     )
@@ -65,26 +80,26 @@ export class RuntimeBrowserCommandsWithBrowserScreencast extends RuntimeBrowserC
     if (!active) {
       createdPageStream = true
       const subscribers = new Map<string, ActiveBrowserScreencastSubscriber>()
-      const record = {
+      const pendingRecord: Omit<ActiveBrowserScreencastPage, 'started'> = {
         format: params.format,
         session: null,
         stopping: false,
         subscribers,
         viewportOwnerSubscriptionId: null,
         appliedBudget: budget
-      } as ActiveBrowserScreencastPage
+      }
       // Why: guest frames come from the window's compositor, which a throttled hidden window stops.
       const win = this.host.getAvailableAuthoritativeWindow()
       const releaseThrottle = win ? rendererPublicationThrottle.acquire(win.webContents) : () => {}
       // Why: on the active tab the guest is the widget a cover hides, and its attach-time unthrottle can predate it.
       const releaseGuestThrottle = rendererPublicationThrottle.acquire(guest)
-      record.started = startBrowserScreencast(guest, {
+      const started = startBrowserScreencast(guest, {
         format: params.format,
         ...budget,
         ...viewport,
         onFrame: (bytes) => {
           const ghosts: string[] = []
-          for (const [subscriptionId, subscriber] of record.subscribers) {
+          for (const [subscriptionId, subscriber] of pendingRecord.subscribers) {
             // A slow viewer drops this frame without stalling every other viewer.
             deliverScreencastSubscriberFrame(subscriber, bytes)
             if (screencastSubscriberIsGhost(subscriber.delivery)) {
@@ -94,29 +109,30 @@ export class RuntimeBrowserCommandsWithBrowserScreencast extends RuntimeBrowserC
           // Evicting after the fan-out keeps a teardown that stops the session from cutting the
           // remaining viewers out of this frame.
           for (const subscriptionId of ghosts) {
-            if (record.session) {
-              this.leaveScreencastSubscriber(record, subscriptionId, record.session)
+            if (pendingRecord.session) {
+              this.leaveScreencastSubscriber(pendingRecord, subscriptionId, pendingRecord.session)
             }
           }
           return true
         },
         onEvent: (event) => {
-          for (const subscriber of record.subscribers.values()) {
+          for (const subscriber of pendingRecord.subscribers.values()) {
             subscriber.emit?.(event)
           }
         },
         onError: (message) => {
-          for (const subscriber of record.subscribers.values()) {
+          for (const subscriber of pendingRecord.subscribers.values()) {
             subscriber.emit?.({ type: 'error', message })
           }
           // Why: every stream error is terminal; marking it stopping makes a newcomer start a fresh
           // stream instead of joining this one and waiting on frames that will never come.
-          if (record.session) {
-            record.stopping = true
-            record.session.stop()
+          if (pendingRecord.session) {
+            pendingRecord.stopping = true
+            pendingRecord.session.stop()
           }
         }
       })
+      const record: ActiveBrowserScreencastPage = Object.assign(pendingRecord, { started })
       active = record
       this.activeScreencastsByPageId.set(browserPageId, record)
       void record.started
@@ -130,11 +146,11 @@ export class RuntimeBrowserCommandsWithBrowserScreencast extends RuntimeBrowserC
           if (this.activeScreencastsByPageId.get(browserPageId) === record) {
             this.activeScreencastsByPageId.delete(browserPageId)
           }
-          for (const subscriber of record.subscribers.values()) {
+          for (const subscriber of pendingRecord.subscribers.values()) {
             cancelScreencastSubscriberFrameRetry(subscriber)
             subscriber.resolveDone()
           }
-          record.subscribers.clear()
+          pendingRecord.subscribers.clear()
         })
         .catch(() => {})
     }
@@ -203,19 +219,56 @@ export class RuntimeBrowserCommandsWithBrowserScreencast extends RuntimeBrowserC
         subscriptionId,
         browserPageId,
         format: active.format,
-        tab: this.describeBrowserTab(browserPageId, target.worktreeId)
+        tab: this.catalog.describeBrowserTab(browserPageId, target.worktreeId)
       }
     }
   }
 
-  async browserEval(
-    params: { expression: string } & BrowserCommandTargetParams
-  ): Promise<BrowserEvalResult> {
-    const target = await this.resolveBrowserCommandTarget(params)
-    return this.requireAgentBrowserBridge().evaluate(
-      params.expression,
-      target.worktreeId,
-      target.browserPageId
+  // Explicit stops, ghost eviction and reconnect replacement must share the same teardown.
+  private leaveScreencastSubscriber(
+    active: Pick<
+      ActiveBrowserScreencastPage,
+      'subscribers' | 'viewportOwnerSubscriptionId' | 'stopping' | 'appliedBudget'
+    >,
+    subscriptionId: string,
+    session: BrowserScreencastSession
+  ): void {
+    const subscriber = active.subscribers.get(subscriptionId)
+    if (!subscriber) {
+      return
+    }
+    active.subscribers.delete(subscriptionId)
+    cancelScreencastSubscriberFrameRetry(subscriber)
+    subscriber.resolveDone()
+    if (active.viewportOwnerSubscriptionId === subscriptionId) {
+      const fallback = Array.from(active.subscribers.entries()).findLast(([, candidate]) =>
+        hasScreencastViewportSize(candidate.viewport)
+      )
+      active.viewportOwnerSubscriptionId = fallback?.[0] ?? null
+      if (fallback) {
+        void session.updateViewport(fallback[1].viewport).catch(() => {})
+      }
+    }
+    if (active.subscribers.size === 0) {
+      active.stopping = true
+      session.stop()
+      return
+    }
+    // Why: a departed subscriber's caps would otherwise pin the shared stream for
+    // the rest of its life, long after the client that asked for them is gone.
+    void applySharedScreencastFrameBudget(active, session).catch(() => {})
+  }
+
+  settleDialog(
+    browserPageId: string | undefined,
+    accept: boolean,
+    promptText?: string
+  ): Promise<boolean> {
+    return settleBrowserDialogOnLiveScreencast(
+      this.activeScreencastsByPageId,
+      browserPageId,
+      accept,
+      promptText
     )
   }
 }

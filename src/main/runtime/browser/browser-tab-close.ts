@@ -1,14 +1,38 @@
-// @ts-nocheck -- mechanically split class members.
-import { RuntimeBrowserCommandsWithBrowserProfileImportFromBrowser } from './runtime-browser-commands-browser-profile-import-from-browser'
-import { closeRuntimeBrowserClientPage } from './runtime-browser-client-page-creation'
-import { BrowserError } from '../browser/browser-error'
+import type { RuntimeBrowserTabQueries } from './browser-tab-queries'
+import { closeRuntimeBrowserClientPage } from '../runtime-browser-client-page-creation'
+import { BrowserError } from '../../browser/browser-error'
 import { randomUUID } from 'node:crypto'
 import { ipcMain } from 'electron'
-import type { BrowserTabListResult } from '../../shared/runtime-types'
-import { browserManager } from '../browser/browser-manager'
-import { browserSessionRegistry } from '../browser/browser-session-registry'
+import type { RuntimeBrowserCommandHost } from './browser-command-contracts'
+import type { RuntimeBrowserCommandTargets } from './browser-command-targets'
+import type { RuntimeBrowserTabCatalog } from './browser-tab-catalog'
 
-export class RuntimeBrowserCommandsWithBrowserTabClose extends RuntimeBrowserCommandsWithBrowserProfileImportFromBrowser {
+export class RuntimeBrowserTabClose {
+  constructor(
+    private readonly queries: Pick<
+      RuntimeBrowserTabQueries,
+      'browserTabList' | 'browserTabCurrent'
+    >,
+    private readonly host: Pick<
+      RuntimeBrowserCommandHost,
+      | 'getRuntimeBrowserPageRegistry'
+      | 'resolveBrowserWorkspace'
+      | 'getBrowserHostLeaseRegistry'
+      | 'retireRuntimeOwnedBrowserSessionTab'
+      | 'notifyHeadlessBrowserSessionTabsChanged'
+      | 'getAgentBrowserBridge'
+      | 'resolveWorktreeSelector'
+      | 'getAvailableAuthoritativeWindow'
+      | 'getOffscreenBrowserBackend'
+      | 'getAuthoritativeWindow'
+    >,
+    private readonly targets: Pick<
+      RuntimeBrowserCommandTargets,
+      'resolveBrowserWorktreeId' | 'retireGhostBrowserSessionRow'
+    >,
+    private readonly catalog: Pick<RuntimeBrowserTabCatalog, 'assertClientPageWorkspace'>
+  ) {}
+
   async browserTabClose(params: {
     index?: number
     page?: string
@@ -17,7 +41,7 @@ export class RuntimeBrowserCommandsWithBrowserTabClose extends RuntimeBrowserCom
     const pages = this.host.getRuntimeBrowserPageRegistry()
     let clientPage = params.page ? pages.getPage(params.page) : undefined
     if (clientPage) {
-      await this.assertClientPageWorkspace(clientPage, params.worktree)
+      await this.catalog.assertClientPageWorkspace(clientPage, params.worktree)
     } else if (!params.page) {
       const workspaceId = params.worktree
         ? (await this.host.resolveBrowserWorkspace(params.worktree)).id
@@ -25,8 +49,8 @@ export class RuntimeBrowserCommandsWithBrowserTabClose extends RuntimeBrowserCom
       if (pages.listPages(workspaceId).length > 0) {
         const tab =
           params.index !== undefined
-            ? (await this.browserTabList({ worktree: params.worktree })).tabs[params.index]
-            : (await this.browserTabCurrent({ worktree: params.worktree })).tab
+            ? (await this.queries.browserTabList({ worktree: params.worktree })).tabs[params.index]
+            : (await this.queries.browserTabCurrent({ worktree: params.worktree })).tab
         clientPage = tab ? pages.getPage(tab.browserPageId) : undefined
       }
     }
@@ -63,7 +87,7 @@ export class RuntimeBrowserCommandsWithBrowserTabClose extends RuntimeBrowserCom
       if (
         namedPageId &&
         params.worktree &&
-        this.retireGhostBrowserSessionRow(
+        this.targets.retireGhostBrowserSessionRow(
           (await this.host.resolveWorktreeSelector(params.worktree)).id,
           namedPageId
         )
@@ -76,7 +100,7 @@ export class RuntimeBrowserCommandsWithBrowserTabClose extends RuntimeBrowserCom
       ? params.worktree
         ? (await this.host.resolveWorktreeSelector(params.worktree)).id
         : undefined
-      : await this.resolveBrowserWorktreeId(params.worktree)
+      : await this.targets.resolveBrowserWorktreeId(params.worktree)
 
     let tabId: string | null = null
     if (namedPageId !== null) {
@@ -108,7 +132,7 @@ export class RuntimeBrowserCommandsWithBrowserTabClose extends RuntimeBrowserCom
         return { closed: false }
       }
       if (explicitPage && !bridge.getRegisteredTabs(worktreeId).has(resolvedTabId)) {
-        if (this.retireGhostBrowserSessionRow(worktreeId, resolvedTabId)) {
+        if (this.targets.retireGhostBrowserSessionRow(worktreeId, resolvedTabId)) {
           return { closed: true }
         }
         const scope = worktreeId ? ' in this worktree' : ''
@@ -131,7 +155,7 @@ export class RuntimeBrowserCommandsWithBrowserTabClose extends RuntimeBrowserCom
     }
 
     if (!authoritativeWindow && tabId && !bridge.getRegisteredTabs(worktreeId).has(tabId)) {
-      if (this.retireGhostBrowserSessionRow(worktreeId, tabId)) {
+      if (this.targets.retireGhostBrowserSessionRow(worktreeId, tabId)) {
         return { closed: true }
       }
       const scope = worktreeId ? ' in this worktree' : ''
@@ -171,20 +195,5 @@ export class RuntimeBrowserCommandsWithBrowserTabClose extends RuntimeBrowserCom
     })
 
     return { closed: true }
-  }
-
-  protected enrichBrowserTabInfo(
-    tab: BrowserTabListResult['tabs'][number]
-  ): BrowserTabListResult['tabs'][number] {
-    const rawProfileId = browserManager.getSessionProfileIdForTab(tab.browserPageId)
-    const profile =
-      browserSessionRegistry.getProfile(rawProfileId ?? 'default') ??
-      browserSessionRegistry.getDefaultProfile()
-    return {
-      ...tab,
-      worktreeId: browserManager.getWorktreeIdForTab(tab.browserPageId) ?? null,
-      profileId: profile.id,
-      profileLabel: profile.label
-    }
   }
 }

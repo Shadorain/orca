@@ -1,24 +1,45 @@
-// @ts-nocheck -- mechanically split class members.
-import { RuntimeBrowserCommandsWithBrowserSetHeaders } from './runtime-browser-commands-browser-set-headers'
-import type { RuntimeNavigationTarget } from '../../shared/runtime-navigation'
-import type { BrowserPageCreationPlacement } from '../../shared/browser-client-host-placement'
+import { createBrowserTabInRenderer } from './browser-tab-renderer-create'
+import type { RuntimeNavigationTarget } from '../../../shared/runtime-navigation'
+import type { BrowserPageCreationPlacement } from '../../../shared/browser-client-host-placement'
 import {
   publishCreatedBrowserSessionTab,
   resolveBrowserTabCreateFocus
-} from './browser-tab-create-publication'
-import { browserSessionRegistry } from '../browser/browser-session-registry'
-import { BrowserError } from '../browser/browser-error'
+} from '../browser-tab-create-publication'
+import { browserSessionRegistry } from '../../browser/browser-session-registry'
+import { BrowserError } from '../../browser/browser-error'
 import { randomUUID } from 'node:crypto'
 import {
   createRuntimeBrowserClientPage,
   navigateRuntimeBrowserClientPage
-} from './runtime-browser-client-page-creation'
-import { browserNetworkExecutionHostKey } from '../browser/browser-network-execution-route'
-import { waitForTabRegistration } from '../ipc/browser-tab-registration-wait'
-import { BROWSER_CLIENT_AUTOMATION_HOST_CAPABILITY } from '../../shared/browser-client-automation-protocol'
-import { BROWSER_HOST_WEBVIEW_CAPABILITY } from './browser-host-capability-selection'
+} from '../runtime-browser-client-page-creation'
+import { browserNetworkExecutionHostKey } from '../../browser/browser-network-execution-route'
+import { waitForTabRegistration } from '../../ipc/browser-tab-registration-wait'
+import { BROWSER_CLIENT_AUTOMATION_HOST_CAPABILITY } from '../../../shared/browser-client-automation-protocol'
+import { BROWSER_HOST_WEBVIEW_CAPABILITY } from '../browser-host-capability-selection'
+import type { RuntimeBrowserCommandHost } from './browser-command-contracts'
+import type { RuntimeBrowserCommandTargets } from './browser-command-targets'
 
-export class RuntimeBrowserCommandsWithBrowserTabCreate extends RuntimeBrowserCommandsWithBrowserSetHeaders {
+export class RuntimeBrowserTabCreation {
+  constructor(
+    private readonly host: Pick<
+      RuntimeBrowserCommandHost,
+      | 'getAgentBrowserBridge'
+      | 'resolveBrowserWorkspace'
+      | 'resolveBrowserNetworkExecutionHost'
+      | 'getBrowserHostLeaseRegistry'
+      | 'getRuntimeBrowserPageRegistry'
+      | 'getAvailableAuthoritativeWindow'
+      | 'getOffscreenBrowserBackend'
+      | 'getAuthoritativeWindow'
+      | 'markHeadlessBrowserSessionTabActive'
+      | 'notifyHeadlessBrowserSessionTabsChanged'
+    >,
+    private readonly targets: Pick<
+      RuntimeBrowserCommandTargets,
+      'requireAgentBrowserBridge' | 'notifyRendererNavigation'
+    >
+  ) {}
+
   async browserTabCreate(
     params: {
       url?: string
@@ -134,7 +155,8 @@ export class RuntimeBrowserCommandsWithBrowserTabCreate extends RuntimeBrowserCo
       })
       return { browserPageId: created.browserPageId }
     }
-    const { browserPageId } = await this.createBrowserTabInRenderer(
+    const { browserPageId } = await createBrowserTabInRenderer(
+      this.host,
       url,
       worktreeId,
       params.profileId,
@@ -152,7 +174,7 @@ export class RuntimeBrowserCommandsWithBrowserTabCreate extends RuntimeBrowserCo
       }
     }
 
-    const bridge = this.requireAgentBrowserBridge()
+    const bridge = this.targets.requireAgentBrowserBridge()
     publishCreatedBrowserSessionTab(this.host, {
       placementKind: 'renderer',
       browserPageId,
@@ -166,7 +188,7 @@ export class RuntimeBrowserCommandsWithBrowserTabCreate extends RuntimeBrowserCo
     if (url && url !== 'about:blank') {
       const navigate = async (): Promise<void> => {
         const result = await bridge.goto(url, worktreeId, browserPageId)
-        this.notifyRendererNavigation(browserPageId, result.url, result.title)
+        this.targets.notifyRendererNavigation(browserPageId, result.url, result.title)
         if (!this.host.getAvailableAuthoritativeWindow() && worktreeId) {
           this.host.notifyHeadlessBrowserSessionTabsChanged?.(worktreeId)
         }
