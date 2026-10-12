@@ -1,6 +1,6 @@
 /* eslint-disable unicorn/no-useless-spread */
 import { OrcaRuntimeWithCreateRuntimeOwnedMobileSessionTerminal } from '../launch/mobile-terminal-owned-create'
-import type { OrcaRuntimeWithResolveTerminalSplitSourceAuthority } from '../../orca-runtime-resolve-terminal-split-source-authority'
+import type { OrcaRuntimeWithResolveTerminalSplitSourceAuthority } from '../launch/terminal-split-source-authority'
 import type {
   RuntimeMobileSessionCreateTerminalResult,
   RuntimeMobileSessionTerminalClientTab

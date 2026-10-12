@@ -1,22 +1,28 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithSplitPtyBackedTerminal } from './terminal/launch/terminal-split-surface'
+import type { OrcaRuntimeWithPruneMobileSessionTabGroupLayout } from '../../orca-runtime-prune-mobile-session-tab-group-layout'
+import { OrcaRuntimeWithSplitPtyBackedTerminal } from './terminal-split-surface'
 import {
   resolveTerminalSessionWorktreeId,
   runtimeWorktreeIdsEqual
-} from './runtime-worktree-path-identity'
-import { makePaneKey } from '../../shared/stable-pane-id'
-import { terminalLayoutContainsLeaf } from '../../shared/workspace-session-pane-ownership'
+} from '../../runtime-worktree-path-identity'
+import { makePaneKey } from '../../../../shared/stable-pane-id'
+import { terminalLayoutContainsLeaf } from '../../../../shared/workspace-session-pane-ownership'
 import type {
   AgentTeamsTmuxCompatRequest,
   AgentTeamsTmuxCompatResponse
-} from './claude-agent-teams-service'
+} from '../../claude-agent-teams-service'
 import {
   ensureClaudeAgentTeamsShimDir,
   resolveClaudeAgentTeamsShimBin
-} from './claude-agent-teams-shim-env'
-import { applyClaudeEnvPatch } from '../claude-accounts/environment'
+} from '../../claude-agent-teams-shim-env'
+import { applyClaudeEnvPatch } from '../../../claude-accounts/environment'
 
-export class OrcaRuntimeWithResolveTerminalSplitSourceAuthority extends OrcaRuntimeWithSplitPtyBackedTerminal {
+export abstract class OrcaRuntimeWithResolveTerminalSplitSourceAuthority extends OrcaRuntimeWithSplitPtyBackedTerminal {
+  abstract getTerminalHandleForPaneKey(
+    ...args: Parameters<
+      OrcaRuntimeWithPruneMobileSessionTabGroupLayout['getTerminalHandleForPaneKey']
+    >
+  ): ReturnType<OrcaRuntimeWithPruneMobileSessionTabGroupLayout['getTerminalHandleForPaneKey']>
+
   protected resolveTerminalSplitSourceAuthority(
     worktreeId: string,
     tabId: string,

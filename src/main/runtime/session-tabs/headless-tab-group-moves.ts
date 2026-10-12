@@ -12,7 +12,7 @@ import {
 import { randomUUID } from 'node:crypto'
 import { withSelectedTabs } from '../headless-tab-group-selection'
 import type { TabGroupLayoutNode } from '../../../shared/tab-types'
-import type { OrcaRuntimeWithPersistHeadlessTerminalTitle } from '../orca-runtime-persist-headless-terminal-title'
+import type { OrcaRuntimeWithPersistHeadlessTerminalTitle } from '../workspaces/workspace-file-session-targets'
 import type { OrcaRuntimeWithPruneMobileSessionTabGroupLayout } from '../orca-runtime-prune-mobile-session-tab-group-layout'
 
 export abstract class RuntimeHeadlessTabGroups extends RuntimeHeadlessTabProperties {

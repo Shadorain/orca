@@ -269,3 +269,23 @@ describe('reading the catalogs for a sweep run', () => {
     }
   })
 })
+
+describe('optional catalog capability failure timing', () => {
+  it('still directly calls the missing profile directory capability', () => {
+    const active = catalogs().active
+    expect(() => readNativeChatVisualsWorkspaceCatalogs(active, '/unused-profile-root')).toThrow(
+      TypeError
+    )
+  })
+
+  it('keeps the missing folder reader failure after the other-profile short circuit', async () => {
+    const known = catalogs()
+    known.active.getFolderWorkspaces = undefined
+    const { verdict } = verdictWith(known)
+    await expect(verdict(at('folder:missing', { workspaceKind: 'folder' }))).rejects.toThrow(
+      TypeError
+    )
+    known.others.ids = new Set(['folder:known'])
+    await expect(verdict(at('folder:known', { workspaceKind: 'folder' }))).resolves.toBe('present')
+  })
+})

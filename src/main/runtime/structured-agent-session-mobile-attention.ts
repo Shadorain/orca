@@ -30,7 +30,7 @@ import { getRuntimeDesktopSurface } from './runtime-desktop-surface'
 export type StructuredAttentionWorkspaceLabels = { repoLabel?: string; worktreeLabel?: string }
 
 export type StructuredAttentionMobileDeliveryDeps = {
-  readNotificationSettings: () => NotificationSettings
+  readNotificationSettings: () => NotificationSettings | undefined
   /** In-memory metadata only: a lookup that could wait would let the alert outlive its prompt. */
   readWorkspaceLabels: (scope: AgentSessionExecutionLocation) => StructuredAttentionWorkspaceLabels
   dispatch: (event: MobileNotificationDispatchEvent) => void
@@ -101,7 +101,7 @@ export function createStructuredAttentionMobileDelivery(
         request,
         getRuntimeDesktopSurface().translateNotification
       )
-      const settings = deps.readNotificationSettings()
+      const settings = deps.readNotificationSettings()!
       // The same eligibility the desktop's own fan-out applies: these preferences gate the phone too.
       const desktopAllowed = settings.enabled && settings.agentTaskComplete
       deps.dispatch({

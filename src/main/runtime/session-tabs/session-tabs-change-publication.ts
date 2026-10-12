@@ -1,16 +1,15 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithStoredMobileSnapshotHasStalePreservedTab } from './session-tabs/mobile-session-publication-preservation'
+import { OrcaRuntimeWithStoredMobileSnapshotHasStalePreservedTab } from './mobile-session-publication-preservation'
 import type {
   BrowserTabInfo,
   RuntimeMobileSessionClientTab,
   RuntimeMobileSessionMarkdownTab,
   RuntimeMobileSessionTabGroup,
   RuntimeMobileSessionTabsResult
-} from '../../shared/runtime-types'
-import { UNPUBLISHED_WORKTREE_PUBLICATION_EPOCH } from '../../shared/runtime-types'
-import { getRuntimeBrowserPageRegistry } from './runtime-browser-page-registry'
+} from '../../../shared/runtime-types'
+import { UNPUBLISHED_WORKTREE_PUBLICATION_EPOCH } from '../../../shared/runtime-types'
+import { getRuntimeBrowserPageRegistry } from '../runtime-browser-page-registry'
 
-export class OrcaRuntimeWithScheduleMobileSessionTabsChanged extends OrcaRuntimeWithStoredMobileSnapshotHasStalePreservedTab {
+export abstract class OrcaRuntimeWithScheduleMobileSessionTabsChanged extends OrcaRuntimeWithStoredMobileSnapshotHasStalePreservedTab {
   protected scheduleMobileSessionTabsChanged(worktreeId: string): void {
     this.pendingMobileSessionTabsChangeSequenceByWorktree.set(
       worktreeId,

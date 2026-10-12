@@ -1,18 +1,59 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithPersistHeadlessTerminalTitle } from './orca-runtime-persist-headless-terminal-title'
+import type { RuntimeWorkspaceCatalog } from './workspace-catalog'
+import type { OrcaRuntimeWithListManagedWorktrees } from './managed-workspace-operations'
+import type { OrcaRuntimeWithTransitionGraphReloadToTerminalState } from '../session-graph/session-graph-authority'
+import type { OrcaRuntimeWithBindPtyIncarnationHandle } from '../terminal/identity/terminal-handle-bindings'
+import type { OrcaRuntimeWithInvalidateAllHandlesForPty } from '../terminal/lifecycle/pty-handle-invalidation'
+import { OrcaRuntimeWithPersistHeadlessTerminalTitle } from './workspace-file-session-targets'
 import {
   getConnectionExecutionHostId,
   LOCAL_EXECUTION_HOST_ID,
   type ExecutionHostId
-} from '../../shared/execution-host'
-import type { ResolvedWorktree } from './runtime-worktree-path-identity'
-import { resolveWorktreeHostRouting } from './worktree-launch-host-repo'
-import { findRuntimeWorkspaceFileOwner } from '../../shared/runtime-workspace-file-owner'
-import type { RuntimeMobileSessionTabsResult } from '../../shared/runtime-types'
+} from '../../../shared/execution-host'
+import type { ResolvedWorktree } from '../runtime-worktree-path-identity'
+import { resolveWorktreeHostRouting } from '../worktree-launch-host-repo'
+import { findRuntimeWorkspaceFileOwner } from '../../../shared/runtime-workspace-file-owner'
+import type { RuntimeMobileSessionTabsResult } from '../../../shared/runtime-types'
 import { randomUUID } from 'node:crypto'
-import type { PtyIncarnationId } from '../../shared/pty-incarnation'
+import type { PtyIncarnationId } from '../../../shared/pty-incarnation'
 
-export class OrcaRuntimeWithResolveKnownWorkspaceFileTarget extends OrcaRuntimeWithPersistHeadlessTerminalTitle {
+export abstract class OrcaRuntimeWithResolveKnownWorkspaceFileTarget extends OrcaRuntimeWithPersistHeadlessTerminalTitle {
+  protected abstract listResolvedWorktrees(
+    ...args: Parameters<RuntimeWorkspaceCatalog['listResolvedWorktrees']>
+  ): ReturnType<RuntimeWorkspaceCatalog['listResolvedWorktrees']>
+  protected abstract buildRuntimeVisibilitySourceMatchersByRepoId(
+    ...args: Parameters<
+      OrcaRuntimeWithListManagedWorktrees['buildRuntimeVisibilitySourceMatchersByRepoId']
+    >
+  ): ReturnType<OrcaRuntimeWithListManagedWorktrees['buildRuntimeVisibilitySourceMatchersByRepoId']>
+  protected abstract isRuntimeWorktreeVisible(
+    ...args: Parameters<OrcaRuntimeWithListManagedWorktrees['isRuntimeWorktreeVisible']>
+  ): ReturnType<OrcaRuntimeWithListManagedWorktrees['isRuntimeWorktreeVisible']>
+  protected abstract resolveFolderWorkspaceConnectionId(
+    ...args: Parameters<
+      OrcaRuntimeWithTransitionGraphReloadToTerminalState['resolveFolderWorkspaceConnectionId']
+    >
+  ): ReturnType<
+    OrcaRuntimeWithTransitionGraphReloadToTerminalState['resolveFolderWorkspaceConnectionId']
+  >
+  protected abstract invalidatePtyIncarnationHandle(
+    ...args: Parameters<OrcaRuntimeWithBindPtyIncarnationHandle['invalidatePtyIncarnationHandle']>
+  ): ReturnType<OrcaRuntimeWithBindPtyIncarnationHandle['invalidatePtyIncarnationHandle']>
+  protected abstract invalidateAllHandlesForPty(
+    ...args: Parameters<OrcaRuntimeWithInvalidateAllHandlesForPty['invalidateAllHandlesForPty']>
+  ): ReturnType<OrcaRuntimeWithInvalidateAllHandlesForPty['invalidateAllHandlesForPty']>
+  protected abstract isTerminalHandleAdoptionBlocked(
+    ...args: Parameters<
+      OrcaRuntimeWithInvalidateAllHandlesForPty['isTerminalHandleAdoptionBlocked']
+    >
+  ): ReturnType<OrcaRuntimeWithInvalidateAllHandlesForPty['isTerminalHandleAdoptionBlocked']>
+  protected abstract replaceSyntheticTerminalHandlesForRestoredPty(
+    ...args: Parameters<
+      OrcaRuntimeWithInvalidateAllHandlesForPty['replaceSyntheticTerminalHandlesForRestoredPty']
+    >
+  ): ReturnType<
+    OrcaRuntimeWithInvalidateAllHandlesForPty['replaceSyntheticTerminalHandlesForRestoredPty']
+  >
+
   protected async resolveKnownWorkspaceFileTarget(
     absolutePath: string,
     executionHostId: ExecutionHostId

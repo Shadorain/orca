@@ -1,15 +1,14 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithRestoreStructuredAgentSessionTabsOnce } from './session-tabs/structured-session-tab-restoration'
-import { DEFAULT_WORKTREE_LIST_LIMIT } from './orca-runtime-postlude'
-import type { RuntimeWorktreeListResult } from '../../shared/runtime-types'
-import type { DetectedWorktreeListResult, Worktree } from '../../shared/worktree/types'
-import type { Repo } from '../../shared/repo-types'
-import { stopMissingWorktreeTerminals } from './missing-worktree-terminal-reconciliation'
-import type { RuntimeCommandSurfaceHost } from './orca-runtime-core'
-import type { WorktreeVisibilitySourceMatcher } from '../../shared/worktree/visibility-sources'
-import type { RuntimeStore } from './runtime-store-contract'
-import { getWorkspaceAttachments } from '../../shared/workspace-attachments'
-import type { TerminalWorkspaceLaunchScope } from './runtime-legacy-worker-terminal-recovery-types'
+import type { OrcaRuntimeWithResolveBrowserNetworkExecutionHostForWorktree } from '../terminal/launch/terminal-workspace-scope'
+import { OrcaRuntimeWithRestoreStructuredAgentSessionTabsOnce } from '../session-tabs/structured-session-tab-restoration'
+import { DEFAULT_WORKTREE_LIST_LIMIT } from '../orca-runtime-postlude'
+import type { RuntimeWorktreeListResult } from '../../../shared/runtime-types'
+import type { DetectedWorktreeListResult, Worktree } from '../../../shared/worktree/types'
+import type { Repo } from '../../../shared/repo-types'
+import { stopMissingWorktreeTerminals } from '../missing-worktree-terminal-reconciliation'
+import type { WorktreeVisibilitySourceMatcher } from '../../../shared/worktree/visibility-sources'
+import type { RuntimeStore } from '../runtime-store-contract'
+import { getWorkspaceAttachments } from '../../../shared/workspace-attachments'
+import type { TerminalWorkspaceLaunchScope } from '../runtime-legacy-worker-terminal-recovery-types'
 import type {
   WorkspacePortHostKillRequest,
   WorkspacePortHostScanResult,
@@ -17,21 +16,29 @@ import type {
   WorkspacePortKillResult,
   WorkspacePortProbe,
   WorkspacePortScanResult
-} from '../../shared/workspace-ports'
+} from '../../../shared/workspace-ports'
 import {
   filterWorkspacePortProbes,
   killWorkspacePort,
   scanWorkspacePortProbes
-} from '../ports/workspace-port-ownership'
+} from '../../ports/workspace-port-ownership'
 import {
   killWorkspacePortOnExecutionHost,
   scanWorkspacePortsOnExecutionHost,
   type WorkspacePortExecutionHostDeps
-} from '../ports/workspace-port-execution-host'
-import { resolveWorktreeHostRouting } from './worktree-launch-host-repo'
-import { LOCAL_EXECUTION_HOST_ID } from '../../shared/execution-host'
+} from '../../ports/workspace-port-execution-host'
+import { resolveWorktreeHostRouting } from '../worktree-launch-host-repo'
+import { LOCAL_EXECUTION_HOST_ID } from '../../../shared/execution-host'
 
-export class OrcaRuntimeWithListManagedWorktrees extends OrcaRuntimeWithRestoreStructuredAgentSessionTabsOnce {
+export abstract class OrcaRuntimeWithListManagedWorktrees extends OrcaRuntimeWithRestoreStructuredAgentSessionTabsOnce {
+  protected abstract resolveTerminalWorkspaceLaunchTarget(
+    ...args: Parameters<
+      OrcaRuntimeWithResolveBrowserNetworkExecutionHostForWorktree['resolveTerminalWorkspaceLaunchTarget']
+    >
+  ): ReturnType<
+    OrcaRuntimeWithResolveBrowserNetworkExecutionHostForWorktree['resolveTerminalWorkspaceLaunchTarget']
+  >
+
   listManagedWorktrees(
     repoSelector?: string,
     limit = DEFAULT_WORKTREE_LIST_LIMIT,
@@ -84,7 +91,7 @@ export class OrcaRuntimeWithListManagedWorktrees extends OrcaRuntimeWithRestoreS
       knownWorktreeIds,
       detected.worktrees.map((worktree) => worktree.id),
       {
-        runtime: this as RuntimeCommandSurfaceHost<this>,
+        runtime: this,
         getLocalProvider: () => this.getLocalProvider(),
         onPtyStopped: this.onPtyStopped ?? undefined
       }

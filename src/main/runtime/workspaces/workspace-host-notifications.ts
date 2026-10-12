@@ -1,18 +1,46 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithGetStatus } from './orca-runtime-get-status'
-import type { SshConnectionState } from '../../shared/ssh-types'
-import { getPublicSshState } from './public-ssh-state'
-import { splitWorktreeId } from '../../shared/worktree/id'
-import type { CreateWorktreeResult } from '../../shared/worktree/create-types'
-import type { WorktreeStartupLaunch } from '../../shared/worktree/launch-types'
-import type { RuntimeNavigationTarget } from '../../shared/runtime-navigation'
-import { navigationTargetsClients, navigationTargetsHost } from '../../shared/runtime-navigation'
-import { toRuntimeActivateWorktreeEvent } from '../../shared/runtime-client-events'
-import type { AgentBrowserBridge } from '../browser/agent-browser-bridge'
-import type { BrowserBackend } from '../browser/browser-backend'
-import type { EmulatorBridge } from '../emulator/emulator-bridge'
+import type { OrcaRuntimeWithHydrateHeadlessMobileSessionTabsFromWorkspaceSession } from '../session-tabs/mobile-session-hydration'
+import type { OrcaRuntimeWithBuildHeadlessMobileSessionBrowserTabs } from '../orca-runtime-build-headless-mobile-session-browser-tabs'
+import type { OrcaRuntimeWithScheduleMobileSessionTabsChanged } from '../session-tabs/session-tabs-change-publication'
+import type { RuntimeWorkspaceRepoScanRefresh } from './workspace-repo-scan-refresh'
+import { OrcaRuntimeWithGetStatus } from '../orca-runtime-get-status'
+import type { SshConnectionState } from '../../../shared/ssh-types'
+import { getPublicSshState } from '../public-ssh-state'
+import { splitWorktreeId } from '../../../shared/worktree/id'
+import type { CreateWorktreeResult } from '../../../shared/worktree/create-types'
+import type { WorktreeStartupLaunch } from '../../../shared/worktree/launch-types'
+import type { RuntimeNavigationTarget } from '../../../shared/runtime-navigation'
+import { navigationTargetsClients, navigationTargetsHost } from '../../../shared/runtime-navigation'
+import { toRuntimeActivateWorktreeEvent } from '../../../shared/runtime-client-events'
+import type { AgentBrowserBridge } from '../../browser/agent-browser-bridge'
+import type { BrowserBackend } from '../../browser/browser-backend'
+import type { EmulatorBridge } from '../../emulator/emulator-bridge'
 
 export abstract class OrcaRuntimeWithNotifySshStateChanged extends OrcaRuntimeWithGetStatus {
+  protected abstract hydrateHeadlessMobileSessionTabsFromWorkspaceSession(
+    ...args: Parameters<
+      OrcaRuntimeWithHydrateHeadlessMobileSessionTabsFromWorkspaceSession['hydrateHeadlessMobileSessionTabsFromWorkspaceSession']
+    >
+  ): ReturnType<
+    OrcaRuntimeWithHydrateHeadlessMobileSessionTabsFromWorkspaceSession['hydrateHeadlessMobileSessionTabsFromWorkspaceSession']
+  >
+  protected abstract refreshMobileSessionPtyRecords(
+    ...args: Parameters<
+      OrcaRuntimeWithBuildHeadlessMobileSessionBrowserTabs['refreshMobileSessionPtyRecords']
+    >
+  ): ReturnType<
+    OrcaRuntimeWithBuildHeadlessMobileSessionBrowserTabs['refreshMobileSessionPtyRecords']
+  >
+  protected abstract notifyMobileSessionTabsChangedNow(
+    ...args: Parameters<
+      OrcaRuntimeWithScheduleMobileSessionTabsChanged['notifyMobileSessionTabsChangedNow']
+    >
+  ): ReturnType<
+    OrcaRuntimeWithScheduleMobileSessionTabsChanged['notifyMobileSessionTabsChangedNow']
+  >
+  protected abstract invalidateSshWorktreeScanCacheInternal(
+    ...args: Parameters<RuntimeWorkspaceRepoScanRefresh['invalidateSshWorktreeScanCacheInternal']>
+  ): ReturnType<RuntimeWorkspaceRepoScanRefresh['invalidateSshWorktreeScanCacheInternal']>
+
   abstract invalidateResolvedWorktreeCache(): void
   abstract invalidateWorktreeScanCacheForRepo(repoId: string): void
 

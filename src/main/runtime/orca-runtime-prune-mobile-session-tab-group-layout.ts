@@ -1,6 +1,6 @@
 // @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
 import { selectFreshAgentRowForMobileTab } from './runtime-hook-agent-row-selection'
-import { OrcaRuntimeWithScheduleMobileSessionTabsChanged } from './orca-runtime-schedule-mobile-session-tabs-changed'
+import { OrcaRuntimeWithScheduleMobileSessionTabsChanged } from './session-tabs/session-tabs-change-publication'
 import type { TabGroupLayoutNode } from '../../shared/tab-types'
 import type {
   RuntimeMobileSessionSnapshotTab,

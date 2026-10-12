@@ -1,23 +1,52 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { RuntimeHeadlessTabGroups } from './session-tabs/headless-tab-group-moves'
+import type { OrcaRuntimeWithScheduleMobileSessionTabsChanged } from '../session-tabs/session-tabs-change-publication'
+import type { OrcaRuntimeWithResolveBrowserNetworkExecutionHostForWorktree } from '../terminal/launch/terminal-workspace-scope'
+import type { OrcaRuntimeWithTransitionGraphReloadToTerminalState } from '../session-graph/session-graph-authority'
+import { RuntimeHeadlessTabGroups } from '../session-tabs/headless-tab-group-moves'
 import type {
   RuntimeMarkdownReadTabResult,
   RuntimeMarkdownSaveTabResult,
   RuntimeMobileSessionTabGroup,
   RuntimeMobileSessionTabsSnapshot
-} from '../../shared/runtime-types'
-import type { ResolvedWorktree } from './runtime-worktree-path-identity'
-import type { Repo } from '../../shared/repo-types'
+} from '../../../shared/runtime-types'
+import type { ResolvedWorktree } from '../runtime-worktree-path-identity'
+import type { Repo } from '../../../shared/repo-types'
 import {
   getConnectionExecutionHostId,
   LOCAL_EXECUTION_HOST_ID,
   type ExecutionHostId
-} from '../../shared/execution-host'
-import { getLocalProjectWorktreeGitOptions } from '../project-runtime-git-options'
-import { resolveWorktreeHostRouting } from './worktree-launch-host-repo'
-import { isFloatingWorkspaceSelector } from '../../shared/floating-workspace-worktree'
+} from '../../../shared/execution-host'
+import { getLocalProjectWorktreeGitOptions } from '../../project-runtime-git-options'
+import { resolveWorktreeHostRouting } from '../worktree-launch-host-repo'
+import { isFloatingWorkspaceSelector } from '../../../shared/floating-workspace-worktree'
 
 export abstract class OrcaRuntimeWithPersistHeadlessTerminalTitle extends RuntimeHeadlessTabGroups {
+  protected abstract resolveMobileMarkdownWorktreeId(
+    ...args: Parameters<
+      OrcaRuntimeWithScheduleMobileSessionTabsChanged['resolveMobileMarkdownWorktreeId']
+    >
+  ): ReturnType<OrcaRuntimeWithScheduleMobileSessionTabsChanged['resolveMobileMarkdownWorktreeId']>
+  protected abstract floatingWorkspaceToResolvedWorktree(
+    ...args: Parameters<
+      OrcaRuntimeWithResolveBrowserNetworkExecutionHostForWorktree['floatingWorkspaceToResolvedWorktree']
+    >
+  ): ReturnType<
+    OrcaRuntimeWithResolveBrowserNetworkExecutionHostForWorktree['floatingWorkspaceToResolvedWorktree']
+  >
+  protected abstract resolveFloatingWorkspacePath(
+    ...args: Parameters<
+      OrcaRuntimeWithResolveBrowserNetworkExecutionHostForWorktree['resolveFloatingWorkspacePath']
+    >
+  ): ReturnType<
+    OrcaRuntimeWithResolveBrowserNetworkExecutionHostForWorktree['resolveFloatingWorkspacePath']
+  >
+  protected abstract resolveFolderWorkspaceLaunchScope(
+    ...args: Parameters<
+      OrcaRuntimeWithTransitionGraphReloadToTerminalState['resolveFolderWorkspaceLaunchScope']
+    >
+  ): ReturnType<
+    OrcaRuntimeWithTransitionGraphReloadToTerminalState['resolveFolderWorkspaceLaunchScope']
+  >
+
   // Persist a manual terminal rename so a headless rebuild keeps the title
   // instead of reverting to the generated/default one.
   protected persistHeadlessTerminalTitle(

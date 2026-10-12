@@ -1,61 +1,105 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { resolveStructuredCodexAccountKind } from './structured-agent-account-home'
-import { collectRuntimeWorktreeAgentSources } from './runtime-worktree-agent-sources'
-import { OrcaRuntimeWithStartTuiIdleVisibleReadProbe } from './terminal/wait/terminal-wait-visible-probe'
-import { DEFAULT_WORKTREE_PS_LIMIT } from './orca-runtime-postlude'
-import type { RuntimeWorktreePsResult } from '../../shared/runtime-types'
-import { buildRuntimeWorktreePsSummaries } from './runtime-worktree-ps-summaries'
+import type { RuntimeWorkspaceCatalog } from './workspace-catalog'
+import type { OrcaRuntimeWithRefreshPtyWorktreeRecordsFromController } from '../terminal/lifecycle/pty-worktree-refresh'
+import type { RuntimeAccountController } from '../runtime-account-controller'
+import type { OrcaRuntimeWithPruneMobileSessionTabGroupLayout } from '../orca-runtime-prune-mobile-session-tab-group-layout'
+import type { OrcaRuntimeWithGetStructuredAgentSessionCreateSupport } from '../session-tabs/structured-session-create-support'
+import type { OrcaRuntimeWithGetPtyRecordForPaneKey } from '../orchestration/terminal-pane-mail-routing'
+import { resolveStructuredCodexAccountKind } from '../structured-agent-account-home'
+import { collectRuntimeWorktreeAgentSources } from '../runtime-worktree-agent-sources'
+import { OrcaRuntimeWithStartTuiIdleVisibleReadProbe } from '../terminal/wait/terminal-wait-visible-probe'
+import { DEFAULT_WORKTREE_PS_LIMIT } from '../orca-runtime-postlude'
+import type { RuntimeWorktreePsResult } from '../../../shared/runtime-types'
+import { buildRuntimeWorktreePsSummaries } from '../runtime-worktree-ps-summaries'
 import {
   buildRuntimeWorktreeSummaryPathIndex,
   createRuntimeWorktreePsSummaryLookup
-} from './runtime-worktree-summary-paths'
+} from '../runtime-worktree-summary-paths'
 import {
   applyRuntimeWorktreePsSessionActivity,
   applyRuntimeWorktreePsTerminalActivity
-} from './runtime-worktree-ps-activity'
-import { applyRuntimeWorktreePsUnverifiableTerminals } from './runtime-worktree-ps-unverifiable-terminals'
-import { attachRuntimeWorktreeAgentRows } from './runtime-worktree-agent-rows'
-import { compareWorktreePs } from './runtime-worktree-status-projection'
-import type { Repo } from '../../shared/repo-types'
-import { enrichMissingRepoGitRemoteIdentities } from '../repo-git-remote-identity-enrichment'
-import { ensureStructuredAgentSessionHost as installStructuredAgentSessionHost } from './structured-agent-session-runtime'
+} from '../runtime-worktree-ps-activity'
+import { applyRuntimeWorktreePsUnverifiableTerminals } from '../runtime-worktree-ps-unverifiable-terminals'
+import { attachRuntimeWorktreeAgentRows } from '../runtime-worktree-agent-rows'
+import { compareWorktreePs } from '../runtime-worktree-status-projection'
+import type { Repo } from '../../../shared/repo-types'
+import { enrichMissingRepoGitRemoteIdentities } from '../../repo-git-remote-identity-enrichment'
+import { ensureStructuredAgentSessionHost as installStructuredAgentSessionHost } from '../structured-agent-session-runtime'
 import {
   createStructuredAttentionMobileDelivery,
   readStructuredAttentionWorkspaceLabels
-} from './structured-agent-session-mobile-attention'
+} from '../structured-agent-session-mobile-attention'
 import {
   createStructuredAgentSessionLogger,
   neverThrowingStructuredAgentSessionLogger
-} from '../native-chat/agent-session-wire/structured-agent-session-logger'
-import { openAgentSessionRecordStoreOnce } from './agent-session-record-store-slot'
-import type { AgentSessionRecordStore } from './agent-session-record-store'
-import { maybeAutoRenameWorkspaceOnFirstStructuredTurn } from '../agent-hooks/first-work-structured-session-rename'
-import { firstWorkRenameDeps } from '../agent-hooks/first-work-rename-runtime'
-import { createStructuredChatNamingHandler } from '../native-chat/structured-chat-naming'
-import { structuredChatNamingDeps } from './structured-chat-naming-runtime'
-import { getProfileUserDataPath } from '../orca-profiles/profile-storage-paths'
-import { LOCAL_EXECUTION_HOST_ID } from '../../shared/execution-host'
-import { buildWorktreeListingPage } from './worktree-listing-host-scope'
+} from '../../native-chat/agent-session-wire/structured-agent-session-logger'
+import { openAgentSessionRecordStoreOnce } from '../agent-session-record-store-slot'
+import type { AgentSessionRecordStore } from '../agent-session-record-store'
+import { maybeAutoRenameWorkspaceOnFirstStructuredTurn } from '../../agent-hooks/first-work-structured-session-rename'
+import { firstWorkRenameDeps } from '../../agent-hooks/first-work-rename-runtime'
+import { createStructuredChatNamingHandler } from '../../native-chat/structured-chat-naming'
+import { structuredChatNamingDeps } from '../structured-chat-naming-runtime'
+import { getProfileUserDataPath } from '../../orca-profiles/profile-storage-paths'
+import { LOCAL_EXECUTION_HOST_ID } from '../../../shared/execution-host'
+import { buildWorktreeListingPage } from '../worktree-listing-host-scope'
 import {
   structuredWorkerOpenTaskTitle,
   structuredWorkerOwesWork
-} from './structured-worker-custody'
+} from '../structured-worker-custody'
 import {
   resolvedTuiAgentArgsBypassPermissions,
   resolveTuiAgentLaunchEnv
-} from '../../shared/tui-agent-launch-defaults'
-import { isTuiAgent } from '../../shared/tui-agent-config'
-import { nativeChatShellEnvironmentPolicy } from '../../shared/native-chat-shell-environment'
-import { claudeStructuredAuthPolicyForSettings } from '../claude-accounts/claude-structured-auth-policy'
-import { resolveStructuredAgentCommand } from '../native-chat/structured-agent-command-resolution'
-import { structuredAgentConfiguredArgs } from '../native-chat/structured-agent-configured-args'
-import { claudeCliFlagSupport } from '../claude/claude-cli-flag-support'
+} from '../../../shared/tui-agent-launch-defaults'
+import { isTuiAgent } from '../../../shared/tui-agent-config'
+import { nativeChatShellEnvironmentPolicy } from '../../../shared/native-chat-shell-environment'
+import { claudeStructuredAuthPolicyForSettings } from '../../claude-accounts/claude-structured-auth-policy'
+import { resolveStructuredAgentCommand } from '../../native-chat/structured-agent-command-resolution'
+import { structuredAgentConfiguredArgs } from '../../native-chat/structured-agent-configured-args'
+import { claudeCliFlagSupport } from '../../claude/claude-cli-flag-support'
 import {
   createNativeChatVisualsWorkspaceVerdicts,
   readNativeChatVisualsWorkspaceCatalogs
-} from './native-chat-visuals-workspace-verdict'
+} from '../native-chat-visuals-workspace-verdict'
 
-export class OrcaRuntimeWithGetWorktreePs extends OrcaRuntimeWithStartTuiIdleVisibleReadProbe {
+export abstract class OrcaRuntimeWithGetWorktreePs extends OrcaRuntimeWithStartTuiIdleVisibleReadProbe {
+  protected abstract listResolvedWorktreeSnapshot(
+    ...args: Parameters<RuntimeWorkspaceCatalog['listResolvedWorktreeSnapshot']>
+  ): ReturnType<RuntimeWorkspaceCatalog['listResolvedWorktreeSnapshot']>
+  protected abstract refreshPtyWorktreeRecordsFromController(
+    ...args: Parameters<
+      OrcaRuntimeWithRefreshPtyWorktreeRecordsFromController['refreshPtyWorktreeRecordsFromController']
+    >
+  ): ReturnType<
+    OrcaRuntimeWithRefreshPtyWorktreeRecordsFromController['refreshPtyWorktreeRecordsFromController']
+  >
+  abstract notifyFolderWorkspaceChanged(): void
+  abstract notifyBranchRenamed(repoId: string): void
+  abstract notifyWorktreeFolderRenamed(
+    repoId: string,
+    oldWorktreeId: string,
+    newWorktreeId: string
+  ): void
+  declare getCommitMessageAgentEnvironmentResolvers: RuntimeAccountController['getCommitMessageAgentEnvironment']
+  abstract refreshStructuredConversationTabTitle(
+    ...args: Parameters<
+      OrcaRuntimeWithPruneMobileSessionTabGroupLayout['refreshStructuredConversationTabTitle']
+    >
+  ): ReturnType<
+    OrcaRuntimeWithPruneMobileSessionTabGroupLayout['refreshStructuredConversationTabTitle']
+  >
+  abstract resolveStructuredAgentAccountHome(
+    ...args: Parameters<
+      OrcaRuntimeWithGetStructuredAgentSessionCreateSupport['resolveStructuredAgentAccountHome']
+    >
+  ): ReturnType<
+    OrcaRuntimeWithGetStructuredAgentSessionCreateSupport['resolveStructuredAgentAccountHome']
+  >
+  abstract onStructuredSessionStatusForMail(
+    ...args: Parameters<OrcaRuntimeWithGetPtyRecordForPaneKey['onStructuredSessionStatusForMail']>
+  ): ReturnType<OrcaRuntimeWithGetPtyRecordForPaneKey['onStructuredSessionStatusForMail']>
+  abstract onStructuredSessionTabHidden(
+    ...args: Parameters<OrcaRuntimeWithGetPtyRecordForPaneKey['onStructuredSessionTabHidden']>
+  ): ReturnType<OrcaRuntimeWithGetPtyRecordForPaneKey['onStructuredSessionTabHidden']>
+
   async getWorktreePs(
     limit = DEFAULT_WORKTREE_PS_LIMIT,
     sourceDefaultsSupported = true

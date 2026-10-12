@@ -24,10 +24,11 @@ import type { NativeChatVisualsWorkspaceVerdict } from '../native-chat/native-ch
 /** This profile's live catalog and every other profile's persisted one. The running profile is
  *  named by its own storage folder, not the profile index, which a switch rewrites first. */
 export function readNativeChatVisualsWorkspaceCatalogs(
-  store: NativeChatVisualsWorkspaceCatalogs['active'] & Pick<Store, 'getProfileStorageDirectory'>,
+  store: NativeChatVisualsWorkspaceCatalogs['active'] &
+    Partial<Pick<Store, 'getProfileStorageDirectory'>>,
   userDataPath = getProfileUserDataPath()
 ): NativeChatVisualsWorkspaceCatalogs {
-  const storage = store.getProfileStorageDirectory()
+  const storage = store.getProfileStorageDirectory!()
   const runningProfileId = samePath(dirname(storage), getOrcaProfilesDirectory(userDataPath))
     ? basename(storage)
     : undefined
@@ -47,7 +48,7 @@ export type NativeChatVisualsWorkspaceCatalogs = {
   active: {
     getRepo: (id: string) => { path: string } | undefined
     getAllWorktreeMeta: () => Readonly<Record<string, unknown>>
-    getFolderWorkspaces: () => readonly { id: string }[]
+    getFolderWorkspaces?: () => readonly { id: string }[]
   }
   /** Every other profile's worktree ids, folder workspace keys and project ids. */
   others: { ids: ReadonlySet<string>; repoIds: ReadonlySet<string>; unreadableProfiles: number }
@@ -195,9 +196,9 @@ export function createNativeChatVisualsWorkspaceVerdicts(
       }
       const listed =
         known.others.ids.has(location.workspaceId) ||
-        known.active
-          .getFolderWorkspaces()
-          .some((workspace) => folderWorkspaceKey(workspace.id) === location.workspaceId)
+        known.active.getFolderWorkspaces!().some(
+          (workspace) => folderWorkspaceKey(workspace.id) === location.workspaceId
+        )
       return listed ? 'present' : 'removed'
     }
   }

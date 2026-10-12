@@ -38,6 +38,7 @@ const STACK_WRITERS = [
   'src/renderer/src/runtime/sync-runtime-graph.ts',
   'src/renderer/src/runtime/web-session-tabs-sync/store-patch.ts',
   'src/main/runtime/terminal/launch/terminal-split.ts',
+  'src/main/runtime/workspaces/workspace-file-session-targets.ts',
   'src/main/runtime/session-graph/session-window-graph.ts',
   'src/main/runtime/session-tabs/mobile-session-hydration.ts',
   'src/main/runtime/session-tabs/mobile-session-reconciliation.ts',

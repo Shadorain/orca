@@ -65,11 +65,12 @@ const LAYOUT_ORACLE_PREFIXES = [
   'config/scripts/pr-layout-oracle-route.mjs'
 ]
 
-const LAUNCH_LAYOUT_WRITERS = [
+const RUNTIME_LAYOUT_WRITERS = [
   'src/main/runtime/terminal/launch/terminal-create.ts',
   'src/main/runtime/terminal/launch/terminal-split.ts',
   'src/main/runtime/terminal/launch/terminal-split-surface.ts',
-  'src/main/runtime/terminal/stop/worktree-terminal-stop.ts'
+  'src/main/runtime/terminal/stop/worktree-terminal-stop.ts',
+  'src/main/runtime/workspaces/workspace-file-session-targets.ts'
 ]
 
 // Runtime matches only the modules that create, move, close, persist or publish layout.
@@ -88,7 +89,7 @@ export function isLayoutOracleSource(file) {
     return false
   }
   return (
-    LAUNCH_LAYOUT_WRITERS.includes(file) ||
+    RUNTIME_LAYOUT_WRITERS.includes(file) ||
     LAYOUT_ORACLE_PREFIXES.some((prefix) => file.startsWith(prefix)) ||
     LAYOUT_ORACLE_RUNTIME_MODULE.test(file)
   )
