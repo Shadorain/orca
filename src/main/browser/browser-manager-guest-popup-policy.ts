@@ -29,7 +29,11 @@ export abstract class BrowserManagerGuestPopupPolicy extends BrowserManagerNavig
       const externalUrl = normalizeExternalBrowserUrl(url)
       // Why: one rule for every link and window.open; opener-dependent shapes are excluded by
       // isNewBrowserTabPopupIntent and still get a real child window below.
-      if (ownerContext && externalUrl && isNewBrowserTabPopupIntent({ frameName, disposition })) {
+      if (
+        ownerContext &&
+        externalUrl &&
+        isNewBrowserTabPopupIntent({ url, frameName, disposition })
+      ) {
         // Why: one activation lets a page loop window.open, and each routed tab persists into
         // workspace session state, so only opens beyond the observed clicks draw on the budget.
         if (!clicked && !this.tryConsumePageInitiatedTab(ownerContext.rootGuestWebContentsId)) {

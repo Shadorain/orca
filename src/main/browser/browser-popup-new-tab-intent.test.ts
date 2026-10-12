@@ -14,6 +14,65 @@ describe('isNewBrowserTabPopupIntent', () => {
     { frameName: 'oauth', disposition: 'new-window', tab: false },
     { frameName: '', disposition: 'other', tab: false }
   ])('$frameName/$disposition → tab: $tab', ({ frameName, disposition, tab }) => {
-    expect(isNewBrowserTabPopupIntent({ frameName, disposition })).toBe(tab)
+    expect(
+      isNewBrowserTabPopupIntent({ url: 'https://example.com/docs', frameName, disposition })
+    ).toBe(tab)
+  })
+
+  it.each(['foreground-tab', 'background-tab'])(
+    'keeps Deel Google sign-in as a popup: %s',
+    (disposition) => {
+      const url = new URL('https://accounts.google.com/o/oauth2/v2/auth')
+      url.search = new URLSearchParams({
+        scope: 'email profile openid',
+        response_type: 'token',
+        redirect_uri: 'https://api.deel.com/login/google',
+        response_mode: 'form_post',
+        prompt: 'select_account',
+        client_id: 'test-client',
+        state: 'https://app.deel.com'
+      }).toString()
+      expect(isNewBrowserTabPopupIntent({ url: url.href, frameName: '', disposition })).toBe(false)
+    }
+  )
+
+  it.each([
+    'code',
+    'token',
+    'id_token',
+    'none',
+    'code token',
+    'id_token code',
+    'token id_token',
+    'token code id_token'
+  ])('preserves provider-independent OAuth and OpenID Connect requests: %s', (responseType) => {
+    const url = new URL('https://sso.example.com/authorize')
+    url.search = new URLSearchParams({
+      client_id: 'client',
+      redirect_uri: 'http://localhost:3000/callback',
+      response_type: responseType
+    }).toString()
+    expect(
+      isNewBrowserTabPopupIntent({ url: url.href, frameName: '', disposition: 'foreground-tab' })
+    ).toBe(false)
+  })
+
+  it.each([
+    'https://example.com/docs',
+    'https://example.com/?client_id=a',
+    'https://example.com/?client_id=a&redirect_uri=b',
+    'https://example.com/?client_id=&redirect_uri=b&response_type=code',
+    'https://example.com/?client_id=a&redirect_uri=%20&response_type=code',
+    'https://example.com/?client_id=a&redirect_uri=b&response_type=',
+    'https://example.com/?client_id=a&redirect_uri=b&response_type=json',
+    'https://example.com/?client_id=a&redirect_uri=b&response_type=code+code',
+    'https://example.com/?client_id=a&redirect_uri=b&response_type=none+token',
+    'https://example.com/?client_id=a&redirect_uri=b&response_type=code+unknown',
+    'file:///authorize?client_id=a&redirect_uri=b&response_type=code',
+    'not a url'
+  ])('keeps non-authorization URLs on the existing tab path: %s', (url) => {
+    expect(isNewBrowserTabPopupIntent({ url, frameName: '', disposition: 'foreground-tab' })).toBe(
+      true
+    )
   })
 })

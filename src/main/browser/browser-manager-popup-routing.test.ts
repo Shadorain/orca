@@ -205,6 +205,11 @@ describe('browserManager', () => {
     const openerDependentOpens = [
       { url: 'https://sso.example.com/auth', frameName: 'ssoWindow', features: '' },
       { url: 'https://sso.example.com/auth', frameName: 'ssoWindow', features: 'noopener=0' },
+      {
+        url: 'https://accounts.google.com/o/oauth2/v2/auth?client_id=test-client&redirect_uri=https%3A%2F%2Fapi.deel.com%2Flogin%2Fgoogle&response_type=token',
+        frameName: '',
+        features: ''
+      },
       { url: 'about:blank', frameName: '', features: '' }
     ]
     for (const disposition of ['foreground-tab', 'background-tab', 'new-window']) {
