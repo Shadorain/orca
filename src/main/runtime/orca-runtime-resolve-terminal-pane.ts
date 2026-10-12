@@ -1,5 +1,5 @@
 // @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import type { OrcaRuntimeWithCreateTerminal } from './orca-runtime-create-terminal'
+import type { OrcaRuntimeWithCreateTerminal } from './terminal/launch/terminal-create'
 import { OrcaRuntimeWithGetTerminalInteractiveWait } from './terminal/wait/terminal-interactive-wait'
 import type {
   RuntimeTerminalRead,

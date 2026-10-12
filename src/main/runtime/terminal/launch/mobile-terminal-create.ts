@@ -1,14 +1,29 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithCreateTerminal } from './orca-runtime-create-terminal'
-import type { WorktreeStartupLaunch } from '../../shared/worktree/launch-types'
-import type { TuiAgent } from '../../shared/tui-agent'
-import type { SleepingAgentLaunchConfig } from '../../shared/agent-session-resume'
-import type { RuntimeNavigationTarget } from '../../shared/runtime-navigation'
-import type { RuntimeMobileSessionCreateTerminalResult } from '../../shared/runtime-types'
-import { navigationTargetsHost } from '../../shared/runtime-navigation'
-import { MOBILE_TERMINAL_CREATE_RESULT_TTL_MS } from './orca-runtime-core'
+import type { MobileTerminalCreateOptions } from './mobile-terminal-renderer-create'
+import type { RuntimeMobileSessionTabsResult } from '../../../../shared/runtime-session-contracts'
+import { OrcaRuntimeWithCreateTerminal } from './terminal-create'
+import type { WorktreeStartupLaunch } from '../../../../shared/worktree/launch-types'
+import type { TuiAgent } from '../../../../shared/tui-agent'
+import type { SleepingAgentLaunchConfig } from '../../../../shared/agent-session-resume'
+import type { RuntimeNavigationTarget } from '../../../../shared/runtime-navigation'
+import type { RuntimeMobileSessionCreateTerminalResult } from '../../../../shared/runtime-types'
+import { navigationTargetsHost } from '../../../../shared/runtime-navigation'
+import { MOBILE_TERMINAL_CREATE_RESULT_TTL_MS } from '../../orca-runtime-core'
 
-export class OrcaRuntimeWithCreateMobileSessionTerminal extends OrcaRuntimeWithCreateTerminal {
+export abstract class OrcaRuntimeWithCreateMobileSessionTerminal extends OrcaRuntimeWithCreateTerminal {
+  protected abstract runCreateMobileSessionTerminal(
+    worktreeSelector: string,
+    opts?: MobileTerminalCreateOptions
+  ): Promise<RuntimeMobileSessionCreateTerminalResult>
+
+  protected abstract getValidatedExplicitWorktreeIdSelector(
+    selector: string | undefined
+  ): string | null
+
+  protected abstract getMobileSessionTabsForWorktree(
+    worktreeId: string,
+    clientNavigationId?: string
+  ): RuntimeMobileSessionTabsResult
+
   async createMobileSessionTerminal(
     worktreeSelector: string,
     opts: {

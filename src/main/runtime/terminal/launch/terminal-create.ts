@@ -1,12 +1,11 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithTerminalCreateDeduplication } from './orca-runtime-terminal-create-deduplication'
-import * as dependencies from './orca-runtime-create-terminal-dependencies'
-import { createDesktopTerminal } from './orca-runtime-create-terminal-desktop'
-import { buildRuntimeAgentTeamsLaunchPlan } from './terminal/launch/agent-teams-launch-plan'
-import { createPtySpawnCommitReporter } from './orca-runtime-report-pty-spawn-commit'
-import { recordPtySurface, spawnSurfaceClaimSequence } from './pty-recorded-surface-topology'
+import { OrcaRuntimeWithTerminalCreateDeduplication } from './terminal-create-deduplication'
+import * as dependencies from '../../orca-runtime-create-terminal-dependencies'
+import { createDesktopTerminal } from '../../orca-runtime-create-terminal-desktop'
+import { buildRuntimeAgentTeamsLaunchPlan } from './agent-teams-launch-plan'
+import { createPtySpawnCommitReporter } from '../../orca-runtime-report-pty-spawn-commit'
+import { recordPtySurface, spawnSurfaceClaimSequence } from '../../pty-recorded-surface-topology'
 
-export class OrcaRuntimeWithCreateTerminal extends OrcaRuntimeWithTerminalCreateDeduplication {
+export abstract class OrcaRuntimeWithCreateTerminal extends OrcaRuntimeWithTerminalCreateDeduplication {
   async createTerminal(
     worktreeSelector?: string,
     opts: dependencies.TerminalCreateOptions = {},
@@ -77,7 +76,7 @@ export class OrcaRuntimeWithCreateTerminal extends OrcaRuntimeWithTerminalCreate
           ...launchOpts.env,
           ...(launchToken ? { ORCA_AGENT_LAUNCH_TOKEN: launchToken } : {})
         }
-        let agentTeamsPlan: Awaited<ReturnType<typeof dependencies.buildClaudeAgentTeamsLaunchPlan>>
+        let agentTeamsPlan: Awaited<ReturnType<typeof buildRuntimeAgentTeamsLaunchPlan>>['plan']
         let sequencedStartupCommand: string | undefined
         let effectiveLaunchConfig = launchOpts.launchConfig
         try {

@@ -1,11 +1,24 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithStopExplicitlyClosedTabPtys } from './session-tabs/explicit-terminal-close-stops'
-import type { TerminalPaneSplitSource } from '../../shared/feature-education-telemetry'
-import type { RuntimeTerminalSplit } from '../../shared/runtime-types'
+import type { TerminalSplitOptions } from './terminal-split-surface'
+import type { RuntimePtyWorktreeRecord } from '../../runtime-terminal-state-records'
+import { OrcaRuntimeWithStopExplicitlyClosedTabPtys } from '../../session-tabs/explicit-terminal-close-stops'
+import type { TerminalPaneSplitSource } from '../../../../shared/feature-education-telemetry'
+import type { RuntimeTerminalSplit } from '../../../../shared/runtime-types'
 import { randomUUID } from 'node:crypto'
-import type { Worktree } from '../../shared/worktree/types'
+import type { Worktree } from '../../../../shared/worktree/types'
 
-export class OrcaRuntimeWithSplitTerminal extends OrcaRuntimeWithStopExplicitlyClosedTabPtys {
+export abstract class OrcaRuntimeWithSplitTerminal extends OrcaRuntimeWithStopExplicitlyClosedTabPtys {
+  protected abstract splitPtyBackedTerminal(
+    pty: RuntimePtyWorktreeRecord,
+    opts?: TerminalSplitOptions,
+    createdWorktree?: Worktree
+  ): Promise<RuntimeTerminalSplit>
+
+  protected abstract waitForLeafInTab(
+    tabId: string,
+    leafId: string,
+    timeoutMs?: number
+  ): Promise<string>
+
   async splitTerminal(
     handle: string,
     opts: {

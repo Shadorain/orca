@@ -1,7 +1,10 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithRegisterPty } from './orca-runtime-register-pty'
+import { OrcaRuntimeWithRegisterPty } from '../../orca-runtime-register-pty'
 
-export class OrcaRuntimeWithPreparePtyExecutionContext extends OrcaRuntimeWithRegisterPty {
+export abstract class OrcaRuntimeWithPreparePtyExecutionContext extends OrcaRuntimeWithRegisterPty {
+  protected abstract disposeHeadlessTerminal(ptyId: string): void
+
+  protected abstract replaceHeadlessTerminalAfterExecutionContextChange(ptyId: string): void
+
   preparePtyExecutionContext(
     ptyId: string,
     wslDistro: string | null,

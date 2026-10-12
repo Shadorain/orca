@@ -1,21 +1,20 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithCreateAgentSession } from './orca-runtime-create-agent-session'
-import type { RuntimeTerminalCreate } from '../../shared/runtime-types'
-import { WORKTREE_CREATE_RESULT_TTL_MS } from './orca-runtime-core'
-import { deriveRemoteRuntimeTerminalCreateHandle } from './remote-runtime-terminal-create-identity'
-import { withTimeoutResult } from './runtime-async-boundaries'
-import { PTY_CONTROLLER_LIST_TIMEOUT_MS } from './orca-runtime-postlude'
-import { inferWorktreeIdFromPtyId } from './runtime-worktree-path-identity'
-import { getRegisteredSshState } from '../ssh/ssh-target-registry'
+import { OrcaRuntimeWithCreateAgentSession } from '../../orca-runtime-create-agent-session'
+import type { RuntimeTerminalCreate } from '../../../../shared/runtime-types'
+import { WORKTREE_CREATE_RESULT_TTL_MS } from '../../orca-runtime-core'
+import { deriveRemoteRuntimeTerminalCreateHandle } from '../../remote-runtime-terminal-create-identity'
+import { withTimeoutResult } from '../../runtime-async-boundaries'
+import { PTY_CONTROLLER_LIST_TIMEOUT_MS } from '../../orca-runtime-postlude'
+import { inferWorktreeIdFromPtyId } from '../../runtime-worktree-path-identity'
+import { getRegisteredSshState } from '../../../ssh/ssh-target-registry'
 import {
   getConnectionExecutionHostId,
   LOCAL_EXECUTION_HOST_ID,
   toSshExecutionHostId
-} from '../../shared/execution-host'
-import { resolveWorktreeLaunchHost } from './worktree-launch-host-repo'
-import type { TuiAgent } from '../../shared/tui-agent'
+} from '../../../../shared/execution-host'
+import { resolveWorktreeLaunchHost } from '../../worktree-launch-host-repo'
+import type { TuiAgent } from '../../../../shared/tui-agent'
 
-export class OrcaRuntimeWithTerminalCreateDeduplication extends OrcaRuntimeWithCreateAgentSession {
+export abstract class OrcaRuntimeWithTerminalCreateDeduplication extends OrcaRuntimeWithCreateAgentSession {
   async dedupeTerminalCreate(
     clientIdentity: string,
     worktreeSelector: string | undefined,
@@ -126,7 +125,7 @@ export class OrcaRuntimeWithTerminalCreateDeduplication extends OrcaRuntimeWithC
     }
   }
 
-  protected getPtyExecutionHostMetadata(
+  getPtyExecutionHostMetadata(
     ptyId: string | null
   ): Pick<RuntimeTerminalCreate, 'executionHostId' | 'hostPlatform' | 'incarnationId'> {
     if (!ptyId) {
@@ -206,6 +205,7 @@ export class OrcaRuntimeWithTerminalCreateDeduplication extends OrcaRuntimeWithC
     const key = `${repoSelector}\0${clientMutationId}`
     const inflight = this.worktreeCreateByMutationId.get(key)
     if (inflight) {
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Callers must use one operation/result type per repo and mutation key.
       return inflight as Promise<T>
     }
     const created = run()

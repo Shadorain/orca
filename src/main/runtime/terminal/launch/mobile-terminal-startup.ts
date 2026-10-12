@@ -1,33 +1,37 @@
-import { OrcaRuntimeWithRunCreateMobileSessionTerminal } from './orca-runtime-run-create-mobile-session-terminal'
-import type { TerminalWorkspaceLaunchScope } from './runtime-legacy-worker-terminal-recovery-types'
-import type { WorktreeStartupLaunch } from '../../shared/worktree/launch-types'
-import type { TuiAgent } from '../../shared/tui-agent'
-import type { SleepingAgentLaunchConfig } from '../../shared/agent-session-resume'
-import { isTuiAgentEnabled } from '../../shared/tui-agent-selection'
-import { buildAgentStartupPlan } from '../../shared/tui-agent-startup'
-import { resolveAgentStartupPlanInputs } from '../../shared/agent-startup-plan-inputs'
+import { OrcaRuntimeWithRunCreateMobileSessionTerminal } from './mobile-terminal-renderer-create'
+import type { TerminalWorkspaceLaunchScope } from '../../runtime-legacy-worker-terminal-recovery-types'
+import type { WorktreeStartupLaunch } from '../../../../shared/worktree/launch-types'
+import type { TuiAgent } from '../../../../shared/tui-agent'
+import type { SleepingAgentLaunchConfig } from '../../../../shared/agent-session-resume'
+import { isTuiAgentEnabled } from '../../../../shared/tui-agent-selection'
+import { buildAgentStartupPlan } from '../../../../shared/tui-agent-startup'
+import { resolveAgentStartupPlanInputs } from '../../../../shared/agent-startup-plan-inputs'
+
+export type MobileTerminalCommandOptions = {
+  command?: string
+  env?: Record<string, string>
+  envToDelete?: string[]
+  startupCommandDelivery?: WorktreeStartupLaunch['startupCommandDelivery']
+  agent?: TuiAgent
+  agentPrompt?: string
+  launchConfig?: SleepingAgentLaunchConfig
+  launchAgent?: TuiAgent
+}
+
+export type MobileTerminalCommand = {
+  command?: string
+  env?: Record<string, string>
+  envToDelete?: string[]
+  startupCommandDelivery?: WorktreeStartupLaunch['startupCommandDelivery']
+  launchConfig?: SleepingAgentLaunchConfig
+  launchAgent?: TuiAgent
+}
 
 export abstract class OrcaRuntimeWithResolveMobileSessionTerminalCommand extends OrcaRuntimeWithRunCreateMobileSessionTerminal {
   protected async resolveMobileSessionTerminalCommand(
     workspace: TerminalWorkspaceLaunchScope,
-    opts: {
-      command?: string
-      env?: Record<string, string>
-      envToDelete?: string[]
-      startupCommandDelivery?: WorktreeStartupLaunch['startupCommandDelivery']
-      agent?: TuiAgent
-      agentPrompt?: string
-      launchConfig?: SleepingAgentLaunchConfig
-      launchAgent?: TuiAgent
-    }
-  ): Promise<{
-    command?: string
-    env?: Record<string, string>
-    envToDelete?: string[]
-    startupCommandDelivery?: WorktreeStartupLaunch['startupCommandDelivery']
-    launchConfig?: SleepingAgentLaunchConfig
-    launchAgent?: TuiAgent
-  }> {
+    opts: MobileTerminalCommandOptions
+  ): Promise<MobileTerminalCommand> {
     if (opts.command || !opts.agent) {
       return {
         command: opts.command,

@@ -1,4 +1,5 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
+import type { BrowserWindow } from 'electron'
+import type { TerminalWorkspaceLaunchScope } from './runtime-legacy-worker-terminal-recovery-types'
 import { OrcaRuntimeWithGetAgentSessionExecutionNamespace } from './orca-runtime-get-agent-session-execution-namespace'
 import type {
   RuntimeAgentSessionRpcCaller,
@@ -26,7 +27,30 @@ import {
 import { agentStartedTelemetry } from '../agent-launch/agent-started-telemetry'
 import { withAgentSessionAccountEnv } from './agent-session-account-env'
 
-export class OrcaRuntimeWithCreateAgentSession extends OrcaRuntimeWithGetAgentSessionExecutionNamespace {
+export abstract class OrcaRuntimeWithCreateAgentSession extends OrcaRuntimeWithGetAgentSessionExecutionNamespace {
+  abstract resolveWorkspaceTerminalStartupCwd(
+    workspace: Pick<TerminalWorkspaceLaunchScope, 'path'>,
+    requestedCwd?: string | null
+  ): string | undefined
+
+  protected abstract buildTerminalWorkspaceEnv(
+    scope: TerminalWorkspaceLaunchScope,
+    baseEnv: Record<string, string>,
+    paneKey: string,
+    tabId: string,
+    agentTeamsEnv?: Record<string, string>
+  ): Promise<Record<string, string>>
+
+  abstract getAuthoritativeWindow(): BrowserWindow
+
+  abstract waitForTerminalHandle(tabId: string, timeoutMs?: number): Promise<string>
+
+  protected abstract reconcileRemoteTerminalCreate(
+    worktreeId: string,
+    terminalHandle: string,
+    connectionId?: string | null
+  ): Promise<RuntimeTerminalCreate | null>
+
   async createAgentSession(
     request: RuntimeCreateAgentSessionRequest,
     caller: RuntimeAgentSessionRpcCaller = {}

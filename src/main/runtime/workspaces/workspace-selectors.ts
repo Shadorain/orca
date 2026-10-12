@@ -1,4 +1,4 @@
-import { OrcaRuntimeWithResolveBrowserNetworkExecutionHostForWorktree } from '../orca-runtime-resolve-browser-network-execution-host-for-worktree'
+import { OrcaRuntimeWithResolveBrowserNetworkExecutionHostForWorktree } from '../terminal/launch/terminal-workspace-scope'
 import type { ResolvedWorktree } from '../runtime-worktree-path-identity'
 import { splitWorktreeIdForFilesystem, worktreeIdComparisonKey } from '../../../shared/worktree/id'
 import { branchSelectorMatches, runtimePathsEqual } from '../runtime-worktree-path-identity'

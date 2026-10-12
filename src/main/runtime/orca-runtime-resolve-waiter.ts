@@ -25,7 +25,7 @@ export class OrcaRuntimeWithResolveWaiter extends OrcaRuntimeWithDeliverPendingM
     return `${tabId}::${leafId}`
   }
 
-  protected getAuthoritativeWindow(): BrowserWindow {
+  getAuthoritativeWindow(): BrowserWindow {
     const win = this.getAvailableAuthoritativeWindow()
     if (!win || win.isDestroyed()) {
       throw new Error('No renderer window available')

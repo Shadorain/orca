@@ -134,7 +134,7 @@ export abstract class OrcaRuntimeWithRestoreLivePairedRendererSessionOwnedMobile
     }
   }
 
-  protected waitForTerminalHandle(tabId: string, timeoutMs = 10_000): Promise<string> {
+  waitForTerminalHandle(tabId: string, timeoutMs = 10_000): Promise<string> {
     const existing = this.resolveHandleForTab(tabId)
     if (existing) {
       return Promise.resolve(existing)

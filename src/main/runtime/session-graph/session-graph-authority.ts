@@ -1,4 +1,4 @@
-import type { OrcaRuntimeWithResolveBrowserNetworkExecutionHostForWorktree as ResolveBrowserNetworkExecutionHostForWorktreeMethods } from '../orca-runtime-resolve-browser-network-execution-host-for-worktree'
+import type { OrcaRuntimeWithResolveBrowserNetworkExecutionHostForWorktree as ResolveBrowserNetworkExecutionHostForWorktreeMethods } from '../terminal/launch/terminal-workspace-scope'
 import { OrcaRuntimeWithHasTerminalsForWorktree } from './session-graph-reload-lifecycle'
 import { HEADLESS_RUNTIME_WINDOW_ID } from '../../../shared/runtime-types'
 import type { FolderWorkspace } from '../../../shared/folder-workspace-types'
@@ -65,7 +65,7 @@ export abstract class OrcaRuntimeWithTransitionGraphReloadToTerminalState extend
     this.markSessionTabsInventoryPublished()
   }
 
-  protected assertGraphReady(): void {
+  assertGraphReady(): void {
     if (this.graphStatus !== 'ready') {
       throw new Error('runtime_unavailable')
     }

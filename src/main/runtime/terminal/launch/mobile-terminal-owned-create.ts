@@ -1,27 +1,43 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithResolveMobileSessionTerminalCommand } from './orca-runtime-resolve-mobile-session-terminal-command'
-import type { WorktreeStartupLaunch } from '../../shared/worktree/launch-types'
-import type { TuiAgent } from '../../shared/tui-agent'
-import type { SleepingAgentLaunchConfig } from '../../shared/agent-session-resume'
+import { OrcaRuntimeWithResolveMobileSessionTerminalCommand } from './mobile-terminal-startup'
+import type { WorktreeStartupLaunch } from '../../../../shared/worktree/launch-types'
+import type { TuiAgent } from '../../../../shared/tui-agent'
+import type { SleepingAgentLaunchConfig } from '../../../../shared/agent-session-resume'
 import type {
   RuntimeMobileSessionCreateTerminalResult,
   RuntimeMobileSessionTabsSnapshot,
   RuntimeMobileSessionTerminalTab
-} from '../../shared/runtime-types'
+} from '../../../../shared/runtime-types'
 import { randomUUID } from 'node:crypto'
-import { copySleepingAgentLaunchConfig } from './runtime-agent-launch-resolution'
-import { deriveRemoteRuntimeTerminalCreateHandle } from './remote-runtime-terminal-create-identity'
-import { parsePaneKey } from '../../shared/stable-pane-id'
-import { placeCreatedSessionTab } from '../../shared/session-tab-placement'
+import { copySleepingAgentLaunchConfig } from '../../runtime-agent-launch-resolution'
+import { deriveRemoteRuntimeTerminalCreateHandle } from '../../remote-runtime-terminal-create-identity'
+import { parsePaneKey } from '../../../../shared/stable-pane-id'
+import { placeCreatedSessionTab } from '../../../../shared/session-tab-placement'
 import {
   buildHeadlessMobileSessionTabGroups,
   buildMaterializedHeadlessParentLayout,
   getHeadlessMobileSessionGroupId
-} from './mobile-session-layout-projection'
+} from '../../mobile-session-layout-projection'
 
 const OWNED_MOBILE_DISPATCH_RECIPE_TTL_MS = 15 * 60_000
 
-export class OrcaRuntimeWithCreateRuntimeOwnedMobileSessionTerminal extends OrcaRuntimeWithResolveMobileSessionTerminalCommand {
+export type OwnedMobileTerminalCreateOptions = {
+  command?: string
+  cwd?: string
+  env?: Record<string, string>
+  envToDelete?: string[]
+  startupCommandDelivery?: WorktreeStartupLaunch['startupCommandDelivery']
+  identity?: { tabId: string; leafId: string; sessionId?: string }
+  createMutation?: { clientIdentity: string; id: string }
+  launchAgent?: TuiAgent
+  viewMode?: 'terminal' | 'chat'
+  targetGroupId?: string
+  supportsSplitGroupPlacement?: boolean
+  launchConfig?: SleepingAgentLaunchConfig
+  signal?: AbortSignal
+  refuseSleptWorktree?: boolean
+}
+
+export abstract class OrcaRuntimeWithCreateRuntimeOwnedMobileSessionTerminal extends OrcaRuntimeWithResolveMobileSessionTerminalCommand {
   private readonly ownedMobileDispatchRecipes = new Map<
     string,
     {
@@ -45,22 +61,7 @@ export class OrcaRuntimeWithCreateRuntimeOwnedMobileSessionTerminal extends Orca
     worktreeId: string,
     activate: boolean,
     afterTabId?: string,
-    opts: {
-      command?: string
-      cwd?: string
-      env?: Record<string, string>
-      envToDelete?: string[]
-      startupCommandDelivery?: WorktreeStartupLaunch['startupCommandDelivery']
-      identity?: { tabId: string; leafId: string; sessionId?: string }
-      createMutation?: { clientIdentity: string; id: string }
-      launchAgent?: TuiAgent
-      viewMode?: 'terminal' | 'chat'
-      targetGroupId?: string
-      supportsSplitGroupPlacement?: boolean
-      launchConfig?: SleepingAgentLaunchConfig
-      signal?: AbortSignal
-      refuseSleptWorktree?: boolean
-    } = {}
+    opts: OwnedMobileTerminalCreateOptions = {}
   ): Promise<RuntimeMobileSessionCreateTerminalResult> {
     this.pruneOwnedMobileDispatchRecipes()
     const workspace = await this.resolveTerminalWorkspaceLaunchScope(`id:${worktreeId}`)

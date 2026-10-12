@@ -289,7 +289,7 @@ export class OrcaRuntimeWithRuntimeId {
   // ptyId keeps active TUI redraws independent of the total open terminal count.
   protected leavesByPtyId = new Map<string, RuntimeLeafRecord[]>()
 
-  protected handles = new Map<string, TerminalHandleRecord>()
+  handles = new Map<string, TerminalHandleRecord>()
 
   protected handleByLeafKey = new Map<string, string>()
 

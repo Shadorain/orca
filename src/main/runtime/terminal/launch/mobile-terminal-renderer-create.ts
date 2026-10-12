@@ -1,42 +1,96 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithCreateMobileSessionTerminal } from './orca-runtime-create-mobile-session-terminal'
-import type { WorktreeStartupLaunch } from '../../shared/worktree/launch-types'
-import type { TuiAgent } from '../../shared/tui-agent'
-import type { SleepingAgentLaunchConfig } from '../../shared/agent-session-resume'
-import type { RuntimeMobileSessionCreateTerminalResult } from '../../shared/runtime-types'
+import type { MobileTerminalCommandOptions, MobileTerminalCommand } from './mobile-terminal-startup'
+import type { OwnedMobileTerminalCreateOptions } from './mobile-terminal-owned-create'
+import type { RuntimePtyWorktreeRecord } from '../../runtime-terminal-state-records'
+import type { TerminalWorkspaceLaunchScope } from '../../runtime-legacy-worker-terminal-recovery-types'
+import { OrcaRuntimeWithCreateMobileSessionTerminal } from './mobile-terminal-create'
+import type { WorktreeStartupLaunch } from '../../../../shared/worktree/launch-types'
+import type { TuiAgent } from '../../../../shared/tui-agent'
+import type { SleepingAgentLaunchConfig } from '../../../../shared/agent-session-resume'
+import type { RuntimeMobileSessionCreateTerminalResult } from '../../../../shared/runtime-types'
 import { randomUUID } from 'node:crypto'
-import { getRuntimeDesktopSurface } from './runtime-desktop-surface'
+import { getRuntimeDesktopSurface } from '../../runtime-desktop-surface'
 import type { IpcMainEvent } from 'electron'
 import {
   MOBILE_TERMINAL_READY_FALLBACK_MS,
   MOBILE_TERMINAL_SURFACE_TIMEOUT_MS,
   isClientDisconnectedError
-} from './orca-runtime-core'
-import { rendererPublicationThrottle } from '../window/renderer-publication-throttle'
-import { deterministicAgentSessionUuid } from './runtime-agent-launch-resolution'
+} from '../../orca-runtime-core'
+import { rendererPublicationThrottle } from '../../../window/renderer-publication-throttle'
+import { deterministicAgentSessionUuid } from '../../runtime-agent-launch-resolution'
 
-export class OrcaRuntimeWithRunCreateMobileSessionTerminal extends OrcaRuntimeWithCreateMobileSessionTerminal {
+export type MobileTerminalCreateOptions = {
+  afterTabId?: string
+  targetGroupId?: string
+  command?: string
+  cwd?: string
+  env?: Record<string, string>
+  envToDelete?: string[]
+  startupCommandDelivery?: WorktreeStartupLaunch['startupCommandDelivery']
+  agent?: TuiAgent
+  agentPrompt?: string
+  launchConfig?: SleepingAgentLaunchConfig
+  launchAgent?: TuiAgent
+  viewMode?: 'terminal' | 'chat'
+  activate?: boolean
+  clientNavigationId?: string
+  clientMutationId?: string
+  supportsSplitGroupPlacement?: boolean
+  signal?: AbortSignal
+}
+
+export abstract class OrcaRuntimeWithRunCreateMobileSessionTerminal extends OrcaRuntimeWithCreateMobileSessionTerminal {
+  protected abstract captureReadyGraphEpoch(): number
+
+  protected abstract resolveMobileSessionTerminalCommand(
+    workspace: TerminalWorkspaceLaunchScope,
+    opts: MobileTerminalCommandOptions
+  ): Promise<MobileTerminalCommand>
+
+  protected abstract assertStableReadyGraph(expectedGraphEpoch: number): void
+
+  protected abstract createRuntimeOwnedMobileSessionTerminal(
+    worktreeId: string,
+    activate: boolean,
+    afterTabId?: string,
+    opts?: OwnedMobileTerminalCreateOptions
+  ): Promise<RuntimeMobileSessionCreateTerminalResult>
+
+  protected abstract ensurePtyBackedMobileSurfaceForRendererTab(
+    worktreeId: string,
+    tabId: string
+  ): RuntimeMobileSessionCreateTerminalResult | null
+
+  protected abstract waitForMobileTerminalSurface(
+    worktreeId: string,
+    parentTabId: string,
+    options?: { timeoutMs?: number; requireReady?: boolean; signal?: AbortSignal }
+  ): Promise<RuntimeMobileSessionCreateTerminalResult>
+
+  protected abstract isReadyMobileTerminalSurface(
+    surface: RuntimeMobileSessionCreateTerminalResult | null
+  ): boolean
+
+  protected abstract deliverPendingStartupCommandToBareRendererPty(
+    worktreeId: string,
+    tabId: string
+  ): void
+
+  protected abstract findMobileTerminalSurface(
+    worktreeId: string,
+    parentTabId: string,
+    options?: { requireReady?: boolean }
+  ): RuntimeMobileSessionCreateTerminalResult | null
+
+  protected abstract findLiveRegisteredPtyForRendererTab(
+    worktreeId: string,
+    tabId: string
+  ): RuntimePtyWorktreeRecord | null
+
+  protected abstract hasLiveShellForRendererTab(worktreeId: string, tabId: string): boolean
+
   protected async runCreateMobileSessionTerminal(
     worktreeSelector: string,
-    opts: {
-      afterTabId?: string
-      targetGroupId?: string
-      command?: string
-      cwd?: string
-      env?: Record<string, string>
-      envToDelete?: string[]
-      startupCommandDelivery?: WorktreeStartupLaunch['startupCommandDelivery']
-      agent?: TuiAgent
-      agentPrompt?: string
-      launchConfig?: SleepingAgentLaunchConfig
-      launchAgent?: TuiAgent
-      viewMode?: 'terminal' | 'chat'
-      activate?: boolean
-      clientNavigationId?: string
-      clientMutationId?: string
-      supportsSplitGroupPlacement?: boolean
-      signal?: AbortSignal
-    } = {}
+    opts: MobileTerminalCreateOptions = {}
   ): Promise<RuntimeMobileSessionCreateTerminalResult> {
     const pairedCreate = Boolean(opts.clientNavigationId)
     const graphEpoch = this.captureReadyGraphEpoch()

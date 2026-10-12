@@ -60,7 +60,7 @@ export abstract class OrcaRuntimeWithPreservedBranchCleanup extends OrcaRuntimeW
     folderWorkspace: FolderWorkspace
   ): ResolvedWorktree
 
-  protected abstract resolveTerminalWorkspaceLaunchScope(
+  abstract resolveTerminalWorkspaceLaunchScope(
     selector: string,
     createdWorktree?: Worktree
   ): Promise<TerminalWorkspaceLaunchScope>

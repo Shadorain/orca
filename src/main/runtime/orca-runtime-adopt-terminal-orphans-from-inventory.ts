@@ -22,7 +22,7 @@ import { getLatestPtyTitle } from './runtime-worktree-status-projection'
 import type { PtyLivenessVerdict } from '../../shared/pty-liveness-verdict'
 
 export abstract class OrcaRuntimeWithAdoptTerminalOrphansFromInventory extends OrcaRuntimeWithSubscribeToTerminalResize {
-  protected abstract assertGraphReady(): void
+  abstract assertGraphReady(): void
 
   protected async adoptTerminalOrphansFromInventoryUnderMutation(
     request: RuntimeTerminalOrphanAdoptionRequest,

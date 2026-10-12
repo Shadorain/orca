@@ -1,38 +1,37 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithTransitionGraphReloadToTerminalState } from './session-graph/session-graph-authority'
-import type { ExecutionHostId } from '../../shared/execution-host'
+import { OrcaRuntimeWithTransitionGraphReloadToTerminalState } from '../../session-graph/session-graph-authority'
+import type { ExecutionHostId } from '../../../../shared/execution-host'
 import {
   floatingWorkspaceToWorktree,
   isFloatingWorkspaceSelector
-} from '../../shared/floating-workspace-worktree'
-import { resolveFloatingTerminalCwd } from '../ipc/floating-workspace-directory'
-import type { BrowserNetworkExecutionHost } from '../../shared/browser-client-host-protocol'
+} from '../../../../shared/floating-workspace-worktree'
+import { resolveFloatingTerminalCwd } from '../../../ipc/floating-workspace-directory'
+import type { BrowserNetworkExecutionHost } from '../../../../shared/browser-client-host-protocol'
 import {
   LOCAL_EXECUTION_HOST_ID,
   getWorktreeExecutionHostId,
   parseExecutionHostId
-} from '../../shared/execution-host'
-import { resolveRuntimeBrowserNetworkExecutionHost } from './runtime-browser-network-execution-host'
-import { resolveLocalProjectRuntimeForWorktreeId } from '../local-project-runtime-resolution'
-import { getRegisteredSshState } from '../ssh/ssh-target-registry'
-import { resolveWorktreeLaunchHost } from './worktree-launch-host-repo'
-import { folderWorkspaceKey, parseWorkspaceKey } from '../../shared/workspace-scope'
-import type { FolderWorkspace } from '../../shared/folder-workspace-types'
-import type { ResolvedWorktree } from './runtime-worktree-path-identity'
-import type { Worktree } from '../../shared/worktree/types'
-import { folderWorkspaceToWorktree } from '../../shared/folder-workspace-worktree'
-import type { TerminalWorkspaceLaunchScope } from './runtime-legacy-worker-terminal-recovery-types'
-import { resolveTerminalStartupCwd } from '../../shared/terminal-startup-cwd'
-import type { ResolvedTerminalWorkspaceLaunchTarget } from './orca-runtime-core'
-import { AGENT_HOOK_RUNTIME_ENV_KEYS } from './orca-runtime-core'
-import { ensureJcodeRuntimeDir } from '../../shared/jcode-runtime-dir'
-import { FLOATING_TERMINAL_WORKTREE_ID } from '../../shared/constants'
+} from '../../../../shared/execution-host'
+import { resolveRuntimeBrowserNetworkExecutionHost } from '../../runtime-browser-network-execution-host'
+import { resolveLocalProjectRuntimeForWorktreeId } from '../../../local-project-runtime-resolution'
+import { getRegisteredSshState } from '../../../ssh/ssh-target-registry'
+import { resolveWorktreeLaunchHost } from '../../worktree-launch-host-repo'
+import { folderWorkspaceKey, parseWorkspaceKey } from '../../../../shared/workspace-scope'
+import type { FolderWorkspace } from '../../../../shared/folder-workspace-types'
+import type { ResolvedWorktree } from '../../runtime-worktree-path-identity'
+import type { Worktree } from '../../../../shared/worktree/types'
+import { folderWorkspaceToWorktree } from '../../../../shared/folder-workspace-worktree'
+import type { TerminalWorkspaceLaunchScope } from '../../runtime-legacy-worker-terminal-recovery-types'
+import { resolveTerminalStartupCwd } from '../../../../shared/terminal-startup-cwd'
+import type { ResolvedTerminalWorkspaceLaunchTarget } from '../../orca-runtime-core'
+import { AGENT_HOOK_RUNTIME_ENV_KEYS } from '../../orca-runtime-core'
+import { ensureJcodeRuntimeDir } from '../../../../shared/jcode-runtime-dir'
+import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../../shared/constants'
 import { homedir } from 'node:os'
-import { getExplicitWorktreeIdSelector } from './runtime-worktree-selection'
-import { WORKTREE_ID_SEPARATOR } from '../../shared/worktree/id'
-import { WorktreeIdRequiresFullPathError } from './runtime-worktree-lineage-resolution'
-import { triggerTerminalSpawnPushTargetMaterialization } from './runtime-terminal-spawn-push-target-materialization'
-import { resolveCreatedWorktreeTerminalTarget } from './runtime-created-worktree-terminal-target'
+import { getExplicitWorktreeIdSelector } from '../../runtime-worktree-selection'
+import { WORKTREE_ID_SEPARATOR } from '../../../../shared/worktree/id'
+import { WorktreeIdRequiresFullPathError } from '../../runtime-worktree-lineage-resolution'
+import { triggerTerminalSpawnPushTargetMaterialization } from '../../runtime-terminal-spawn-push-target-materialization'
+import { resolveCreatedWorktreeTerminalTarget } from '../../runtime-created-worktree-terminal-target'
 
 // Why: folder and floating workspaces have no worktree row, so no parent, children or lineage.
 function withoutWorktreeLineage(worktree: Worktree): ResolvedWorktree {
@@ -51,7 +50,7 @@ function withoutWorktreeLineage(worktree: Worktree): ResolvedWorktree {
   }
 }
 
-export class OrcaRuntimeWithResolveBrowserNetworkExecutionHostForWorktree extends OrcaRuntimeWithTransitionGraphReloadToTerminalState {
+export abstract class OrcaRuntimeWithResolveBrowserNetworkExecutionHostForWorktree extends OrcaRuntimeWithTransitionGraphReloadToTerminalState {
   protected resolveBrowserNetworkExecutionHostForWorktree(worktree?: {
     id: string
     repoId?: string
@@ -105,14 +104,14 @@ export class OrcaRuntimeWithResolveBrowserNetworkExecutionHostForWorktree extend
     return withoutWorktreeLineage(folderWorkspaceToWorktree(folderWorkspace))
   }
 
-  protected resolveWorkspaceTerminalStartupCwd(
+  resolveWorkspaceTerminalStartupCwd(
     workspace: Pick<TerminalWorkspaceLaunchScope, 'path'>,
     requestedCwd?: string | null
   ): string | undefined {
     return resolveTerminalStartupCwd(workspace.path, requestedCwd)
   }
 
-  protected async resolveTerminalWorkspaceLaunchScope(
+  async resolveTerminalWorkspaceLaunchScope(
     selector: string,
     createdWorktree?: Worktree
   ): Promise<TerminalWorkspaceLaunchScope> {
