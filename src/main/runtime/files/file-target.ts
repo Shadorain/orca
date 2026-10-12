@@ -1,3 +1,4 @@
+import { joinWorktreeRelativePath, normalizeRuntimeRelativePath } from '../runtime-relative-paths'
 import type { ExecutionHostId } from '../../../shared/execution-host'
 import type { GitWorktreeInfo, Worktree } from '../../../shared/worktree/types'
 import {
@@ -97,4 +98,29 @@ export function runtimeFileSshTargetId(target: {
 }): string | undefined {
   const route = runtimeFileRouteForTarget(target)
   return route.kind === 'ssh' ? route.connectionId : undefined
+}
+
+export async function resolveFileExplorerPath(
+  host: { resolveRuntimeFileTarget(selector: string): Promise<ResolvedRuntimeFileTarget> },
+  worktreeSelector: string,
+  relativePath: string
+): Promise<RuntimeFileExplorerPath> {
+  const [target] = await resolveFileExplorerPaths(host, worktreeSelector, [relativePath])
+  return target
+}
+
+export async function resolveFileExplorerPaths(
+  host: { resolveRuntimeFileTarget(selector: string): Promise<ResolvedRuntimeFileTarget> },
+  worktreeSelector: string,
+  relativePaths: readonly string[]
+): Promise<RuntimeFileExplorerPath[]> {
+  const target = await host.resolveRuntimeFileTarget(worktreeSelector)
+  return relativePaths.map((relativePath) => ({
+    worktree: target.worktree,
+    path: joinWorktreeRelativePath(
+      target.worktree.path,
+      normalizeRuntimeRelativePath(relativePath, target.worktree.path)
+    ),
+    executionHostId: target.executionHostId
+  }))
 }

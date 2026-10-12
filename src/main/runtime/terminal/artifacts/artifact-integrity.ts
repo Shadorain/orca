@@ -7,7 +7,7 @@ import type { RuntimeFileStatLike, TerminalFileGrant } from './file-grants'
 import {
   LOCAL_PREVIEWABLE_BINARY_MAX_BYTES,
   MOBILE_FILE_READ_MAX_BYTES
-} from '../../runtime-file-commands-mobile-file-list-limit'
+} from '../../files/file-preview-budget'
 
 export async function localTerminalArtifactRoots(worktreePath: string): Promise<string[]> {
   const roots = new Set<string>([tmpdir()])

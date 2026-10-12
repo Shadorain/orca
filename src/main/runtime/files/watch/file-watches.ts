@@ -1,32 +1,39 @@
-import { RuntimeFileCommandsWithResolveTerminalPath } from './runtime-file-commands-resolve-terminal-path'
 import {
-  runtimeFileWatcherLeasesByOwnerAndRoot,
-  runtimeWatcherReleaseKey
-} from './runtime-file-commands-mobile-file-list-limit'
+  getRuntimeFileWatcherLeases,
+  registerRuntimeFileWatcherRelease
+} from './file-watcher-leases'
 import {
   requireLocalRuntimeFileRoute,
   requireRuntimeFileProvider,
-  runtimeFileSshTargetId
-} from './files/file-target'
+  runtimeFileSshTargetId,
+  resolveFileExplorerPath
+} from '../file-target'
+import type { RuntimeFileCommandHost } from '../file-command-host'
 import { stat } from 'node:fs/promises'
-import type { DirEntry, FsChangeEvent } from '../../shared/filesystem-entry-types'
-import { sortDirEntries } from '../../shared/file-name-sort'
-import { resolveAuthorizedPath } from '../ipc/filesystem-auth'
-import { watchWindowsRuntimeFileExplorer } from './runtime-file-command-host'
-import { beginWatcherInstall } from '../ipc/watcher-removal-gate'
+import type { DirEntry, FsChangeEvent } from '../../../../shared/filesystem-entry-types'
+import { sortDirEntries } from '../../../../shared/file-name-sort'
+import { resolveAuthorizedPath } from '../../../ipc/filesystem-auth'
+import { watchWindowsRuntimeFileExplorer } from './windows-file-watch'
+import { beginWatcherInstall } from '../../../ipc/watcher-removal-gate'
 import {
   closeFileExplorerWatcherInWatcherProcess,
   watchFileExplorerInWatcherProcess
-} from './file-watcher-host'
-import { registerRuntimeFileWatcherRelease } from './runtime-file-watcher-leases'
+} from '../../file-watcher-host'
 
-export class RuntimeFileExplorerWatchCommands extends RuntimeFileCommandsWithResolveTerminalPath {
+type RuntimeFileWatchHost = Pick<
+  RuntimeFileCommandHost,
+  'getRuntimeId' | 'requireStore' | 'resolveRuntimeFileTarget'
+>
+
+export class RuntimeFileWatches {
+  constructor(private readonly host: RuntimeFileWatchHost) {}
+
   async readFileExplorerDir(
     worktreeSelector: string,
     relativePath: string,
     options: { followSymlinks?: boolean } = {}
   ): Promise<DirEntry[]> {
-    const target = await this.resolveFileExplorerPath(worktreeSelector, relativePath)
+    const target = await resolveFileExplorerPath(this.host, worktreeSelector, relativePath)
     // Why: providers do not promise this order, so sort before returning.
     return sortDirEntries(
       await requireRuntimeFileProvider(target, this.host).readDir(target.path, options)
@@ -39,7 +46,7 @@ export class RuntimeFileExplorerWatchCommands extends RuntimeFileCommandsWithRes
     onTerminalError: (error: Error) => void = () => undefined,
     signal?: AbortSignal
   ): Promise<() => Promise<void>> {
-    const target = await this.resolveFileExplorerPath(worktreeSelector, '')
+    const target = await resolveFileExplorerPath(this.host, worktreeSelector, '')
     // Why: watcher keys must scope teardown to the owning host; a `runtime:` host throws here
     // rather than registering a lease under this client's namespace.
     const sshTargetId = runtimeFileSshTargetId(target)
@@ -83,8 +90,7 @@ export class RuntimeFileExplorerWatchCommands extends RuntimeFileCommandsWithRes
   }
 
   async closeFileExplorerWatchersForPath(rootPath: string, connectionId?: string): Promise<void> {
-    const key = runtimeWatcherReleaseKey(this.host.getRuntimeId(), connectionId, rootPath)
-    const leases = runtimeFileWatcherLeasesByOwnerAndRoot.get(key)
+    const leases = getRuntimeFileWatcherLeases(this.host.getRuntimeId(), connectionId, rootPath)
     if (leases) {
       await Promise.all(Array.from(leases, (lease) => lease.suspend()))
     }
@@ -99,16 +105,14 @@ export class RuntimeFileExplorerWatchCommands extends RuntimeFileCommandsWithRes
     rootPath: string,
     connectionId?: string
   ): Promise<void> {
-    const key = runtimeWatcherReleaseKey(this.host.getRuntimeId(), connectionId, rootPath)
-    const leases = runtimeFileWatcherLeasesByOwnerAndRoot.get(key)
+    const leases = getRuntimeFileWatcherLeases(this.host.getRuntimeId(), connectionId, rootPath)
     if (leases) {
       await Promise.all(Array.from(leases, (lease) => lease.resume()))
     }
   }
 
   forgetFileExplorerWatchersAfterRemoval(rootPath: string, connectionId?: string): void {
-    const key = runtimeWatcherReleaseKey(this.host.getRuntimeId(), connectionId, rootPath)
-    const leases = runtimeFileWatcherLeasesByOwnerAndRoot.get(key)
+    const leases = getRuntimeFileWatcherLeases(this.host.getRuntimeId(), connectionId, rootPath)
     if (leases) {
       for (const lease of Array.from(leases)) {
         lease.forget()

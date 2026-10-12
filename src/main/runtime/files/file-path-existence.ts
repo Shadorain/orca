@@ -1,10 +1,13 @@
-import { capturePathExistence, type PathExistenceResult } from '../../shared/path-existence-batch'
-import { isENOENT } from '../ipc/filesystem-path-containment'
+import {
+  capturePathExistence,
+  type PathExistenceResult
+} from '../../../shared/path-existence-batch'
+import { isENOENT } from '../../ipc/filesystem-path-containment'
 import {
   requireRuntimeFileProvider,
   type RuntimeFileExplorerPath,
   type RuntimeLocalFileHost
-} from './files/file-target'
+} from './file-target'
 
 export async function readRuntimeFilePathExistence(
   targets: readonly RuntimeFileExplorerPath[],

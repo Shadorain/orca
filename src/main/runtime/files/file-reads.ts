@@ -1,31 +1,74 @@
-// @ts-nocheck -- mechanically split class members.
-import { RuntimeFileExplorerWatchCommands } from './runtime-file-explorer-watch-commands'
+import { open, stat } from 'node:fs/promises'
+import { extname } from 'node:path'
+import type { Store } from '../../persistence'
+import type { RuntimeFileCommandHost } from './file-command-host'
 import type {
+  RuntimeFileReadResult,
   RuntimeFilePreviewResult,
   RuntimeFileReadChunkResult
-} from '../../shared/runtime-types'
+} from '../../../shared/runtime-types'
+import { isMobileBinaryPath, isSafeMobileRelativePath } from './mobile-file-kind'
+import { joinWorktreeRelativePath } from '../runtime-relative-paths'
+import { truncateMobileFilePreview } from '../terminal/artifacts/artifact-integrity'
+import {
+  requireLocalRuntimeFileRoute,
+  requireRuntimeFileProvider,
+  resolveFileExplorerPath,
+  resolveFileExplorerPaths
+} from './file-target'
 import {
   LOCAL_PREVIEWABLE_BINARY_MAX_BYTES,
   MOBILE_FILE_READ_MAX_BYTES,
   RUNTIME_PREVIEWABLE_BINARY_MIME_TYPES,
   assertPreviewWithinTransportBudget,
   previewableBinaryByteLimit
-} from './runtime-file-commands-mobile-file-list-limit'
-import { requireLocalRuntimeFileRoute, requireRuntimeFileProvider } from './files/file-target'
-import { readLocalFileRange } from '../ipc/filesystem/local-file-range-read'
-import { resolveAuthorizedPath } from '../ipc/filesystem-auth'
-import { extname } from 'node:path'
+} from './file-preview-budget'
+import { readLocalFileRange } from '../../ipc/filesystem/local-file-range-read'
+import { resolveAuthorizedPath } from '../../ipc/filesystem-auth'
 import {
   NodeFileReadTooLargeError,
   readNodeFileWithinLimit
-} from '../../shared/node-bounded-file-reader'
-import { isBinaryBuffer } from '../../shared/binary-buffer'
+} from '../../../shared/node-bounded-file-reader'
+import { isBinaryBuffer } from '../../../shared/binary-buffer'
 import type {
   DocPreviewFileAccessRequest,
   DocPreviewFileAccessResult
-} from '../../shared/doc-preview-file-access'
+} from '../../../shared/doc-preview-file-access'
 
-export class RuntimeFileCommandsWithReadFileExplorerPreview extends RuntimeFileExplorerWatchCommands {
+type RuntimeFileReadHost = Pick<RuntimeFileCommandHost, 'requireStore' | 'resolveRuntimeFileTarget'>
+
+export class RuntimeFileReads {
+  constructor(private readonly host: RuntimeFileReadHost) {}
+
+  async readMobileFile(
+    worktreeSelector: string,
+    relativePath: string
+  ): Promise<RuntimeFileReadResult> {
+    const store = this.host.requireStore()
+    const target = await this.host.resolveRuntimeFileTarget(worktreeSelector)
+    const { worktree } = target
+    // Why: an `ssh:` host fails before path validation, as it always has.
+    requireLocalRuntimeFileRoute(target)
+    if (!isSafeMobileRelativePath(relativePath)) {
+      throw new Error('invalid_relative_path')
+    }
+    if (isMobileBinaryPath(relativePath)) {
+      throw new Error('binary_file')
+    }
+
+    const filePath = joinWorktreeRelativePath(worktree.path, relativePath)
+    const content = await readLocalMobileFile(filePath, store)
+    const truncated = truncateMobileFilePreview(content)
+
+    return {
+      worktree: worktree.id,
+      relativePath,
+      content: truncated.content,
+      truncated: truncated.truncated,
+      byteLength: truncated.byteLength
+    }
+  }
+
   async readFileExplorerPreview(
     worktreeSelector: string,
     relativePath: string,
@@ -35,7 +78,7 @@ export class RuntimeFileCommandsWithReadFileExplorerPreview extends RuntimeFileE
       maxContentBytes === undefined
         ? LOCAL_PREVIEWABLE_BINARY_MAX_BYTES
         : previewableBinaryByteLimit(maxContentBytes)
-    const target = await this.resolveFileExplorerPath(worktreeSelector, relativePath)
+    const target = await resolveFileExplorerPath(this.host, worktreeSelector, relativePath)
     requireLocalRuntimeFileRoute(target)
     // Why: sized by extension instead of a stat round trip.
     const filePath = await resolveAuthorizedPath(target.path, this.host.requireStore())
@@ -86,7 +129,8 @@ export class RuntimeFileCommandsWithReadFileExplorerPreview extends RuntimeFileE
       ...(implicitRootRelativePath === null ? [] : [implicitRootRelativePath]),
       ...authorizedRootRelativePaths
     ]
-    const [boundary, entry, target, ...authorityRoots] = await this.resolveFileExplorerPaths(
+    const [boundary, entry, target, ...authorityRoots] = await resolveFileExplorerPaths(
+      this.host,
       worktreeSelector,
       relativePaths
     )
@@ -121,9 +165,24 @@ export class RuntimeFileCommandsWithReadFileExplorerPreview extends RuntimeFileE
     offset: number,
     length: number
   ): Promise<RuntimeFileReadChunkResult> {
-    const target = await this.resolveFileExplorerPath(worktreeSelector, relativePath)
+    const target = await resolveFileExplorerPath(this.host, worktreeSelector, relativePath)
     requireLocalRuntimeFileRoute(target)
     const filePath = await resolveAuthorizedPath(target.path, this.host.requireStore())
     return readLocalFileRange(filePath, offset, length)
+  }
+}
+
+async function readLocalMobileFile(filePath: string, store: Store): Promise<string> {
+  const authorizedPath = await resolveAuthorizedPath(filePath, store)
+  const fileStat = await stat(authorizedPath)
+  // Why: cap the read so opening a large file can't block the WebSocket (previews are read-only convenience views).
+  const readLimit = Math.min(fileStat.size, MOBILE_FILE_READ_MAX_BYTES + 1)
+  const handle = await open(authorizedPath, 'r')
+  try {
+    const buffer = Buffer.alloc(readLimit)
+    const { bytesRead } = await handle.read(buffer, 0, readLimit, 0)
+    return buffer.subarray(0, bytesRead).toString('utf8')
+  } finally {
+    await handle.close()
   }
 }

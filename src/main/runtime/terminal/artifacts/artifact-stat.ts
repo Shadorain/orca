@@ -1,5 +1,5 @@
 import { open } from 'node:fs/promises'
-import { assertLocalTerminalArtifactPathStillCanonical } from '../../runtime-file-commands-terminal-file-paths'
+import { assertLocalTerminalArtifactPathStillCanonical } from './local-artifact-read'
 import { localTerminalArtifactContentDigest } from './artifact-integrity'
 import type { RuntimeFileStatLike } from './file-grants'
 

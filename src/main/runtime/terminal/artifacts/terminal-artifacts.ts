@@ -19,13 +19,13 @@ import {
   openLocalTerminalArtifactGrant,
   readLocalTerminalArtifactFileFromHandle,
   readLocalTerminalArtifactPreviewFromHandle
-} from '../../runtime-file-commands-terminal-file-paths'
+} from './local-artifact-read'
 import { statLocalTerminalArtifact } from './artifact-stat'
 import { requireReachableFilesystemRoute } from '../../../providers/execution-host-provider-dispatch'
 import { getConnectionExecutionHostId } from '../../../../shared/execution-host'
-import { assertPreviewWithinTransportBudget } from '../../runtime-file-commands-mobile-file-list-limit'
+import { assertPreviewWithinTransportBudget } from '../../files/file-preview-budget'
 import { SshHostNotServedError } from '../../../providers/ssh-host-not-served-error'
-import { isMobileBinaryPath } from '../../runtime-file-command-host'
+import { isMobileBinaryPath } from '../../files/mobile-file-kind'
 import { writeTerminalArtifactFile } from './artifact-write'
 
 export class RuntimeTerminalArtifacts {

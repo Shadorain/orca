@@ -1,12 +1,54 @@
-// @ts-nocheck -- mechanically split declarations.
-import type { RuntimeFileWatcherLease } from './runtime-file-commands-mobile-file-list-limit'
-import {
-  pendingRuntimeFileWatcherUnsubscribes,
-  runtimeFileWatcherLeasesByOwnerAndRoot,
-  runtimeWatcherReleaseKey,
-  trackRuntimeFileWatcherUnsubscribe
-} from './runtime-file-commands-mobile-file-list-limit'
-import { isWatcherProcessFailure } from '../ipc/parcel-watcher-process-failure'
+import { normalizeRuntimePathForComparison } from '../../../../shared/cross-platform-path'
+import { isWatcherProcessFailure } from '../../../ipc/parcel-watcher-process-failure'
+
+const pendingRuntimeFileWatcherUnsubscribes = new Set<Promise<void>>()
+
+type RuntimeFileWatcherLease = {
+  suspend(): Promise<void>
+  resume(): Promise<void>
+  forget(): void
+}
+
+const runtimeFileWatcherLeasesByOwnerAndRoot = new Map<string, Set<RuntimeFileWatcherLease>>()
+
+function trackRuntimeFileWatcherUnsubscribe(
+  rootPath: string,
+  unsubscribe: () => Promise<void>
+): Promise<void> {
+  const promise = Promise.resolve()
+    .then(unsubscribe)
+    .finally(() => {
+      pendingRuntimeFileWatcherUnsubscribes.delete(promise)
+    })
+  pendingRuntimeFileWatcherUnsubscribes.add(promise)
+  void promise.catch((err: unknown) => {
+    console.error('[runtime-files.watch] unsubscribe error', { rootPath, err })
+  })
+  return promise
+}
+
+function normalizeRuntimeWatcherRoot(rootPath: string): string {
+  return normalizeRuntimePathForComparison(rootPath)
+}
+
+function runtimeWatcherReleaseKey(
+  runtimeId: string,
+  connectionId: string | undefined,
+  rootPath: string
+): string {
+  // Why: identical absolute paths exist on local and multiple SSH hosts; scope teardown to the host that owns it.
+  return JSON.stringify([runtimeId, connectionId ?? null, normalizeRuntimeWatcherRoot(rootPath)])
+}
+
+export function getRuntimeFileWatcherLeases(
+  runtimeId: string,
+  connectionId: string | undefined,
+  rootPath: string
+): ReadonlySet<RuntimeFileWatcherLease> | undefined {
+  return runtimeFileWatcherLeasesByOwnerAndRoot.get(
+    runtimeWatcherReleaseKey(runtimeId, connectionId, rootPath)
+  )
+}
 
 export function registerRuntimeFileWatcherRelease(
   runtimeId: string,

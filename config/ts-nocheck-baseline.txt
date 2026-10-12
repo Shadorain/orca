@@ -135,11 +135,3 @@ src/main/runtime/orca-runtime-wait-for-mobile-terminal-surface.ts
 src/main/runtime/orca-runtime-wait-for-session-tabs-inventory-publication.ts
 src/main/runtime/orca-runtime-write-orchestration-pointer-pty.ts
 src/main/runtime/orca-runtime-write-terminal-agent-prompt.ts
-src/main/runtime/runtime-file-command-host.ts
-src/main/runtime/runtime-file-commands-create-file-explorer-dir-no-clobber.ts
-src/main/runtime/runtime-file-commands-mobile-file-list-limit.ts
-src/main/runtime/runtime-file-commands-read-file-explorer-preview.ts
-src/main/runtime/runtime-file-commands-resolve-terminal-path.ts
-src/main/runtime/runtime-file-commands-terminal-file-paths.ts
-src/main/runtime/runtime-file-commands-write-file-explorer-file.ts
-src/main/runtime/runtime-file-watcher-leases.ts

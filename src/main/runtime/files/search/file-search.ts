@@ -10,21 +10,23 @@ import {
 } from '../../../../shared/abort-signal-reason'
 import { listQuickOpenFiles } from '../../../ipc/filesystem-list-files'
 import { searchQuickOpenFilePaths as searchHostQuickOpenFilePaths } from '../../../ipc/filesystem-search-file-paths'
-import { isMobileBinaryPath, isSafeMobileRelativePath } from '../../runtime-file-command-host'
+import { isMobileBinaryPath, isSafeMobileRelativePath } from '../mobile-file-kind'
 import {
   requireRuntimeFileProvider,
   runtimeFileRouteForTarget,
   type RuntimeLocalFileHost,
   type ResolvedRuntimeFileTarget
 } from '../file-target'
-import {
-  MOBILE_FILE_LIST_LIMIT,
-  MOBILE_FILE_PATH_SEARCH_CACHE_LIMIT,
-  MOBILE_FILE_PATH_SEARCH_CACHE_ENTRIES,
-  MOBILE_FILE_PATH_SEARCH_CACHE_TTL_MS
-} from '../../runtime-file-commands-mobile-file-list-limit'
 import { basenameFromRelativePath } from '../file-paths'
 import { RuntimeMobileFilePathSearchCache, rankRuntimeMobileFilePaths } from './mobile-path-search'
+
+const MOBILE_FILE_LIST_LIMIT = 5000
+
+const MOBILE_FILE_PATH_SEARCH_CACHE_LIMIT = 20_000
+
+const MOBILE_FILE_PATH_SEARCH_CACHE_ENTRIES = 8
+
+const MOBILE_FILE_PATH_SEARCH_CACHE_TTL_MS = 30_000
 
 type RuntimeFileSearchTarget = {
   worktree: Pick<ResolvedRuntimeFileTarget['worktree'], 'id' | 'path'>

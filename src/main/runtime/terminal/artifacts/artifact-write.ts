@@ -2,10 +2,10 @@ import { chmod, constants, rename, rm, writeFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import type { RuntimeTerminalFileGrants } from './file-grants'
-import { MOBILE_FILE_READ_MAX_BYTES } from '../../runtime-file-commands-mobile-file-list-limit'
-import { isMobileBinaryPath } from '../../runtime-file-command-host'
+import { MOBILE_FILE_READ_MAX_BYTES } from '../../files/file-preview-budget'
+import { isMobileBinaryPath } from '../../files/mobile-file-kind'
 import { isBinaryBuffer } from '../../../../shared/binary-buffer'
-import { openLocalTerminalArtifactGrant } from '../../runtime-file-commands-terminal-file-paths'
+import { openLocalTerminalArtifactGrant } from './local-artifact-read'
 import {
   assertTerminalArtifactContentUnchanged,
   assertTerminalFileGrantFresh,

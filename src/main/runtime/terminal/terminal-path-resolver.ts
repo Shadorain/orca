@@ -1,21 +1,41 @@
-// @ts-nocheck -- mechanically split class members.
-import { RuntimeFileCommandsWithReadMobileFile } from './runtime-file-commands-read-mobile-file'
 import type {
   RuntimeNativeChatFileContext,
   RuntimeTerminalPathResolution
-} from '../../shared/runtime-types'
-import { parseWslPath } from '../wsl'
-import { relativePathInsideRoot, resolveRuntimePath } from '../../shared/cross-platform-path'
+} from '../../../shared/runtime-types'
+import { parseWslPath } from '../../wsl'
+import { relativePathInsideRoot, resolveRuntimePath } from '../../../shared/cross-platform-path'
 import { homedir } from 'node:os'
-import {
-  provenancePathCandidate,
-  resolveTerminalAbsolutePath
-} from './runtime-file-commands-terminal-file-paths'
-import { requireRuntimeFileProvider, runtimeFileRouteForTarget } from './files/file-target'
-import { isSafeMobileRelativePath } from './runtime-file-command-host'
-import { isENOENT } from '../ipc/filesystem-path-containment'
+import { provenancePathCandidate, resolveTerminalAbsolutePath } from './terminal-file-path'
+import { requireRuntimeFileProvider, runtimeFileRouteForTarget } from '../files/file-target'
+import { isSafeMobileRelativePath } from '../files/mobile-file-kind'
+import { isENOENT } from '../../ipc/filesystem-path-containment'
+import type { RuntimeFileCommandHost } from '../files/file-command-host'
+import type { RuntimeTerminalArtifacts } from './artifacts/terminal-artifacts'
 
-export class RuntimeFileCommandsWithResolveTerminalPath extends RuntimeFileCommandsWithReadMobileFile {
+type RuntimeTerminalPathHost = Pick<
+  RuntimeFileCommandHost,
+  | 'requireStore'
+  | 'resolveRuntimeFileTarget'
+  | 'resolveKnownWorkspaceFileTarget'
+  | 'resolveTerminalCwd'
+  | 'resolveTerminalContext'
+  | 'resolveTerminalFileUriHostname'
+  | 'hasRecentTerminalOutputPath'
+  | 'hasRecentNativeChatOutputPath'
+>
+type RuntimeTerminalArtifactAuthority = Pick<
+  RuntimeTerminalArtifacts,
+  | 'resolveNativeChatArtifactPath'
+  | 'resolveAbsoluteFileGrant'
+  | 'resolveAllowedTerminalArtifactPath'
+>
+
+export class RuntimeTerminalPathResolver {
+  constructor(
+    private readonly host: RuntimeTerminalPathHost,
+    private readonly artifacts: RuntimeTerminalArtifactAuthority
+  ) {}
+
   // Resolves a mobile terminal tap to a worktree-relative path; relatives resolve against cwd, else the worktree root.
   async resolveTerminalPath(
     worktreeSelector: string,
@@ -115,8 +135,11 @@ export class RuntimeFileCommandsWithResolveTerminalPath extends RuntimeFileComma
           absolutePath
         ))
       ) {
-        const artifactPath = await this.resolveNativeChatArtifactPath(absolutePath, connectionId)
-        return await this.resolveAbsoluteFileGrant({
+        const artifactPath = await this.artifacts.resolveNativeChatArtifactPath(
+          absolutePath,
+          connectionId
+        )
+        return await this.artifacts.resolveAbsoluteFileGrant({
           worktreeId: worktree.id,
           artifactPath,
           clientId,
@@ -137,7 +160,7 @@ export class RuntimeFileCommandsWithResolveTerminalPath extends RuntimeFileComma
       ) {
         return { ...empty, relativePath, absolutePath }
       }
-      const artifactPath = await this.resolveAllowedTerminalArtifactPath({
+      const artifactPath = await this.artifacts.resolveAllowedTerminalArtifactPath({
         absolutePath,
         connectionId,
         worktreePath: worktree.path
@@ -154,7 +177,7 @@ export class RuntimeFileCommandsWithResolveTerminalPath extends RuntimeFileComma
       ) {
         return { ...empty, relativePath, absolutePath }
       }
-      return await this.resolveAbsoluteFileGrant({
+      return await this.artifacts.resolveAbsoluteFileGrant({
         worktreeId: worktree.id,
         artifactPath,
         rejectedAbsolutePath: absolutePath,
