@@ -1,5 +1,5 @@
 // @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithWaitForLeafPtyId } from './orca-runtime-wait-for-leaf-pty-id'
+import { OrcaRuntimeWithWaitForLeafPtyId } from './terminal/view/renderer-terminal-snapshot'
 import type { RuntimeTerminalFocus } from '../../shared/runtime-types'
 import { parsePaneKey } from '../../shared/stable-pane-id'
 import { getLatestPtyTitle } from './runtime-worktree-status-projection'

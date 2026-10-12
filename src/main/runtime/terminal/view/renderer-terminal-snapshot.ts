@@ -1,8 +1,10 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithRestoreLivePairedRendererSessionOwnedMobileTerminals } from './session-tabs/renderer-session-terminal-rescue'
-import type { TerminalOscLinkRange } from '../../shared/terminal-osc-link-ranges'
+import { OrcaRuntimeWithRestoreLivePairedRendererSessionOwnedMobileTerminals } from '../../session-tabs/renderer-session-terminal-rescue'
+import type { TerminalOscLinkRange } from '../../../../shared/terminal-osc-link-ranges'
+import type { RuntimeLeafRecord } from '../../runtime-terminal-state-records'
 
-export class OrcaRuntimeWithWaitForLeafPtyId extends OrcaRuntimeWithRestoreLivePairedRendererSessionOwnedMobileTerminals {
+export abstract class OrcaRuntimeWithWaitForLeafPtyId extends OrcaRuntimeWithRestoreLivePairedRendererSessionOwnedMobileTerminals {
+  protected abstract issueHandle(leaf: RuntimeLeafRecord): string
+
   // Why: mobile may subscribe before the PTY spawns; wait for it so subscribe proceeds with phone-fit instead of a bare scrollback+end.
   waitForLeafPtyId(handle: string, timeoutMs = 10_000, signal?: AbortSignal): Promise<string> {
     const leaf = this.resolveLeafForHandle(handle)

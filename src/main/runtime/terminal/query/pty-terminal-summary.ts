@@ -1,21 +1,35 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithGetPtyRecordForPaneKey } from './orchestration/terminal-pane-mail-routing'
-import type { RuntimeLeafRecord, RuntimePtyWorktreeRecord } from './runtime-terminal-state-records'
-import { runtimeWorktreeIdentityKey, type ResolvedWorktree } from './runtime-worktree-path-identity'
-import type { RuntimeTerminalRead, RuntimeTerminalSummary } from '../../shared/runtime-types'
-import { getLatestPtyTitle } from './runtime-worktree-status-projection'
-import { parsePaneKey } from '../../shared/stable-pane-id'
-import { ptyHoldsRecordedSurface, type PtySurfaceTopology } from './pty-recorded-surface-topology'
-import type { TerminalHandleRecord } from './runtime-terminal-contracts'
-import { readTerminalTail } from './terminal-tail-read'
-import { structuredWorkerTerminalRefusal } from './structured-worker-terminal-refusal'
+import { OrcaRuntimeWithGetPtyRecordForPaneKey } from '../../orchestration/terminal-pane-mail-routing'
+import type {
+  RuntimeLeafRecord,
+  RuntimePtyWorktreeRecord
+} from '../../runtime-terminal-state-records'
+import {
+  runtimeWorktreeIdentityKey,
+  type ResolvedWorktree
+} from '../../runtime-worktree-path-identity'
+import type { RuntimeTerminalRead, RuntimeTerminalSummary } from '../../../../shared/runtime-types'
+import { getLatestPtyTitle } from '../../runtime-worktree-status-projection'
+import { parsePaneKey } from '../../../../shared/stable-pane-id'
+import {
+  ptyHoldsRecordedSurface,
+  type PtySurfaceTopology
+} from '../../pty-recorded-surface-topology'
+import type { PtyIncarnationHandleRecord } from '../../orca-runtime-core'
+import type { TerminalHandleRecord } from '../../runtime-terminal-contracts'
+import { readTerminalTail } from '../../terminal-tail-read'
+import { structuredWorkerTerminalRefusal } from '../../structured-worker-terminal-refusal'
 import { randomUUID } from 'node:crypto'
 
 export type LiveTerminalPty = ReturnType<
   OrcaRuntimeWithBuildPtyTerminalSummary['getLivePtyForHandle']
 >
 
-export class OrcaRuntimeWithBuildPtyTerminalSummary extends OrcaRuntimeWithGetPtyRecordForPaneKey {
+export abstract class OrcaRuntimeWithBuildPtyTerminalSummary extends OrcaRuntimeWithGetPtyRecordForPaneKey {
+  protected abstract bindPtyIncarnationHandle(
+    retained: PtyIncarnationHandleRecord,
+    leaf: RuntimeLeafRecord
+  ): void
+
   protected ptySurfaceTopology(): PtySurfaceTopology {
     return {
       graphSequence: this.graphSequence,
@@ -55,7 +69,8 @@ export class OrcaRuntimeWithBuildPtyTerminalSummary extends OrcaRuntimeWithGetPt
       worktreePath: worktree?.path ?? '',
       branch: worktree?.branch ?? '',
       tabId: orphaned ? `pty:${pty.ptyId}` : pty.tabId!,
-      leafId: orphaned ? `pty:${pty.ptyId}` : pane.leafId,
+      // SAFETY: A later binding read does not prove the cached pane was present.
+      leafId: orphaned ? `pty:${pty.ptyId}` : pane!.leafId,
       title,
       connected: pty.connected,
       writable: pty.connected,
