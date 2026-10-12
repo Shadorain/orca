@@ -1,9 +1,11 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithSleepResolvedWorktreeTerminals } from './orca-runtime-sleep-resolved-worktree-terminals'
-import { setsEqual } from './runtime-worktree-binding-index'
-import { runtimeWorktreeIdsEqual } from './runtime-worktree-path-identity'
+import { OrcaRuntimeWithSleepResolvedWorktreeTerminals } from './worktree-terminal-sleep'
+import { setsEqual } from '../../runtime-worktree-binding-index'
+import { runtimeWorktreeIdsEqual } from '../../runtime-worktree-path-identity'
+import type { RuntimeLeafRecord } from '../../runtime-terminal-state-records'
 
-export class OrcaRuntimeWithStopExactTerminalsForWorktree extends OrcaRuntimeWithSleepResolvedWorktreeTerminals {
+export abstract class OrcaRuntimeWithStopExactTerminalsForWorktree extends OrcaRuntimeWithSleepResolvedWorktreeTerminals {
+  protected abstract issueHandle(leaf: RuntimeLeafRecord): string
+
   async stopExactTerminalsForWorktree(
     worktreeSelector: string,
     expectedPtyIds: readonly string[],

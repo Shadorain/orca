@@ -1,29 +1,34 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithResolveTerminalSplitSourceAuthority } from './orca-runtime-resolve-terminal-split-source-authority'
+import { OrcaRuntimeWithResolveTerminalSplitSourceAuthority } from '../../orca-runtime-resolve-terminal-split-source-authority'
 import {
+  type ResolvedWorktree,
   runtimeWorktreeIdentityKey,
   runtimeWorktreeIdsEqual
-} from './runtime-worktree-path-identity'
-import { teardownRpcDeadline } from './worktree-teardown'
-import { WORKTREE_TERMINALS_SLEEPING_ERROR } from './worktree-terminals-sleeping-error'
+} from '../../runtime-worktree-path-identity'
+import { teardownRpcDeadline } from '../../worktree-teardown'
+import { WORKTREE_TERMINALS_SLEEPING_ERROR } from '../../worktree-terminals-sleeping-error'
 import type {
   RuntimeWorktreeTerminalCloseResult,
   RuntimeWorktreeTerminalSleepResult
-} from '../../shared/runtime-types'
-import type { WorktreeTerminalMutationKind } from './worktree-terminal-mutation-lock'
-import type { WorkspaceSessionState } from '../../shared/workspace-session-state-types'
-import { cloneWorkspaceSessionState } from '../persistence/restoring-sessions/session-owner-fields'
-import { rollbackWorkspaceSessionAfterFailedAsyncWrite } from '../persistence/restoring-sessions/workspace-session-write-rollback'
+} from '../../../../shared/runtime-types'
+import type { WorktreeTerminalStopOptions } from './worktree-terminal-stop-options'
+import type { WorktreeTerminalMutationKind } from '../../worktree-terminal-mutation-lock'
+import type { WorkspaceSessionState } from '../../../../shared/workspace-session-state-types'
+import { cloneWorkspaceSessionState } from '../../../persistence/restoring-sessions/session-owner-fields'
+import { rollbackWorkspaceSessionAfterFailedAsyncWrite } from '../../../persistence/restoring-sessions/workspace-session-write-rollback'
 import {
   getWorktreeExecutionHostId,
   parseExecutionHostId,
   type ExecutionHostId
-} from '../../shared/execution-host'
-import { worktreePtyBelongsToHost, type WorktreePtyHostFence } from './worktree-pty-host-fence'
-import { summarizeWorktreePtyStopVerdict } from './worktree-pty-stop-verdict'
-import { describeMobileSessionTabCloseRefusal } from './mobile-session-tab-close-refusal-message'
+} from '../../../../shared/execution-host'
+import { worktreePtyBelongsToHost, type WorktreePtyHostFence } from '../../worktree-pty-host-fence'
+import { summarizeWorktreePtyStopVerdict } from '../../worktree-pty-stop-verdict'
+import { describeMobileSessionTabCloseRefusal } from '../../mobile-session-tab-close-refusal-message'
 
-export class OrcaRuntimeWithStopTerminalsForWorktree extends OrcaRuntimeWithResolveTerminalSplitSourceAuthority {
+export abstract class OrcaRuntimeWithStopTerminalsForWorktree extends OrcaRuntimeWithResolveTerminalSplitSourceAuthority {
+  protected abstract sleepResolvedWorktreeTerminals(
+    worktree: ResolvedWorktree
+  ): Promise<RuntimeWorktreeTerminalSleepResult>
+
   private collectWorktreePtyIds(
     worktreeId: string,
     hostFence: WorktreePtyHostFence,
@@ -51,7 +56,9 @@ export class OrcaRuntimeWithStopTerminalsForWorktree extends OrcaRuntimeWithReso
     return ptyIds
   }
 
-  private getWorktreeHostFence(worktree: { id: string; repoId?: string }): WorktreePtyHostFence {
+  private getWorktreeHostFence(
+    worktree: { id: string; repoId?: string } & Parameters<typeof getWorktreeExecutionHostId>[0]
+  ): WorktreePtyHostFence {
     const repo = worktree.repoId ? this.store?.getRepo?.(worktree.repoId) : undefined
     const parsedHost = parseExecutionHostId(getWorktreeExecutionHostId(worktree, repo))
     return parsedHost?.kind === 'runtime'
@@ -124,7 +131,8 @@ export class OrcaRuntimeWithStopTerminalsForWorktree extends OrcaRuntimeWithReso
       throw new Error('workspace_session_unavailable')
     }
     const refusal = await this.store.runDurableMutation<Error | undefined>(() => {
-      const session = cloneWorkspaceSessionState(this.store.getWorkspaceSession(hostId))
+      // SAFETY: Keep the original late lookup and failure if this capability disappears.
+      const session = cloneWorkspaceSessionState(this.store!.getWorkspaceSession!(hostId))
       const sleepingAgentSessionsByPaneKey = Object.fromEntries(
         Object.entries(session.sleepingAgentSessionsByPaneKey ?? {}).filter(
           ([, record]) => record.worktreeId !== worktreeId
@@ -155,15 +163,19 @@ export class OrcaRuntimeWithStopTerminalsForWorktree extends OrcaRuntimeWithReso
         sleepingAgentSessionsByPaneKey,
         terminalPtyIncarnationsByPaneKey
       }
-      this.store.setWorkspaceSession(next, hostId)
-      const staged = cloneWorkspaceSessionState(this.store.getWorkspaceSession(hostId))
+      // SAFETY: Keep the original late lookup and failure if this capability disappears.
+      this.store!.setWorkspaceSession!(next, hostId)
+      // SAFETY: Keep the original late lookup and failure if this capability disappears.
+      const staged = cloneWorkspaceSessionState(this.store!.getWorkspaceSession!(hostId))
       return {
         value: undefined,
         rollback: () => {
-          const current = this.store.getWorkspaceSession(hostId)
+          // SAFETY: Keep the original late lookup and failure if this capability disappears.
+          const current = this.store!.getWorkspaceSession!(hostId)
           const rolledBack = rollbackWorkspaceSessionAfterFailedAsyncWrite(session, staged, current)
           if (rolledBack !== current) {
-            this.store.setWorkspaceSession(rolledBack, hostId)
+            // SAFETY: Keep the original late lookup and failure if this capability disappears.
+            this.store!.setWorkspaceSession!(rolledBack, hostId)
           }
         }
       }
@@ -175,17 +187,7 @@ export class OrcaRuntimeWithStopTerminalsForWorktree extends OrcaRuntimeWithReso
 
   async stopTerminalsForWorktree(
     worktreeSelector: string,
-    options: {
-      deadline?: number
-      stopPty?: (
-        ptyId: string,
-        stop: () => Promise<boolean>
-      ) => Promise<{ stopped: boolean; owner: boolean }>
-      /** Authoritative id for an orphan whose selector no longer resolves. */
-      resolvedWorktreeId?: string
-      resolvedConnectionId?: string | null
-      resolvedRuntimeEnvironmentId?: string
-    } = {}
+    options: WorktreeTerminalStopOptions = {}
   ): Promise<{ stopped: number }> {
     // Why: this mutates live PTYs, so reject while the graph is reloading rather than act on cached leaf ownership.
     const graphEpoch = this.captureReadyGraphEpoch()

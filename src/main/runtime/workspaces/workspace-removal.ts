@@ -1,5 +1,5 @@
 import type { RuntimeStore } from '../runtime-store-contract'
-import type { OrcaRuntimeWithStopTerminalsForWorktree } from '../orca-runtime-stop-terminals-for-worktree'
+import type { OrcaRuntimeWithStopTerminalsForWorktree } from '../terminal/stop/worktree-terminal-stop'
 import type { GitWorktreeInfo } from '../../../shared/worktree/types'
 import { OrcaRuntimeWithCreateManagedRemoteWorktree } from './workspace-metadata'
 import {

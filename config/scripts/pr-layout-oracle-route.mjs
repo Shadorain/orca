@@ -68,7 +68,8 @@ const LAYOUT_ORACLE_PREFIXES = [
 const LAUNCH_LAYOUT_WRITERS = [
   'src/main/runtime/terminal/launch/terminal-create.ts',
   'src/main/runtime/terminal/launch/terminal-split.ts',
-  'src/main/runtime/terminal/launch/terminal-split-surface.ts'
+  'src/main/runtime/terminal/launch/terminal-split-surface.ts',
+  'src/main/runtime/terminal/stop/worktree-terminal-stop.ts'
 ]
 
 // Runtime matches only the modules that create, move, close, persist or publish layout.

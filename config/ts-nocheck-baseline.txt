@@ -39,11 +39,8 @@ src/main/runtime/orca-runtime-resolve-terminal-pane.ts
 src/main/runtime/orca-runtime-resolve-terminal-split-source-authority.ts
 src/main/runtime/orca-runtime-runtime-id.ts
 src/main/runtime/orca-runtime-schedule-mobile-session-tabs-changed.ts
-src/main/runtime/orca-runtime-sleep-resolved-worktree-terminals.ts
 src/main/runtime/orca-runtime-state-fields.ts
-src/main/runtime/orca-runtime-stop-exact-terminals-for-worktree.ts
 src/main/runtime/orca-runtime-stop-requested-pty-ids.ts
-src/main/runtime/orca-runtime-stop-terminals-for-worktree.ts
 src/main/runtime/orca-runtime-terminal-drivers.ts
 src/main/runtime/orca-runtime-touch-mobile-session-tabs-for-worktree.ts
 src/main/runtime/orca-runtime-verify-orchestration-compatibility-caller.ts
