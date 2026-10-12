@@ -1,5 +1,5 @@
 // @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithRefreshRepoWorktreeScan } from './orca-runtime-refresh-repo-worktree-scan'
+import { RuntimeWorkspaceRepoScanRefresh } from './workspaces/workspace-repo-scan-refresh'
 import type { RuntimePtyWorktreeRecord } from './runtime-terminal-state-records'
 import { parseAppSshPtyId } from '../../shared/ssh-pty-id'
 import { splitWorktreeIdForFilesystem } from '../../shared/worktree/id'
@@ -15,7 +15,7 @@ import {
   SURFACE_CLAIM_WITHOUT_STANDING
 } from './pty-recorded-surface-topology'
 
-export class OrcaRuntimeWithRecordPtyWorktree extends OrcaRuntimeWithRefreshRepoWorktreeScan {
+export class OrcaRuntimeWithRecordPtyWorktree extends RuntimeWorkspaceRepoScanRefresh {
   protected recordPtyWorktree(
     ptyId: string,
     worktreeId: string,

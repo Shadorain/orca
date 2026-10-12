@@ -47,14 +47,16 @@ class PaneLayoutRuntime extends OrcaRuntimeService {
   }
 
   protected override getWorkspaceSessionForWorktree(): WorkspaceSessionState {
-    return this.requireStore().getWorkspaceSession()
+    // SAFETY: paneLayoutHandler receives the real Store opened by this fixture.
+    return this.requireStore().getWorkspaceSession!()
   }
 
   protected override setWorkspaceSessionForWorktree(
     _worktreeId: string,
     session: WorkspaceSessionState
   ): void {
-    this.requireStore().setWorkspaceSession(session)
+    // SAFETY: paneLayoutHandler receives the real Store opened by this fixture.
+    this.requireStore().setWorkspaceSession!(session)
   }
 }
 

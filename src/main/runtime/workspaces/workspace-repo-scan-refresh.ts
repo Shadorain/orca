@@ -1,23 +1,22 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithListKnownResolvedWorktreesForExplicitTarget } from './orca-runtime-list-known-resolved-worktrees-for-explicit-target'
-import type { Repo } from '../../shared/repo-types'
-import type { ProjectExecutionRuntimeResolution } from '../../shared/project-execution-runtime'
-import type { RuntimeWorktreeScanCache, RuntimeWorktreeScanRefresh } from './orca-runtime-core'
-import { resolveWorktreeScanCacheTtlMs } from './runtime-worktree-scan-cache'
+import { RuntimeWorkspaceCatalog } from './workspace-catalog'
+import type { Repo } from '../../../shared/repo-types'
+import type { ProjectExecutionRuntimeResolution } from '../../../shared/project-execution-runtime'
+import type { RuntimeWorktreeScanCache, RuntimeWorktreeScanRefresh } from '../orca-runtime-core'
+import { resolveWorktreeScanCacheTtlMs } from '../runtime-worktree-scan-cache'
 import {
   WORKTREE_SCAN_ADMIN_FINGERPRINT_TIMEOUT_MS,
   WORKTREE_SCAN_ADMIN_RECONCILE_INTERVAL_MS
-} from './orca-runtime-postlude'
-import { getLocalProjectWorktreeGitOptionsForRuntime } from '../project-runtime-git-options'
-import { withTimeoutResult } from './runtime-async-boundaries'
-import { readRepoWorktreeAdminFingerprint } from './repo-worktree-admin-fingerprint'
-import type { RuntimeWorktreeScanResult } from './repo-worktree-resolution-scan'
-import { scanLocalRepoWorktreesForResolution } from './repo-worktree-resolution-scan'
-import { dropRepeatedWorktreeRows } from './repeated-worktree-rows'
-import type { GitWorktreeInfo } from '../../shared/worktree/types'
-import { listStoredWorktreeRowsForRepo } from './repo-worktree-row-resolution'
-import type { ResolvedWorktree } from './runtime-worktree-path-identity'
-import { getRepoExecutionHostId, getRepoSshConnectionId } from '../../shared/execution-host'
+} from '../orca-runtime-postlude'
+import { getLocalProjectWorktreeGitOptionsForRuntime } from '../../project-runtime-git-options'
+import { withTimeoutResult } from '../runtime-async-boundaries'
+import { readRepoWorktreeAdminFingerprint } from '../repo-worktree-admin-fingerprint'
+import type { RuntimeWorktreeScanResult } from '../repo-worktree-resolution-scan'
+import { scanLocalRepoWorktreesForResolution } from '../repo-worktree-resolution-scan'
+import { dropRepeatedWorktreeRows } from '../repeated-worktree-rows'
+import type { GitWorktreeInfo } from '../../../shared/worktree/types'
+import { listStoredWorktreeRowsForRepo } from '../repo-worktree-row-resolution'
+import type { ResolvedWorktree } from '../runtime-worktree-path-identity'
+import { getRepoExecutionHostId, getRepoSshConnectionId } from '../../../shared/execution-host'
 
 const lastFingerprintUnknownWarnAt = new Map<string, number>()
 
@@ -38,7 +37,7 @@ function warnFingerprintUnknownOnce(repoId: string, reason: string): void {
   )
 }
 
-export class OrcaRuntimeWithRefreshRepoWorktreeScan extends OrcaRuntimeWithListKnownResolvedWorktreesForExplicitTarget {
+export abstract class RuntimeWorkspaceRepoScanRefresh extends RuntimeWorkspaceCatalog {
   /**
    * Refresh one repo's worktree rows, skipping the `git worktree list` subprocess when a cheap
    * Git-admin fingerprint proves nothing changed since the cached scan.

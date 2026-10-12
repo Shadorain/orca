@@ -56,7 +56,6 @@ src/main/runtime/orca-runtime-has-terminals-for-worktree.ts
 src/main/runtime/orca-runtime-hydrate-headless-mobile-session-tabs-from-workspace-session.ts
 src/main/runtime/orca-runtime-invalidate-all-handles-for-pty.ts
 src/main/runtime/orca-runtime-linear-commands.ts
-src/main/runtime/orca-runtime-list-known-resolved-worktrees-for-explicit-target.ts
 src/main/runtime/orca-runtime-list-managed-worktrees.ts
 src/main/runtime/orca-runtime-mark-pty-liveness-unverifiable.ts
 src/main/runtime/orca-runtime-maybe-hydrate-headless-from-renderer.ts
@@ -84,7 +83,6 @@ src/main/runtime/orca-runtime-record-pty-worktree.ts
 src/main/runtime/orca-runtime-refresh-floating-workspace-pty-liveness.ts
 src/main/runtime/orca-runtime-refresh-pty-worktree-records-from-controller.ts
 src/main/runtime/orca-runtime-refresh-pty-worktree-records-with-controller-inventory.ts
-src/main/runtime/orca-runtime-refresh-repo-worktree-scan.ts
 src/main/runtime/orca-runtime-refuse-unattributed-mobile-session-tab-close.ts
 src/main/runtime/orca-runtime-register-pty.ts
 src/main/runtime/orca-runtime-remove-managed-worktree.ts
@@ -98,7 +96,6 @@ src/main/runtime/orca-runtime-resolve-terminal-pane.ts
 src/main/runtime/orca-runtime-resolve-terminal-split-source-authority.ts
 src/main/runtime/orca-runtime-resolve-waiter.ts
 src/main/runtime/orca-runtime-resolve-worktree-removal-target.ts
-src/main/runtime/orca-runtime-resolve-worktree-selector.ts
 src/main/runtime/orca-runtime-restore-live-paired-renderer-session-owned-mobile-terminals.ts
 src/main/runtime/orca-runtime-restore-structured-agent-session-tabs-once.ts
 src/main/runtime/orca-runtime-run-create-mobile-session-terminal.ts

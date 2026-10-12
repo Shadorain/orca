@@ -1,34 +1,41 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithResolveWorktreeSelector } from './orca-runtime-resolve-worktree-selector'
-import type { ResolvedWorktree } from './runtime-worktree-path-identity'
-import { splitWorktreeIdForFilesystem } from '../../shared/worktree/id'
-import { isPathInsideOrEqual } from '../../shared/cross-platform-path'
-import type { ResolvedWorktreeSnapshot } from './runtime-resolved-worktree-cache'
-import { RESOLVED_WORKTREE_CACHE_TTL_MS } from './orca-runtime-postlude'
-import { getWorktreeScanMutationRevision } from '../local-worktree-scan-generation'
+import { RuntimeWorkspaceSelectors } from './workspace-selectors'
+import type { RuntimeWorkspaceRepoScanRefresh } from './workspace-repo-scan-refresh'
+import type { ResolvedWorktree } from '../runtime-worktree-path-identity'
+import { splitWorktreeIdForFilesystem } from '../../../shared/worktree/id'
+import { isPathInsideOrEqual } from '../../../shared/cross-platform-path'
+import type { ResolvedWorktreeSnapshot } from '../runtime-resolved-worktree-cache'
+import { RESOLVED_WORKTREE_CACHE_TTL_MS } from '../orca-runtime-postlude'
+import { getWorktreeScanMutationRevision } from '../../local-worktree-scan-generation'
 import {
   resolveLocalProjectRuntimeForRepo,
   resolveLocalProjectRuntimesForRepos
-} from '../project-runtime-git-options'
-import { getAgentLaunchPlatformForRepo } from './runtime-agent-launch-resolution'
-import { resolveRepoWorktreeRows, resolveScopedWorktreeIdRow } from './repo-worktree-row-resolution'
-import { projectResolvedWorktreeLineage } from '../../shared/resolved-worktree-lineage'
-import type { RepoWorktreeRowDeps } from './repo-worktree-row-resolution'
-import { listRuntimeFolderWorkspaces } from './runtime-worktree-filesystem'
-import type { ExecutionHostId } from '../../shared/execution-host'
-import type { Repo } from '../../shared/repo-types'
-import type { ProjectExecutionRuntimeResolution } from '../../shared/project-execution-runtime'
-import type { RuntimeWorktreeScanResult } from './repo-worktree-resolution-scan'
+} from '../../project-runtime-git-options'
+import { getAgentLaunchPlatformForRepo } from '../runtime-agent-launch-resolution'
+import {
+  resolveRepoWorktreeRows,
+  resolveScopedWorktreeIdRow
+} from '../repo-worktree-row-resolution'
+import { projectResolvedWorktreeLineage } from '../../../shared/resolved-worktree-lineage'
+import type { RepoWorktreeRowDeps } from '../repo-worktree-row-resolution'
+import { listRuntimeFolderWorkspaces } from '../runtime-worktree-filesystem'
+import type { ExecutionHostId } from '../../../shared/execution-host'
+import type { Repo } from '../../../shared/repo-types'
+import type { ProjectExecutionRuntimeResolution } from '../../../shared/project-execution-runtime'
+import type { RuntimeWorktreeScanResult } from '../repo-worktree-resolution-scan'
 import {
   getRepoExecutionHostId,
   getRepoSshConnectionId,
   LOCAL_EXECUTION_HOST_ID
-} from '../../shared/execution-host'
-import { withUnregisteredRemovalCheckouts } from '../worktree-removal-listing'
-import type { RuntimeWorktreeScanCache } from './orca-runtime-core'
-import { resolveWorktreeScanCacheTtlMs } from './runtime-worktree-scan-cache'
+} from '../../../shared/execution-host'
+import { withUnregisteredRemovalCheckouts } from '../../worktree-removal-listing'
+import type { RuntimeWorktreeScanCache } from '../orca-runtime-core'
+import { resolveWorktreeScanCacheTtlMs } from '../runtime-worktree-scan-cache'
 
-export class OrcaRuntimeWithListKnownResolvedWorktreesForExplicitTarget extends OrcaRuntimeWithResolveWorktreeSelector {
+export abstract class RuntimeWorkspaceCatalog extends RuntimeWorkspaceSelectors {
+  protected abstract refreshRepoWorktreeScan(
+    ...args: Parameters<RuntimeWorkspaceRepoScanRefresh['refreshRepoWorktreeScan']>
+  ): ReturnType<RuntimeWorkspaceRepoScanRefresh['refreshRepoWorktreeScan']>
+
   protected listKnownResolvedWorktreesForExplicitTarget(
     targetWorktreeId: string,
     targetWorktree: ResolvedWorktree | null
