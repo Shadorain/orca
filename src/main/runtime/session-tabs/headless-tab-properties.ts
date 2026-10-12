@@ -1,17 +1,14 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithCloseHeadlessMobileTerminalTab } from './orca-runtime-close-headless-mobile-terminal-tab'
-import type { WorkspaceSessionState } from '../../shared/workspace-session-state-types'
-import type {
-  RuntimeMobileSessionSnapshotTab,
-  RuntimeMobileSessionTabsSnapshot
-} from '../../shared/runtime-types'
+import { OrcaRuntimeWithCloseHeadlessMobileTerminalTab } from '../orca-runtime-close-headless-mobile-terminal-tab'
+import type { WorkspaceSessionState } from '../../../shared/workspace-session-state-types'
+import type { RuntimeMobileSessionTabsSnapshot } from '../../../shared/runtime-session-contracts'
+import type { RuntimeMobileSessionSnapshotTab } from '../../../shared/runtime-mobile-session-tab-contracts'
 import type {
   TerminalLayoutSnapshot,
   TerminalPaneLayoutNode
-} from '../../shared/terminal-tab-types'
-import { cloneTerminalLayoutSnapshot } from './mobile-session-layout-projection'
+} from '../../../shared/terminal-tab-types'
+import { cloneTerminalLayoutSnapshot } from '../mobile-session-layout-projection'
 
-export class OrcaRuntimeWithPersistHeadlessSessionTabProps extends OrcaRuntimeWithCloseHeadlessMobileTerminalTab {
+export abstract class RuntimeHeadlessTabProperties extends OrcaRuntimeWithCloseHeadlessMobileTerminalTab {
   protected persistHeadlessSessionTabProps(
     worktreeId: string,
     tabId: string,

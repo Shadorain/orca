@@ -1,20 +1,39 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithPersistHeadlessSessionTabProps } from './orca-runtime-persist-headless-session-tab-props'
+import { RuntimeHeadlessTabProperties } from './headless-tab-properties'
 import type {
   RuntimeMobileSessionTabGroup,
   RuntimeMobileSessionTabMove,
   RuntimeMobileSessionTabMoveResult,
   RuntimeMobileSessionTabsSnapshot
-} from '../../shared/runtime-types'
+} from '../../../shared/runtime-session-contracts'
 import {
   buildHeadlessTabGroupMove,
   buildHeadlessTabGroupSplit
-} from '../../shared/workspace-layout/tab-group-moves'
+} from '../../../shared/workspace-layout/tab-group-moves'
 import { randomUUID } from 'node:crypto'
-import { withSelectedTabs } from './headless-tab-group-selection'
-import type { TabGroupLayoutNode } from '../../shared/tab-types'
+import { withSelectedTabs } from '../headless-tab-group-selection'
+import type { TabGroupLayoutNode } from '../../../shared/tab-types'
+import type { OrcaRuntimeWithPersistHeadlessTerminalTitle } from '../orca-runtime-persist-headless-terminal-title'
+import type { OrcaRuntimeWithPruneMobileSessionTabGroupLayout } from '../orca-runtime-prune-mobile-session-tab-group-layout'
 
-export class OrcaRuntimeWithMoveHeadlessMobileSessionTab extends OrcaRuntimeWithPersistHeadlessSessionTabProps {
+export abstract class RuntimeHeadlessTabGroups extends RuntimeHeadlessTabProperties {
+  protected abstract resolveMobileSessionHostTabId(
+    ...args: Parameters<
+      OrcaRuntimeWithPersistHeadlessTerminalTitle['resolveMobileSessionHostTabId']
+    >
+  ): ReturnType<OrcaRuntimeWithPersistHeadlessTerminalTitle['resolveMobileSessionHostTabId']>
+
+  protected abstract normalizeMobileSessionTabOrder(
+    ...args: Parameters<
+      OrcaRuntimeWithPersistHeadlessTerminalTitle['normalizeMobileSessionTabOrder']
+    >
+  ): ReturnType<OrcaRuntimeWithPersistHeadlessTerminalTitle['normalizeMobileSessionTabOrder']>
+
+  protected abstract toMobileSessionTabsResult(
+    ...args: Parameters<
+      OrcaRuntimeWithPruneMobileSessionTabGroupLayout['toMobileSessionTabsResult']
+    >
+  ): ReturnType<OrcaRuntimeWithPruneMobileSessionTabGroupLayout['toMobileSessionTabsResult']>
+
   protected moveHeadlessMobileSessionTab(
     worktreeId: string,
     snapshot: RuntimeMobileSessionTabsSnapshot,
@@ -169,7 +188,7 @@ export class OrcaRuntimeWithMoveHeadlessMobileSessionTab extends OrcaRuntimeWith
   protected persistHeadlessTabGroups(
     worktreeId: string,
     groups: readonly RuntimeMobileSessionTabGroup[],
-    layout: TabGroupLayoutNode | undefined
+    layout: TabGroupLayoutNode | null | undefined
   ): void {
     const session = this.getWorkspaceSessionForWorktree(worktreeId)
     if (!session || !this.store?.setWorkspaceSession) {

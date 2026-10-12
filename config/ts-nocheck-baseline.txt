@@ -62,14 +62,12 @@ src/main/runtime/orca-runtime-mark-pty-liveness-unverifiable.ts
 src/main/runtime/orca-runtime-maybe-hydrate-headless-from-renderer.ts
 src/main/runtime/orca-runtime-merge-preserved-headless-mobile-session-tabs.ts
 src/main/runtime/orca-runtime-mobile-took-floor.ts
-src/main/runtime/orca-runtime-move-headless-mobile-session-tab.ts
 src/main/runtime/orca-runtime-notify-remote-terminal-view-presence-changed.ts
 src/main/runtime/orca-runtime-notify-ssh-state-changed.ts
 src/main/runtime/orca-runtime-on-client-disconnected.ts
 src/main/runtime/orca-runtime-on-pty-data.ts
 src/main/runtime/orca-runtime-on-pty-exit.ts
 src/main/runtime/orca-runtime-perform-mobile-session-pty-records-refresh.ts
-src/main/runtime/orca-runtime-persist-headless-session-tab-props.ts
 src/main/runtime/orca-runtime-persist-headless-terminal-title.ts
 src/main/runtime/orca-runtime-persist-terminal-surface-retirements.ts
 src/main/runtime/orca-runtime-pick-most-recent-actor.ts
@@ -132,6 +130,5 @@ src/main/runtime/orca-runtime-verify-orchestration-compatibility-caller.ts
 src/main/runtime/orca-runtime-visible-snapshot-preview.ts
 src/main/runtime/orca-runtime-wait-for-leaf-pty-id.ts
 src/main/runtime/orca-runtime-wait-for-mobile-terminal-surface.ts
-src/main/runtime/orca-runtime-wait-for-session-tabs-inventory-publication.ts
 src/main/runtime/orca-runtime-write-orchestration-pointer-pty.ts
 src/main/runtime/orca-runtime-write-terminal-agent-prompt.ts

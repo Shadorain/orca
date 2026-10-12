@@ -1,8 +1,6 @@
-/* eslint-disable unicorn/no-useless-spread */
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithCollectMobileVisibleGraphChangedWorktrees } from './orca-runtime-collect-mobile-visible-graph-changed-worktrees'
+import { OrcaRuntimeWithCollectMobileVisibleGraphChangedWorktrees } from '../orca-runtime-collect-mobile-visible-graph-changed-worktrees'
 
-export class OrcaRuntimeWithWaitForSessionTabsInventoryPublication extends OrcaRuntimeWithCollectMobileVisibleGraphChangedWorktrees {
+export abstract class RuntimeSessionTabsInventoryPublication extends OrcaRuntimeWithCollectMobileVisibleGraphChangedWorktrees {
   protected waitForSessionTabsInventoryPublication(signal?: AbortSignal): Promise<void> {
     if (this.getAuthoritativeSessionTabsInventoryEpoch() !== null) {
       return Promise.resolve()
@@ -42,7 +40,7 @@ export class OrcaRuntimeWithWaitForSessionTabsInventoryPublication extends OrcaR
       return
     }
     this.sessionTabsInventoryPublicationEpoch = this.rendererGraphEpoch
-    for (const publish of [...this.sessionTabsInventoryWaiters]) {
+    for (const publish of Array.from(this.sessionTabsInventoryWaiters)) {
       publish()
     }
   }
