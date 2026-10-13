@@ -1,25 +1,26 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { isRemoteRuntimePtyId } from '../../shared/remote-runtime-pty-id'
-import { OrcaRuntimeWithRefreshFloatingWorkspacePtyLiveness } from './terminal/lifecycle/floating-session-liveness'
-import { writeOrchestrationPointerWithSettlement } from './orchestration/mailbox-pointer-pty-write'
-import type { WriteSettlement } from '../../shared/pty-write-settlement'
-import type { RuntimeLeafRecord } from './runtime-terminal-state-records'
-import type { ExecutionHostId } from '../../shared/execution-host'
-import { getPtyExecutionHost } from '../../shared/terminal-execution-host'
-import type { TuiAgent } from '../../shared/tui-agent'
-import type { TerminalAgent } from '../../shared/terminal-agent'
-import { selectRuntimeHookAgentRowForPane } from './runtime-mobile-agent-status-projection'
-import { isTuiAgent } from '../../shared/tui-agent-config'
-import { resolvePublishedPaneAgentIdentity } from '../../shared/published-pane-agent-identity'
-import type { RuntimeTerminalSummary } from '../../shared/runtime-types'
-import type { ResolvedWorktree } from './runtime-worktree-path-identity'
-import { getLatestLeafTitle } from './runtime-worktree-status-projection'
-import { parseAppSshPtyId } from '../../shared/ssh-pty-id'
-import { isTerminalLeafId, makePaneKey } from '../../shared/stable-pane-id'
-import type { OrchestrationMailboxLeaf } from './orchestration/mailbox-owner'
-import type { OrchestrationMailboxPointerSubmitTarget } from './orchestration/mailbox-pointer-submit'
+import { isRemoteRuntimePtyId } from '../../../../shared/remote-runtime-pty-id'
+import { OrcaRuntimeWithRefreshFloatingWorkspacePtyLiveness } from '../../terminal/lifecycle/floating-session-liveness'
+import { writeOrchestrationPointerWithSettlement } from '../mailbox-pointer-pty-write'
+import type { WriteSettlement } from '../../../../shared/pty-write-settlement'
+import type { RuntimeLeafRecord } from '../../runtime-terminal-state-records'
+import type { ExecutionHostId } from '../../../../shared/execution-host'
+import { getPtyExecutionHost } from '../../../../shared/terminal-execution-host'
+import type { TuiAgent } from '../../../../shared/tui-agent'
+import type { TerminalAgent } from '../../../../shared/terminal-agent'
+import { selectRuntimeHookAgentRowForPane } from '../../runtime-mobile-agent-status-projection'
+import { isTuiAgent } from '../../../../shared/tui-agent-config'
+import { resolvePublishedPaneAgentIdentity } from '../../../../shared/published-pane-agent-identity'
+import type { RuntimeTerminalSummary } from '../../../../shared/runtime-types'
+import type { ResolvedWorktree } from '../../runtime-worktree-path-identity'
+import { getLatestLeafTitle } from '../../runtime-worktree-status-projection'
+import { parseAppSshPtyId } from '../../../../shared/ssh-pty-id'
+import { isTerminalLeafId, makePaneKey } from '../../../../shared/stable-pane-id'
+import type { OrchestrationMailboxLeaf } from '../mailbox-owner'
+import type { OrchestrationMailboxPointerSubmitTarget } from '../mailbox-pointer-submit'
 
-export class OrcaRuntimeWithWriteOrchestrationPointerPty extends OrcaRuntimeWithRefreshFloatingWorkspacePtyLiveness {
+export abstract class OrcaRuntimeWithWriteOrchestrationPointerPty extends OrcaRuntimeWithRefreshFloatingWorkspacePtyLiveness {
+  protected abstract issueHandle(leaf: RuntimeLeafRecord): string
+
   protected writeOrchestrationPointerPty(
     ptyId: string,
     data: string

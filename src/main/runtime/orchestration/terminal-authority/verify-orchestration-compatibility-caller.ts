@@ -1,18 +1,21 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithSerializeHeadlessTerminalBuffer } from './terminal/output/headless-buffer-snapshot'
+import { OrcaRuntimeWithSerializeHeadlessTerminalBuffer } from '../../terminal/output/headless-buffer-snapshot'
 import type {
   OrchestrationCompatibilityEvidence,
   OrchestrationCompatibilityHostStamp
-} from '../../shared/orchestration-compatibility-evidence'
+} from '../../../../shared/orchestration-compatibility-evidence'
 import type {
   OrchestrationCompatibilityCallerAuthority,
   OrchestrationCompatibilityTerminalAuthority
-} from './runtime-terminal-contracts'
+} from '../../runtime-terminal-contracts'
 import { createHash } from 'node:crypto'
-import type { RuntimePtyWorktreeRecord } from './runtime-terminal-state-records'
-import { parsePaneKey } from '../../shared/stable-pane-id'
+import type { RuntimePtyWorktreeRecord } from '../../runtime-terminal-state-records'
+import { parsePaneKey } from '../../../../shared/stable-pane-id'
 
-export class OrcaRuntimeWithVerifyOrchestrationCompatibilityCaller extends OrcaRuntimeWithSerializeHeadlessTerminalBuffer {
+export abstract class OrcaRuntimeWithVerifyOrchestrationCompatibilityCaller extends OrcaRuntimeWithSerializeHeadlessTerminalBuffer {
+  abstract getOrchestrationDispatchAuthority(
+    handle: string
+  ): OrchestrationCompatibilityTerminalAuthority | null
+
   verifyOrchestrationCompatibilityCaller(
     evidence: OrchestrationCompatibilityEvidence | null | undefined,
     options?: { currentRuntimeLaunchSufficient?: boolean }

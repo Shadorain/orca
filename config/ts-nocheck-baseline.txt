@@ -18,5 +18,3 @@ src/main/runtime/orca-runtime-state-fields.ts
 src/main/runtime/orca-runtime-stop-requested-pty-ids.ts
 src/main/runtime/orca-runtime-terminal-drivers.ts
 src/main/runtime/orca-runtime-touch-mobile-session-tabs-for-worktree.ts
-src/main/runtime/orca-runtime-verify-orchestration-compatibility-caller.ts
-src/main/runtime/orca-runtime-write-orchestration-pointer-pty.ts
