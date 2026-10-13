@@ -17579,6 +17579,7 @@
           "fbb5018602": "Ce fichier est vide.",
           "6112db5a1c": "Les artifacts partagés depuis Orca doivent peser moins de 800 Ko.",
           "e2ed5acd8c": "Orca n'a pas pu lire ce fichier. Ouvrez-le depuis un espace de travail et réessayez.",
+          "visualUnreadable": "Impossible de lire cette visualisation pour la partager.",
           "6d475e9b25": "Seuls les fichiers HTML et Markdown locaux peuvent être partagés comme artifacts.",
           "29a406be09": "Les artifacts doivent contenir du texte."
         },

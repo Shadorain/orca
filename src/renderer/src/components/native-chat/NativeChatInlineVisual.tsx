@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { SquareArrowOutUpRight } from 'lucide-react'
+import { ArtifactPublishButton } from '@/components/artifacts/ArtifactPublishButton'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { translate } from '@/i18n/i18n'
@@ -17,10 +18,15 @@ import {
 import { nativeChatVisualHostPath } from '../../../../shared/native-chat-visual-host-path'
 import {
   markNativeChatVisualReads,
+  nativeChatVisualFileKey,
   type NativeChatVisualFile
 } from './native-chat-visual-path-read-client'
 import { useNativeChatVisualSavedMark } from './native-chat-visual-refresh'
 import { openNativeChatVisual } from './native-chat-visual-open'
+import {
+  nativeChatVisualArtifactSourceKey,
+  readNativeChatVisualArtifactRequest
+} from './native-chat-visual-share'
 
 const subscribeToNothing = (): (() => void) => () => {}
 const noMark = (): number => 0
@@ -76,6 +82,7 @@ export function NativeChatInlineVisual({
   const boxRef = useRef<HTMLDivElement | null>(null)
   const [near, setNear] = useState(false)
   const [revealedMark, setRevealedMark] = useState(0)
+  const [sharedMark, setSharedMark] = useState(0)
   const [retired, setRetired] = useState(false)
   const reading = useNativeChatVisualReading()
   const hostFile = useNativeChatVisualHostFile(owner, reading, file)
@@ -86,7 +93,7 @@ export function NativeChatInlineVisual({
   )
   const savedMark = useNativeChatVisualSavedMark(hostFile.kind === 'file' ? hostFile.file : null)
   // Marks only grow, so the largest is the latest trigger.
-  const freshAfter = Math.max(chatRefreshMark, savedMark, revealedMark)
+  const freshAfter = Math.max(chatRefreshMark, savedMark, revealedMark, sharedMark)
   const source = useMemo<NativeChatVisualSource>(
     () => (hostFile.kind === 'file' ? { ...hostFile, freshAfter } : hostFile),
     [freshAfter, hostFile]
@@ -120,7 +127,7 @@ export function NativeChatInlineVisual({
     return <NativeChatVisualUnavailable />
   }
   const label = title ?? file
-  const openLabel = translate('components.native-chat.visualOpenInNewTab', 'Open in new tab')
+  const shareFile = hostFile.kind === 'file' ? hostFile.file : null
 
   return (
     <div ref={boxRef} className="group/visual relative my-3">
@@ -133,29 +140,15 @@ export function NativeChatInlineVisual({
             themeScope={boxRef}
             onRetired={() => setRetired(true)}
           />
-          <div className="absolute top-2 right-2 transition-opacity can-hover:opacity-0 group-hover/visual:opacity-100 focus-within:opacity-100">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon-xs"
-                  aria-label={openLabel}
-                  onClick={() =>
-                    openNativeChatVisual(owner, {
-                      file,
-                      title,
-                      path: hostFile.kind === 'file' ? hostFile.file.path : null
-                    })
-                  }
-                >
-                  <SquareArrowOutUpRight />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top" sideOffset={4}>
-                {openLabel}
-              </TooltipContent>
-            </Tooltip>
-          </div>
+          <NativeChatInlineVisualToolbar
+            // Why keyed: Share's open state belongs to one shareable file; losing path reads drops it.
+            key={shareFile ? nativeChatVisualFileKey(shareFile) : 'open-only'}
+            owner={owner}
+            file={file}
+            title={title}
+            shareFile={shareFile}
+            onShareReadStarted={setSharedMark}
+          />
         </>
       ) : (
         <div
@@ -165,6 +158,60 @@ export function NativeChatInlineVisual({
           style={{ height: NATIVE_CHAT_VISUAL_RESERVED_HEIGHT }}
         />
       )}
+    </div>
+  )
+}
+
+/** Owns Share's open state, so a visual that returns, or regains path reads, starts closed. */
+function NativeChatInlineVisualToolbar({
+  owner,
+  file,
+  title,
+  shareFile,
+  onShareReadStarted
+}: {
+  owner: NativeChatVisualOwner
+  file: string
+  title: string | null
+  /** Null on a host that can't read the file by path, where Share is not offered. */
+  shareFile: NativeChatVisualFile | null
+  onShareReadStarted: (startedAfter: number) => void
+}): React.JSX.Element {
+  // Share's popover is portalled and takes focus, so hover and focus-within can't hold the toolbar.
+  const [shareOpen, setShareOpen] = useState(false)
+  const openLabel = translate('components.native-chat.visualOpenInNewTab', 'Open in new tab')
+  return (
+    <div
+      data-share-open={shareOpen}
+      className="absolute top-2 right-2 flex items-center gap-1 transition-opacity can-hover:opacity-0 group-hover/visual:opacity-100 focus-within:opacity-100 data-[share-open=true]:opacity-100"
+    >
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="outline"
+            size="icon-xs"
+            aria-label={openLabel}
+            onClick={() =>
+              openNativeChatVisual(owner, { file, title, path: shareFile ? shareFile.path : null })
+            }
+          >
+            <SquareArrowOutUpRight />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="top" sideOffset={4}>
+          {openLabel}
+        </TooltipContent>
+      </Tooltip>
+      {shareFile ? (
+        <ArtifactPublishButton
+          variant="outline"
+          size="icon-xs"
+          sourceKey={nativeChatVisualArtifactSourceKey(shareFile)}
+          createRequest={() => readNativeChatVisualArtifactRequest(shareFile, onShareReadStarted)}
+          open={shareOpen}
+          onOpenChange={setShareOpen}
+        />
+      ) : null}
     </div>
   )
 }

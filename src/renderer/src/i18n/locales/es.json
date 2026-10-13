@@ -17427,6 +17427,7 @@
           "fbb5018602": "Este archivo está vacío.",
           "6112db5a1c": "Este artefacto es demasiado grande para compartirlo.",
           "e2ed5acd8c": "Orca no pudo leer este archivo. Ábrelo desde un espacio de trabajo e inténtalo de nuevo.",
+          "visualUnreadable": "No se pudo leer esta visualización para compartirla.",
           "6d475e9b25": "Solo los archivos HTML y Markdown locales se pueden compartir como artefactos.",
           "29a406be09": "Los artefactos deben contener texto."
         },
