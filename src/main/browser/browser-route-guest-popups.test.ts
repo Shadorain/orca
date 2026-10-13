@@ -331,6 +331,39 @@ describe('route guest OAuth popups', () => {
     contents.emitInput('mouseDown')
     expect(contents.openWindow('about:blank')).toEqual({ action: 'deny' })
   })
+
+  it('loads a Cmd/Ctrl+Shift-clicked GET itself but never replays a POST that has no page', () => {
+    const { guest, blockedPopups } = attachRegisteredGuest()
+    popupMocks.openPopupWithOriginBar.mockImplementation(() => ({
+      contentWebContents: createPopupContents(),
+      close: vi.fn(),
+      onClosed: vi.fn()
+    }))
+    guest.emitInput('mouseDown')
+    guest.openWindow('https://accounts.example.com/docs').createWindow?.({})
+    expect(popupMocks.openPopupWithOriginBar).toHaveBeenLastCalledWith(
+      expect.objectContaining({ loadInitialUrl: true }),
+      'https://accounts.example.com/docs',
+      expect.any(Function)
+    )
+    expect(blockedPopups()).toEqual([])
+
+    guest.emitInput('mouseDown')
+    guest
+      .openWindow('https://accounts.example.com/submit', {
+        contentType: 'application/x-www-form-urlencoded',
+        data: []
+      })
+      .createWindow?.({})
+    expect(popupMocks.openPopupWithOriginBar).toHaveBeenLastCalledWith(
+      expect.objectContaining({ loadInitialUrl: false }),
+      'https://accounts.example.com/submit',
+      expect.any(Function)
+    )
+    expect(blockedPopups()).toEqual([
+      { openerWebContentsId: page.webContentsId, url: 'https://accounts.example.com/submit' }
+    ])
+  })
 })
 
 function popupOptions(
@@ -414,8 +447,12 @@ function attachRegisteredGuest() {
 function createRouteGuest(session: Session) {
   const listeners = new Map<string, Set<(...args: unknown[]) => void>>()
   let destroyed = false
-  let windowOpenHandler: ((details: { url: string }) => Electron.WindowOpenHandlerResponse) | null =
-    null
+  let windowOpenHandler:
+    | ((details: {
+        url: string
+        postBody?: Electron.PostBody
+      }) => Electron.WindowOpenHandlerResponse)
+    | null = null
   const guest = {
     id: page.webContentsId,
     session,
@@ -437,7 +474,10 @@ function createRouteGuest(session: Session) {
     },
     setWebRTCIPHandlingPolicy: vi.fn(),
     setWindowOpenHandler: (
-      handler: (details: { url: string }) => Electron.WindowOpenHandlerResponse
+      handler: (details: {
+        url: string
+        postBody?: Electron.PostBody
+      }) => Electron.WindowOpenHandlerResponse
     ) => {
       windowOpenHandler = handler
     }
@@ -449,8 +489,9 @@ function createRouteGuest(session: Session) {
         listener({}, { type })
       }
     },
-    openWindow: (url: string) =>
-      windowOpenHandler?.({ url }) ?? ({ action: 'deny' } as Electron.WindowOpenHandlerResponse),
+    openWindow: (url: string, postBody?: Electron.PostBody) =>
+      windowOpenHandler?.({ url, postBody }) ??
+      ({ action: 'deny' } as Electron.WindowOpenHandlerResponse),
     destroy: () => {
       destroyed = true
       for (const listener of listeners.get('destroyed') ?? []) {

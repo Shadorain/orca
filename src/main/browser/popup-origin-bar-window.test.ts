@@ -9,6 +9,7 @@ type FakeWebContents = {
   executeJavaScript: ReturnType<typeof vi.fn>
   loadURL: ReturnType<typeof vi.fn>
   close: ReturnType<typeof vi.fn>
+  setWindowOpenHandler: ReturnType<typeof vi.fn>
   isDestroyed: ReturnType<typeof vi.fn>
   emit: (event: string, ...args: unknown[]) => void
 }
@@ -32,6 +33,7 @@ const { fakeElectron } = vi.hoisted(() => {
       executeJavaScript: vi.fn(() => Promise.resolve()),
       loadURL: vi.fn(() => Promise.resolve()),
       close: vi.fn(),
+      setWindowOpenHandler: vi.fn(),
       // Mirrors real Electron: isDestroyed() is already true inside a
       // 'destroyed' handler, which is what the double-close guard relies on.
       isDestroyed: vi.fn(() => destroyed),
@@ -202,6 +204,28 @@ describe('openPopupWithOriginBar', () => {
     expect(popup.contentWebContents.loadURL).not.toHaveBeenCalled()
     expect(lastWindow().close).toHaveBeenCalledTimes(1)
     expect(onClosed).toHaveBeenCalledTimes(1)
+  })
+
+  it('loads a page-less GET itself only when asked and only after preparation passes', () => {
+    vi.stubEnv('ORCA_BACKGROUND_LAUNCH', undefined)
+    const popup = openPopupWithOriginBar(
+      { loadInitialUrl: true },
+      'https://example.com/docs',
+      (contents) => {
+        expect(contents.loadURL).not.toHaveBeenCalled()
+        return true
+      }
+    )
+    expect(lastWindow().options.show).toBe(true)
+    expect(popup.contentWebContents.loadURL).toHaveBeenCalledWith('https://example.com/docs')
+
+    const refused = openPopupWithOriginBar(
+      { loadInitialUrl: true },
+      'https://example.com/denied',
+      () => false
+    )
+    expect(refused.contentWebContents.loadURL).not.toHaveBeenCalled()
+    expect(lastWindow().close).toHaveBeenCalledTimes(1)
   })
 
   it('honors explicit hidden windows and background launches', () => {
@@ -395,6 +419,11 @@ describe('openPopupWithOriginBar', () => {
 
     openPopupWithOriginBar({ webContents: adopted as never }, 'https://example.com/', () => false)
 
+    // A plain target=_blank link's first request is already pending; only a navigation veto stops it.
+    const navigation = { preventDefault: vi.fn() }
+    adopted.emit('will-navigate', navigation, 'https://example.com/')
+    expect(navigation.preventDefault).toHaveBeenCalledOnce()
+    expect(adopted.setWindowOpenHandler.mock.calls[0]?.[0]()).toEqual({ action: 'deny' })
     expect(adopted.close).toHaveBeenCalledTimes(1)
     expect(lastViews().bar.webContents.close).toHaveBeenCalledTimes(1)
     expect(lastWindow().close).toHaveBeenCalledTimes(1)

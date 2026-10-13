@@ -2,6 +2,7 @@ import { app, type BrowserWindow, type WebContents } from 'electron'
 import { isBackgroundLaunch } from '../window/foreground-activation-policy'
 import { safeOrigin } from './browser-manager-types'
 import type { PopupChildWindowOptions, PopupOriginBarWindow } from './popup-origin-bar-window'
+import { markNativeBrowserPopupWindow } from './native-browser-popup-windows'
 
 const rejectedNativePopups = new WeakSet<BrowserWindow>()
 
@@ -29,6 +30,7 @@ export function allowNativeBrowserPopup(input: {
 }): Electron.WindowOpenHandlerResponse {
   const mayPresent = !isBackgroundLaunch() && input.options.show !== false
   const onCreated = (_event: Electron.Event, window: BrowserWindow): void => {
+    markNativeBrowserPopupWindow(window)
     try {
       if (input.opener.isDestroyed() || window.webContents.session !== input.opener.session) {
         rejectNativeBrowserPopup(window)
@@ -74,20 +76,25 @@ export function allowNativeBrowserPopup(input: {
   }
 }
 
+/** Ends popup contents Chromium created before their pending first request can leave. */
+export function discardBrowserPopupContents(contents: WebContents): void {
+  if (contents.isDestroyed()) {
+    return
+  }
+  const denyNavigation = (event: Electron.Event): void => event.preventDefault()
+  contents.on('will-navigate', denyNavigation)
+  contents.on('will-frame-navigate', denyNavigation)
+  contents.on('will-redirect', denyNavigation)
+  contents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  // close() is asynchronous during construction; the guards stop the pending request.
+  try {
+    contents.close()
+  } catch {}
+}
+
 function rejectNativeBrowserPopup(window: BrowserWindow): void {
   rejectedNativePopups.add(window)
-  const contents = window.webContents
-  const denyNavigation = (event: Electron.Event): void => event.preventDefault()
-  if (!contents.isDestroyed()) {
-    contents.on('will-navigate', denyNavigation)
-    contents.on('will-frame-navigate', denyNavigation)
-    contents.on('will-redirect', denyNavigation)
-    contents.setWindowOpenHandler(() => ({ action: 'deny' }))
-    // close() is asynchronous during construction; the guards stop the pending native request.
-    try {
-      contents.close()
-    } catch {}
-  }
+  discardBrowserPopupContents(window.webContents)
   // Destroy only after Electron's constructor returns, even if close failed or was intercepted.
   queueMicrotask(() => {
     if (!window.isDestroyed()) {

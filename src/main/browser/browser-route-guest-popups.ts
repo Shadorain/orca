@@ -155,7 +155,7 @@ export function createBrowserRouteGuestPopupController(input: {
   }
 
   const openPopup = (options: PopupChildWindowOptions, targetUrl: string): WebContents => {
-    if (!options.webContents && !options.nativeWindow) {
+    if (!options.webContents && !options.nativeWindow && !options.loadInitialUrl) {
       reportBlockedPopup(targetUrl)
     }
     const popup = openPopupWindow(options, targetUrl, preparePopupContents)
@@ -209,7 +209,15 @@ export function createBrowserRouteGuestPopupController(input: {
         action: 'allow',
         overrideBrowserWindowOptions: options,
         createWindow: (options: PopupChildWindowOptions) =>
-          openPopup(options, details?.url ?? normalized)
+          openPopup(
+            {
+              ...options,
+              // Why: a Cmd/Ctrl+Shift-click arrives without a page; reopening a POST would drop its body.
+              loadInitialUrl:
+                !options.webContents && !details?.postBody && !isBlankBrowserPopupUrl(normalized)
+            },
+            details?.url ?? normalized
+          )
       }
     }
   }

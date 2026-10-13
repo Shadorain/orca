@@ -3,12 +3,17 @@ import { normalizeExternalBrowserUrl, redactKagiSessionToken } from '../../share
 import { trackBrowserGuestInputGesture } from './browser-guest-input-gesture'
 import {
   isNewBrowserTabPopupIntent,
+  isTabShapedBrowserPopupRequest,
   normalizeBrowserPopupUrl
 } from './browser-popup-new-tab-intent'
 import { SAFE_POPUP_WINDOW_OPTIONS, safeOrigin } from './browser-manager-types'
-import type { PopupChildWindowOptions } from './popup-origin-bar-window'
+import { openPopupWithOriginBar, type PopupChildWindowOptions } from './popup-origin-bar-window'
 import { BrowserManagerNavigation } from './browser-manager-navigation'
-import { allowNativeBrowserPopup, isNativeBrowserPopupRequest } from './browser-popup-native-window'
+import {
+  allowNativeBrowserPopup,
+  discardBrowserPopupContents,
+  isNativeBrowserPopupRequest
+} from './browser-popup-native-window'
 import { isBrowserRouteGuestPopup } from './browser-route-guest-popup-ownership'
 
 export abstract class BrowserManagerGuestPopupPolicy extends BrowserManagerNavigation {
@@ -63,6 +68,21 @@ export abstract class BrowserManagerGuestPopupPolicy extends BrowserManagerNavig
       // Why: file URLs are fine for in-pane previews, but must not spawn native child windows targeting local paths.
       const canOpenAsChild = normalizeBrowserPopupUrl(url) !== null
       if (browserTabId && canOpenAsChild) {
+        // Why: the OAuth rule keeps a tab-shaped GET out of tabs only to save its opener. A plain link
+        // has none and a Cmd/Ctrl+Shift-click hands over no page at all, so both are ordinary tabs.
+        const tabUrl =
+          externalUrl && isTabShapedBrowserPopupRequest({ frameName, disposition, postBody })
+            ? externalUrl
+            : null
+        const openAsTabWithoutOpener = (
+          options: PopupChildWindowOptions
+        ): Electron.WebContents | null =>
+          tabUrl && !(options.nativeWindow?.webContents ?? options.webContents)?.opener
+            ? this.openPopupAsBrowserTab(guest, tabUrl, options, {
+                clicked,
+                activate: disposition !== 'background-tab'
+              })
+            : null
         if (isNativeBrowserPopupRequest({ disposition, features, frameName })) {
           return allowNativeBrowserPopup({
             opener: guest,
@@ -70,7 +90,9 @@ export abstract class BrowserManagerGuestPopupPolicy extends BrowserManagerNavig
             options: SAFE_POPUP_WINDOW_OPTIONS,
             background: disposition === 'background-tab',
             canPresent: () => Boolean(this.resolvePopupOwnerContext(guest.id)),
-            onCreated: (options) => this.createPopupChildWindowWithOriginBar(guest, url, options)
+            onCreated: (options) =>
+              openAsTabWithoutOpener(options) ??
+              this.createPopupChildWindowWithOriginBar(guest, url, options)
           })
         }
         // Why: OAuth may request size/position, but content must not create deceptive or inescapable native chrome.
@@ -79,6 +101,7 @@ export abstract class BrowserManagerGuestPopupPolicy extends BrowserManagerNavig
           overrideBrowserWindowOptions: SAFE_POPUP_WINDOW_OPTIONS,
           // Why: default child windows lack an address bar; host in an Orca origin-bar window so the destination is verifiable.
           createWindow: (options: PopupChildWindowOptions) =>
+            openAsTabWithoutOpener(options) ??
             this.createPopupChildWindowWithOriginBar(guest, url, {
               ...options,
               // Link-created contents have no inherited session until we bind the opener's jar.
@@ -110,5 +133,30 @@ export abstract class BrowserManagerGuestPopupPolicy extends BrowserManagerNavig
         // guest may already be destroyed
       }
     }
+  }
+
+  /** The tab loads the URL itself, so Chromium's page ends before its first request. */
+  private openPopupAsBrowserTab(
+    opener: Electron.WebContents,
+    url: string,
+    options: PopupChildWindowOptions,
+    tab: { clicked: boolean; activate: boolean }
+  ): Electron.WebContents {
+    const owner = this.resolvePopupOwnerContext(opener.id)
+    // Same budget as any routed tab: opens beyond the observed clicks draw on it.
+    const opened =
+      owner !== null &&
+      (tab.clicked || this.tryConsumePageInitiatedTab(owner.rootGuestWebContentsId)) &&
+      this.openLinkInOrcaTab(owner.browserTabId, url, tab.activate)
+    this.forwardOrQueuePopupEvent(opener.id, {
+      origin: safeOrigin(url),
+      action: opened ? 'opened-in-orca' : 'blocked'
+    })
+    if (options.webContents && !options.nativeWindow) {
+      // Why: discarding directly avoids flashing an origin-bar window that would close at once.
+      discardBrowserPopupContents(options.webContents)
+      return options.webContents
+    }
+    return openPopupWithOriginBar(options, url, () => false).contentWebContents
   }
 }

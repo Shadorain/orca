@@ -32,6 +32,7 @@ vi.mock('electron', () => ({
 }))
 
 import { getNextDefaultOnAppearanceSettingValue, registerAppMenu } from './register-app-menu'
+import { markNativeBrowserPopupWindow } from '../browser/native-browser-popup-windows'
 
 const isMac = process.platform === 'darwin'
 
@@ -383,6 +384,30 @@ describe('registerAppMenu', () => {
 
     expect(sendActionToFirstResponderMock).toHaveBeenCalledOnce()
     expect(sendActionToFirstResponderMock).toHaveBeenCalledWith('paste:')
+  })
+
+  it('routes macOS Edit actions in a native browser popup to its first responder', () => {
+    vi.spyOn(process, 'platform', 'get').mockReturnValue('darwin')
+    const popupContents = { send: vi.fn() }
+    const popupWindow = { webContents: popupContents }
+    markNativeBrowserPopupWindow(popupWindow)
+    getFocusedWindowMock.mockReturnValue(popupWindow)
+    getFocusedWebContentsMock.mockReturnValue(popupContents)
+    registerAppMenu(buildMenuOptions())
+
+    const editSubmenu = getSubmenu(getTemplate(), 'Edit')
+    for (const label of ['Paste', 'Copy', 'Select All']) {
+      editSubmenu
+        .find((item) => item.label === label)
+        ?.click?.({} as never, {} as never, {} as never)
+    }
+
+    expect(popupContents.send).not.toHaveBeenCalled()
+    expect(sendActionToFirstResponderMock.mock.calls).toEqual([
+      ['paste:'],
+      ['copy:'],
+      ['selectAll:']
+    ])
   })
 
   it.each(['linux', 'win32'] as const)(

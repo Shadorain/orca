@@ -13,11 +13,22 @@ export function isNewBrowserTabPopupIntent(details: {
   postBody?: Electron.PostBody | null
 }): boolean {
   return (
-    details.frameName === '' &&
-    (details.disposition === 'foreground-tab' || details.disposition === 'background-tab') &&
-    !details.postBody &&
+    isTabShapedBrowserPopupRequest(details) &&
     !isBlankBrowserPopupUrl(details.url) &&
     !isOAuthAuthorizationUrl(details.url)
+  )
+}
+
+/** A GET Chrome would open as a tab; Orca can only reopen its URL, which drops any opener. */
+export function isTabShapedBrowserPopupRequest(details: {
+  frameName: string
+  disposition: string
+  postBody?: Electron.PostBody | null
+}): boolean {
+  return (
+    details.frameName === '' &&
+    (details.disposition === 'foreground-tab' || details.disposition === 'background-tab') &&
+    !details.postBody
   )
 }
 
