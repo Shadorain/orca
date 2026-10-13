@@ -19,6 +19,8 @@ const LAYOUT_AUTHORITIES = [
   'src/main/persistence/loading-store/pty-binding-persistence.ts',
   'src/main/remote-layout-snapshot/index.ts',
   'src/main/runtime/terminal/launch/terminal-split-surface.ts',
+  'src/main/runtime/terminal/adoption/adopt-terminal-orphans-from-inventory.ts',
+  'src/main/runtime/runtime-terminal-orphan-adoption.ts',
   'src/main/runtime/session-tabs/headless-tab-group-moves.ts',
   'src/main/runtime/terminal/launch/terminal-create.ts',
   'src/main/runtime/terminal/stop/worktree-terminal-stop.ts',

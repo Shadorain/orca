@@ -1,27 +1,30 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
 import {
   recordPtySurface,
   spawnSurfaceClaimSequence,
   SURFACE_CLAIM_WITHOUT_STANDING
-} from './pty-recorded-surface-topology'
-import { resolveStructuredWorkerAuthority } from './structured-worker-authority'
-import type { RuntimeLeafRecord } from './runtime-terminal-state-records'
-import { OrcaRuntimeWithSubscribeToTerminalResize } from './terminal/layout/terminal-resize-listeners'
+} from '../../pty-recorded-surface-topology'
+import { resolveStructuredWorkerAuthority } from '../../structured-worker-authority'
+import type { RuntimeLeafRecord } from '../../runtime-terminal-state-records'
+import { OrcaRuntimeWithSubscribeToTerminalResize } from '../layout/terminal-resize-listeners'
 import type {
   RuntimeMobileSessionTabsResult,
   RuntimeTerminalOrphanAdoptionRequest,
   RuntimeTerminalOrphanAdoptionResult
-} from '../../shared/runtime-types'
-import type { TerminalWorkspaceLaunchScope } from './runtime-legacy-worker-terminal-recovery-types'
-import type { PtyControllerInventory } from './runtime-pty-controller-contract'
-import { resolveTerminalSessionWorktreeId } from './runtime-worktree-path-identity'
-import { getLocalProjectWorktreeGitOptions } from '../project-runtime-git-options'
-import { adoptRuntimeTerminalOrphansFromInventory } from './runtime-terminal-orphan-adoption'
-import { getRepoIdFromWorktreeId } from '../../shared/worktree/id'
-import { getLatestPtyTitle } from './runtime-worktree-status-projection'
-import type { PtyLivenessVerdict } from '../../shared/pty-liveness-verdict'
+} from '../../../../shared/runtime-types'
+import type { TerminalWorkspaceLaunchScope } from '../../runtime-legacy-worker-terminal-recovery-types'
+import type { PtyControllerInventory } from '../../runtime-pty-controller-contract'
+import { resolveTerminalSessionWorktreeId } from '../../runtime-worktree-path-identity'
+import { getLocalProjectWorktreeGitOptions } from '../../../project-runtime-git-options'
+import { adoptRuntimeTerminalOrphansFromInventory } from '../../runtime-terminal-orphan-adoption'
+import { getRepoIdFromWorktreeId } from '../../../../shared/worktree/id'
+import { getLatestPtyTitle } from '../../runtime-worktree-status-projection'
+import type { PtyLivenessVerdict } from '../../../../shared/pty-liveness-verdict'
 
 export abstract class OrcaRuntimeWithAdoptTerminalOrphansFromInventory extends OrcaRuntimeWithSubscribeToTerminalResize {
+  protected abstract issueHandle(leaf: RuntimeLeafRecord): string
+
+  protected abstract getPaneKeyForTerminalHandle(handle: string): string | null
+
   abstract assertGraphReady(): void
 
   protected async adoptTerminalOrphansFromInventoryUnderMutation(

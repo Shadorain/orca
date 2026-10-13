@@ -3,7 +3,6 @@
 # runtime mixin chain cannot express forward references yet — do NOT add entries to
 # get CI green; fix the types instead.
 # Regenerate/prune: pnpm check:ts-nocheck-ratchet --prune   (removes stale entries only)
-src/main/runtime/orca-runtime-adopt-terminal-orphans-from-inventory.ts
 src/main/runtime/orca-runtime-deliver-pending-messages.ts
 src/main/runtime/orca-runtime-file-commands.ts
 src/main/runtime/orca-runtime-fit-override-listeners.ts
