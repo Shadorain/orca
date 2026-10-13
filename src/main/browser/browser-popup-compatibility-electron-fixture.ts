@@ -154,18 +154,17 @@ async function createHost(name: 'local' | 'route', partition: string): Promise<v
           inputs.push(input.type)
           writeStatus()
         })
-        if (name === 'local') {
-          manager.attachGuestPolicies(guest)
-          if (
-            !manager.registerGuest({
-              browserPageId: name,
-              webContentsId: guest.id,
-              rendererWebContentsId: host.webContents.id
-            })
-          ) {
-            throw new Error('Local guest registration failed')
-          }
-        } else {
+        manager.attachGuestPolicies(guest)
+        if (
+          !manager.registerGuest({
+            browserPageId: name,
+            webContentsId: guest.id,
+            rendererWebContentsId: host.webContents.id
+          })
+        ) {
+          throw new Error('Guest registration failed')
+        }
+        if (name === 'route') {
           const identity = {
             partition,
             browserPageId: name,
