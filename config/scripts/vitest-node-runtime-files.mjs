@@ -51,6 +51,7 @@ export const NODE_RUNTIME_INCLUDE = [
   // Playwright's CDP transport needs Node's WebSocket implementation.
   'src/main/browser/browser-popup-compatibility.electron.test.ts',
   'src/main/browser/browser-popup-native-compatibility.electron.test.ts',
+  'src/main/browser/browser-popup-background-compatibility.electron.test.ts',
   'src/main/ai-vault/session-scanner-devin-db.test.ts',
   'src/shared/workspace-session-salvage.test.ts',
   'src/main/git/repo-detection.test.ts',

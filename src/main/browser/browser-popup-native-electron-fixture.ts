@@ -1,7 +1,15 @@
-import { app, session, type BrowserWindow, type Session, type WebContents } from 'electron'
+import {
+  app,
+  BaseWindow,
+  session,
+  type BrowserWindow,
+  type Session,
+  type WebContents
+} from 'electron'
 import { resolveBrowserRouteGuestPopupOpener } from './browser-route-guest-popup-ownership'
 
 export class BrowserPopupNativeFixture {
+  readonly presentationCalls: string[] = []
   readonly requests: { disposition: string; frameName: string; features: string; post: boolean }[] =
     []
   readonly creation: {
@@ -21,6 +29,16 @@ export class BrowserPopupNativeFixture {
       writeStatus: () => void
     }
   ) {
+    for (const method of ['show', 'showInactive', 'focus', 'moveTop'] as const) {
+      BaseWindow.prototype[method] = () => {
+        this.presentationCalls.push(method)
+        throw new Error(`Hidden popup fixture attempted ${method}`)
+      }
+    }
+    app.focus = () => {
+      this.presentationCalls.push('app.focus')
+      throw new Error('Hidden popup fixture attempted app.focus')
+    }
     app.on('web-contents-created', (_event, contents) => {
       if (
         !this.failCreation ||
@@ -60,6 +78,21 @@ export class BrowserPopupNativeFixture {
     })
   }
 
+  installControlHandler(guest: WebContents): void {
+    guest.setWindowOpenHandler(() => ({
+      action: 'allow',
+      overrideBrowserWindowOptions: {
+        show: false,
+        webPreferences: {
+          session: guest.session,
+          sandbox: true,
+          contextIsolation: true,
+          nodeIntegration: false
+        }
+      }
+    }))
+  }
+
   trackRequests(guest: WebContents): void {
     const setWindowOpenHandler = guest.setWindowOpenHandler.bind(guest)
     guest.setWindowOpenHandler = (handler) =>
@@ -90,6 +123,7 @@ export class BrowserPopupNativeFixture {
 
   snapshot() {
     return {
+      presentationCalls: this.presentationCalls,
       requests: this.requests,
       creation: this.creation,
       windows: this.windows.map((window) => ({

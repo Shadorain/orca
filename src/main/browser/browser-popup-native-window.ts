@@ -3,13 +3,19 @@ import { isBackgroundLaunch } from '../window/foreground-activation-policy'
 import { safeOrigin } from './browser-manager-types'
 import type { PopupChildWindowOptions, PopupOriginBarWindow } from './popup-origin-bar-window'
 
+const rejectedNativePopups = new WeakSet<BrowserWindow>()
+
 /** Chromium's OpenURL path has no adoptable contents or public navigation callback. */
 export function isNativeBrowserPopupRequest(input: {
   disposition?: string
   features?: string
   frameName?: string
 }): boolean {
-  return input.disposition === 'new-window' && input.features === '' && input.frameName === ''
+  return (
+    (input.disposition === 'new-window' || input.disposition === 'background-tab') &&
+    input.features === '' &&
+    input.frameName === ''
+  )
 }
 
 /** Electron constructs this window synchronously before resuming its native navigation. */
@@ -17,8 +23,11 @@ export function allowNativeBrowserPopup(input: {
   opener: WebContents
   targetUrl: string
   options: Electron.BrowserWindowConstructorOptions
+  background?: boolean
+  canPresent?: () => boolean
   onCreated: (options: PopupChildWindowOptions) => WebContents
 }): Electron.WindowOpenHandlerResponse {
+  const mayPresent = !isBackgroundLaunch() && input.options.show !== false
   const onCreated = (_event: Electron.Event, window: BrowserWindow): void => {
     try {
       if (input.opener.isDestroyed() || window.webContents.session !== input.opener.session) {
@@ -26,6 +35,25 @@ export function allowNativeBrowserPopup(input: {
         return
       }
       input.onCreated({ ...input.options, nativeWindow: window })
+      if (input.background && mayPresent && !rejectedNativePopups.has(window)) {
+        window.once('ready-to-show', () => {
+          try {
+            if (
+              input.options.show === false ||
+              isBackgroundLaunch() ||
+              rejectedNativePopups.has(window) ||
+              window.isDestroyed() ||
+              window.webContents.isDestroyed() ||
+              input.opener.isDestroyed() ||
+              window.webContents.session !== input.opener.session ||
+              (input.canPresent && !input.canPresent())
+            ) {
+              return
+            }
+            window.showInactive()
+          } catch {}
+        })
+      }
     } catch {
       rejectNativeBrowserPopup(window)
     }
@@ -40,13 +68,14 @@ export function allowNativeBrowserPopup(input: {
       ...input.options,
       title: safeOrigin(input.targetUrl),
       fullscreenable: false,
-      show: !isBackgroundLaunch() && input.options.show !== false,
+      show: mayPresent && !input.background,
       webPreferences: { ...input.options.webPreferences, session: input.opener.session }
     }
   }
 }
 
 function rejectNativeBrowserPopup(window: BrowserWindow): void {
+  rejectedNativePopups.add(window)
   const contents = window.webContents
   const denyNavigation = (event: Electron.Event): void => event.preventDefault()
   if (!contents.isDestroyed()) {

@@ -10,7 +10,7 @@ import { afterAll, beforeAll, expect } from 'vitest'
 import { build as buildVite } from 'vite'
 import { waitForBrowserCdpEndpoint } from './browser-session-ua-cdp-collector'
 
-type Receipt = {
+export type PopupFixtureReceipt = {
   path: string
   method: string
   body: string
@@ -24,7 +24,7 @@ type Receipt = {
   fetchDest: string
   fetchUser: string
 }
-export const receipts: Receipt[] = []
+export const receipts: PopupFixtureReceipt[] = []
 const root = mkdtempSync(join(tmpdir(), 'orca-popup-compatibility-'))
 let fixture: ReturnType<typeof spawnProcess> | null = null
 export let browser: Browser | null = null
@@ -37,6 +37,7 @@ export const snapshots: ReturnType<typeof status>[] = []
 export const expectedSecurity = { sandbox: true, contextIsolation: true, nodeIntegration: false }
 
 export function status(): {
+  revision: number
   ready?: boolean
   error?: string
   windowsHidden: boolean
@@ -53,6 +54,7 @@ export function status(): {
   routeGranted: boolean
   routeContents: { security: typeof expectedSecurity; webRtcPolicy: string }[]
   native: {
+    presentationCalls: string[]
     requests: { disposition: string; features: string; frameName: string; post: boolean }[]
     creation: {
       firstNavigationPolicy: string
@@ -113,7 +115,7 @@ const server = createServer((request, response) => {
     }
     response.setHeader('Content-Type', 'text/html')
     response.end(
-      path === '/local' || path === '/route'
+      ['/local', '/route', '/local-control', '/route-control'].includes(path)
         ? fixtureHtml()
         : `<title>Hostile synthetic title</title><body>${path}<script>if(window.opener)window.opener.postMessage('callback:'+document.cookie,'*')</script></body>`
     )
@@ -188,7 +190,8 @@ beforeAll(async () => {
       ...env,
       ORCA_BACKGROUND_LAUNCH: '1',
       ORCA_POPUP_FIXTURE_ORIGIN: origin,
-      ORCA_POPUP_FIXTURE_STATUS: statusPath
+      ORCA_POPUP_FIXTURE_STATUS: statusPath,
+      ORCA_POPUP_FIXTURE_NATIVE_CONTROLS: nativeControls ? '1' : '0'
     },
     stdio: ['ignore', 'pipe', 'pipe']
   })
@@ -208,7 +211,9 @@ beforeAll(async () => {
     return current.ready === true
   })
   expect(status()).toMatchObject({ ready: true, windowsHidden: true })
-  for (const name of ['local', 'route']) {
+  for (const name of nativeControls
+    ? ['local', 'route', 'local-control', 'route-control']
+    : ['local', 'route']) {
     await waitForFixture(() =>
       Boolean(
         browser
@@ -272,6 +277,10 @@ export async function closeChildren(page: Page): Promise<void> {
 }
 
 let evidenceName = 'electron-evidence.json'
+let nativeControls = false
+export function enablePopupFixtureNativeControls(): void {
+  nativeControls = true
+}
 export function setPopupFixtureEvidenceName(name: string): void {
   evidenceName = name
 }

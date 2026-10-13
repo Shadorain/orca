@@ -7,7 +7,7 @@ import {
   type Session,
   type WebContents
 } from 'electron'
-import { writeFileSync } from 'node:fs'
+import { renameSync, writeFileSync } from 'node:fs'
 import { applyBackgroundActivationPolicy } from '../window/foreground-activation-policy'
 import { BrowserManager } from './browser-manager'
 import { BrowserRouteWebContentsRegistry } from './browser-route-webcontents-registry'
@@ -90,6 +90,7 @@ let fixtureRouteSession: Session | null = null
 const authority = Symbol('fixture-route-authority')
 let fixtureAuthority: symbol | null = authority
 let fixtureAuthorityThrows = false
+let revision = 0
 const native = new BrowserPopupNativeFixture({
   routeSession: () => fixtureRouteSession,
   failAuthority: (throwOnRead) => {
@@ -105,8 +106,9 @@ const native = new BrowserPopupNativeFixture({
 
 function writeStatus(error?: string): void {
   writeFileSync(
-    fixtureStatusPath,
+    `${fixtureStatusPath}.next`,
     JSON.stringify({
+      revision: ++revision,
       ready,
       phase,
       error,
@@ -127,9 +129,10 @@ function writeStatus(error?: string): void {
       guestIds: Object.fromEntries([...guests].map(([name, guest]) => [name, guest.id]))
     })
   )
+  renameSync(`${fixtureStatusPath}.next`, fixtureStatusPath)
 }
 
-async function createHost(name: 'local' | 'route', partition: string): Promise<void> {
+async function createHost(name: string, partition: string, nativeControl = false): Promise<void> {
   const host = new BrowserWindow({
     show: false,
     webPreferences: {
@@ -154,6 +157,12 @@ async function createHost(name: 'local' | 'route', partition: string): Promise<v
           inputs.push(input.type)
           writeStatus()
         })
+        if (nativeControl) {
+          native.installControlHandler(guest)
+          await guest.loadURL(`${fixtureOrigin}/${name}`)
+          resolve()
+          return
+        }
         manager.attachGuestPolicies(guest)
         if (
           !manager.registerGuest({
@@ -277,6 +286,10 @@ async function run(): Promise<void> {
   phase = 'local'
   writeStatus()
   await createHost('route', routePartition)
+  if (process.env.ORCA_POPUP_FIXTURE_NATIVE_CONTROLS === '1') {
+    await createHost('local-control', localPartition, true)
+    await createHost('route-control', routePartition, true)
+  }
   ready = true
   writeStatus()
 }

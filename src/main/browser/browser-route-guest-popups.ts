@@ -200,6 +200,8 @@ export function createBrowserRouteGuestPopupController(input: {
           opener: input.opener,
           targetUrl: details?.url ?? normalized,
           options,
+          background: details?.disposition === 'background-tab',
+          canPresent: () => !disposed && navigationAllowed(ORCA_BROWSER_BLANK_URL),
           onCreated: (nativeOptions) => openPopup(nativeOptions, details?.url ?? normalized)
         })
       }

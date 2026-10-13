@@ -27,6 +27,7 @@ afterEach(() => {
 
 function nativeWindow() {
   const contents = Object.assign(new EventEmitter(), {
+    session: {},
     isDestroyed: vi.fn(() => false),
     close: vi.fn(),
     setWindowOpenHandler: vi.fn()
@@ -35,6 +36,7 @@ function nativeWindow() {
     webContents: contents,
     isDestroyed: vi.fn(() => false),
     setTitle: vi.fn(),
+    showInactive: vi.fn(),
     destroy: vi.fn()
   })
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: This fixture implements every BrowserWindow member exercised by popup preparation.
@@ -43,13 +45,18 @@ function nativeWindow() {
 }
 
 describe('native popup admission', () => {
-  it('uses the native path only for the observed unnamed, featureless OpenURL disposition', () => {
-    expect(
-      isNativeBrowserPopupRequest({ disposition: 'new-window', features: '', frameName: '' })
-    ).toBe(true)
+  it('uses the native path only for observed unnamed, featureless OpenURL dispositions', () => {
+    for (const disposition of ['new-window', 'background-tab']) {
+      expect(isNativeBrowserPopupRequest({ disposition, features: '', frameName: '' })).toBe(true)
+      expect(
+        isNativeBrowserPopupRequest({ disposition, features: 'width=500', frameName: '' })
+      ).toBe(false)
+      expect(isNativeBrowserPopupRequest({ disposition, features: '', frameName: 'oauth' })).toBe(
+        false
+      )
+    }
     for (const details of [
       { disposition: 'foreground-tab', features: '', frameName: '' },
-      { disposition: 'background-tab', features: '', frameName: '' },
       { disposition: 'new-window', features: 'width=500', frameName: '' },
       { disposition: 'new-window', features: '', frameName: 'oauth' },
       {}
@@ -80,6 +87,66 @@ describe('native popup admission', () => {
     await Promise.resolve()
     expect(events.has('browser-window-created')).toBe(false)
     expect(onCreated).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    'ready',
+    'background-launch',
+    'explicit-hidden',
+    'fenced',
+    'authority-error',
+    'closed',
+    'opener-gone',
+    'changed-launch',
+    'changed-hidden',
+    'changed-session',
+    'preparation-rejected'
+  ])('presents background children only after safe readiness: %s', (state) => {
+    vi.stubEnv('ORCA_BACKGROUND_LAUNCH', state === 'background-launch' ? '1' : '0')
+    const { browserWindow, window, contents } = nativeWindow()
+    const opener = nativeWindow()
+    contents.session = opener.contents.session
+    const options = { show: state !== 'explicit-hidden' }
+    const prepare = vi.fn(() =>
+      state === 'preparation-rejected'
+        ? prepareNativeBrowserPopup(browserWindow, 'https://example.com/post', () => false)
+            .contentWebContents
+        : browserWindow.webContents
+    )
+    const response = allowNativeBrowserPopup({
+      opener: opener.browserWindow.webContents,
+      targetUrl: 'https://example.com/post',
+      options,
+      background: true,
+      canPresent: () => {
+        if (state === 'authority-error') {
+          throw new Error('Synthetic authority failure')
+        }
+        return state !== 'fenced'
+      },
+      onCreated: prepare
+    })
+    expect(response.overrideBrowserWindowOptions?.show).toBe(false)
+    events.get('browser-window-created')?.({}, browserWindow)
+    expect(prepare).toHaveBeenCalledOnce()
+    expect(window.showInactive).not.toHaveBeenCalled()
+    if (state === 'closed') {
+      window.isDestroyed.mockReturnValue(true)
+    }
+    if (state === 'opener-gone') {
+      opener.contents.isDestroyed.mockReturnValue(true)
+    }
+    if (state === 'changed-launch') {
+      vi.stubEnv('ORCA_BACKGROUND_LAUNCH', '1')
+    }
+    if (state === 'changed-hidden') {
+      options.show = false
+    }
+    if (state === 'changed-session') {
+      contents.session = {}
+    }
+    window.emit('ready-to-show')
+    expect(window.showInactive).toHaveBeenCalledTimes(state === 'ready' ? 1 : 0)
   })
 
   it.each([
