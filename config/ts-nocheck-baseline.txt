@@ -4,8 +4,6 @@
 # get CI green; fix the types instead.
 # Regenerate/prune: pnpm check:ts-nocheck-ratchet --prune   (removes stale entries only)
 src/main/runtime/orca-runtime-adopt-terminal-orphans-from-inventory.ts
-src/main/runtime/orca-runtime-apply-mobile-session-tab-navigation.ts
-src/main/runtime/orca-runtime-build-headless-mobile-session-browser-tabs.ts
 src/main/runtime/orca-runtime-close-mobile-session-tab.ts
 src/main/runtime/orca-runtime-deliver-pending-messages.ts
 src/main/runtime/orca-runtime-automation-operations.ts
@@ -15,11 +13,8 @@ src/main/runtime/orca-runtime-get-agent-session-execution-namespace.ts
 src/main/runtime/orca-runtime-has-exact-persisted-terminal-surface-identity.ts
 src/main/runtime/orca-runtime-has-live-or-persisted-serve-or-ssh-owned-pty-binding.ts
 src/main/runtime/orca-runtime-linear-commands.ts
-src/main/runtime/orca-runtime-perform-mobile-session-pty-records-refresh.ts
 src/main/runtime/orca-runtime-preserved-branch-cleanup.ts
-src/main/runtime/orca-runtime-prune-mobile-session-tab-group-layout.ts
 src/main/runtime/orca-runtime-publish-pty-backed-mobile-session-terminal.ts
-src/main/runtime/orca-runtime-reconcile-headless-mobile-session-browser-tabs.ts
 src/main/runtime/orca-runtime-refuse-unattributed-mobile-session-tab-close.ts
 src/main/runtime/orca-runtime-resolve-terminal-pane.ts
 src/main/runtime/orca-runtime-runtime-id.ts

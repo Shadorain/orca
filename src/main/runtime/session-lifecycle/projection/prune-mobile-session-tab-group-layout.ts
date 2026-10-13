@@ -1,36 +1,35 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { selectFreshAgentRowForMobileTab } from './runtime-hook-agent-row-selection'
-import { OrcaRuntimeWithScheduleMobileSessionTabsChanged } from './session-tabs/session-tabs-change-publication'
-import type { TabGroupLayoutNode } from '../../shared/tab-types'
+import { selectFreshAgentRowForMobileTab } from '../../runtime-hook-agent-row-selection'
+import { OrcaRuntimeWithScheduleMobileSessionTabsChanged } from '../../session-tabs/session-tabs-change-publication'
+import type { TabGroupLayoutNode } from '../../../../shared/tab-types'
 import type {
   RuntimeMobileSessionSnapshotTab,
   RuntimeMobileSessionTabGroup,
   RuntimeMobileSessionTabsResult,
   RuntimeMobileSessionTabsSnapshot,
   RuntimeMobileSessionTerminalTab
-} from '../../shared/runtime-types'
-import { mergeMobileSessionTabGroups } from './mobile-session-tab-merge'
-import { buildHeadlessMobileSessionTabGroups } from './mobile-session-layout-projection'
-import { projectRuntimeMobileSessionTabs } from './runtime-mobile-session-projection'
-import type { RuntimeMobileSessionProjectionHost } from './runtime-mobile-session-projection-contract'
-import type { RuntimePtyWorktreeRecord } from './runtime-terminal-state-records'
-import type { RuntimeAgentRowSnapshot } from './runtime-worktree-agent-rows'
+} from '../../../../shared/runtime-types'
+import { mergeMobileSessionTabGroups } from '../../mobile-session-tab-merge'
+import { buildHeadlessMobileSessionTabGroups } from '../../mobile-session-layout-projection'
+import { projectRuntimeMobileSessionTabs } from '../../runtime-mobile-session-projection'
+import type { RuntimeMobileSessionProjectionHost } from '../../runtime-mobile-session-projection-contract'
+import type { RuntimePtyWorktreeRecord } from '../../runtime-terminal-state-records'
+import type { RuntimeAgentRowSnapshot } from '../../runtime-worktree-agent-rows'
 import type {
   AgentStatusEntry,
   AgentStatusIpcPayload,
   AgentStatusOrchestrationContext
-} from '../../shared/agent-status-types'
-import { buildRuntimeMobileAgentStatus } from './runtime-mobile-agent-status-builder'
-import { FIRST_PANE_ID } from '../../shared/pane-key'
-import { isTerminalLeafId, makePaneKey, parsePaneKey } from '../../shared/stable-pane-id'
-import { getStructuredAgentSessionHost } from '../native-chat/agent-session-wire/structured-agent-session-registry'
-import { structuredWorkerHandleAgentStatus } from './orchestration/structured-worker-group-addressing'
+} from '../../../../shared/agent-status-types'
+import { buildRuntimeMobileAgentStatus } from '../../runtime-mobile-agent-status-builder'
+import { FIRST_PANE_ID } from '../../../../shared/pane-key'
+import { isTerminalLeafId, makePaneKey, parsePaneKey } from '../../../../shared/stable-pane-id'
+import { getStructuredAgentSessionHost } from '../../../native-chat/agent-session-wire/structured-agent-session-registry'
+import { structuredWorkerHandleAgentStatus } from '../../orchestration/structured-worker-group-addressing'
 import {
   retitleStructuredConversationTab,
   titleStructuredConversationTabs
-} from './structured-conversation-tab-title'
+} from '../../structured-conversation-tab-title'
 
-export class OrcaRuntimeWithPruneMobileSessionTabGroupLayout extends OrcaRuntimeWithScheduleMobileSessionTabsChanged {
+export abstract class OrcaRuntimeWithPruneMobileSessionTabGroupLayout extends OrcaRuntimeWithScheduleMobileSessionTabsChanged {
   protected pruneMobileSessionTabGroupLayout(
     layout: TabGroupLayoutNode | null | undefined,
     validGroupIds: ReadonlySet<string>

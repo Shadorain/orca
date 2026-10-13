@@ -1,32 +1,31 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithPersistTerminalSurfaceRetirements } from './session-tabs/terminal-surface-retirements'
+import { OrcaRuntimeWithPersistTerminalSurfaceRetirements } from '../../session-tabs/terminal-surface-retirements'
 import type {
   RuntimeMobileSessionBrowserTab,
   RuntimeMobileSessionTabsResult,
   RuntimeMobileSessionTabsSnapshot,
   RuntimeMobileSessionTerminalTab
-} from '../../shared/runtime-types'
-import { parseAppSshPtyId } from '../../shared/ssh-pty-id'
-import { getRuntimeBrowserPageRegistry } from './runtime-browser-page-registry'
-import { holdAgentSessionInventory } from './structured-agent-session-inventory-hold'
-import type { Tab } from '../../shared/tab-types'
+} from '../../../../shared/runtime-types'
+import { parseAppSshPtyId } from '../../../../shared/ssh-pty-id'
+import { getRuntimeBrowserPageRegistry } from '../../runtime-browser-page-registry'
+import { holdAgentSessionInventory } from '../../structured-agent-session-inventory-hold'
+import type { Tab } from '../../../../shared/tab-types'
 import {
   captureTerminalCloseRequest,
   resolveTerminalCloseTarget,
   type PaneCloseResolution,
   type RendererTerminalClose,
   type TerminalSurfaceCloseOptions
-} from './terminal-surface-close'
+} from '../../terminal-surface-close'
 import type {
   TerminalPaneCloseTarget,
   TerminalSurfaceCloseTarget
-} from '../../shared/terminal-surface-close-target'
-import { retireTerminalSurfacesFromSnapshot } from './mobile-session-terminal-retirement'
-import type { PtyControllerInventory } from './runtime-pty-controller-contract'
-import { FLOATING_TERMINAL_WORKTREE_ID } from '../../shared/constants'
-import { captureAcknowledgedTerminalTabRetirement } from './workspace-session-terminal-tab-retirement-identity'
-import { closeLeafOrTab } from '../persistence/terminal-topology/terminal-topology-commit'
-import { markAgentLaunchesClosedByUser } from '../agent-launch/agent-launch-pane-attachment'
+} from '../../../../shared/terminal-surface-close-target'
+import { retireTerminalSurfacesFromSnapshot } from '../../mobile-session-terminal-retirement'
+import type { PtyControllerInventory } from '../../runtime-pty-controller-contract'
+import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../../shared/constants'
+import { captureAcknowledgedTerminalTabRetirement } from '../../workspace-session-terminal-tab-retirement-identity'
+import { closeLeafOrTab } from '../../../persistence/terminal-topology/terminal-topology-commit'
+import { markAgentLaunchesClosedByUser } from '../../../agent-launch/agent-launch-pane-attachment'
 
 export abstract class OrcaRuntimeWithBuildHeadlessMobileSessionBrowserTabs extends OrcaRuntimeWithPersistTerminalSurfaceRetirements {
   // Why: headless serve backs browser panes with offscreen WebContents that live
@@ -139,11 +138,18 @@ export abstract class OrcaRuntimeWithBuildHeadlessMobileSessionBrowserTabs exten
           worktreeId,
           target,
           options,
-          ...captureTerminalCloseRequest(worktreeId, target, hostIds(), store, fenced),
+          ...captureTerminalCloseRequest(
+            worktreeId,
+            target,
+            hostIds(),
+            // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: The existing guard requires this getter; preserve late-bound store access.
+            store as Parameters<typeof captureTerminalCloseRequest>[3],
+            fenced
+          ),
           ownerMatches: () => !acknowledgeTabRetirement || acknowledgeTabRetirement().matches,
           hostIds,
-          getSession: (hostId) => store.getWorkspaceSession(hostId),
-          setSession: (session, hostId) => store.setWorkspaceSession(session, hostId),
+          getSession: (hostId) => store.getWorkspaceSession!(hostId),
+          setSession: (session, hostId) => store.setWorkspaceSession!(session, hostId),
           onClosed: (closedPtyIds) => {
             ptyIdsToKill = closedPtyIds
           }
@@ -178,7 +184,8 @@ export abstract class OrcaRuntimeWithBuildHeadlessMobileSessionBrowserTabs exten
     return resolveTerminalCloseTarget(target, {
       rendererListsTab: this.tabs.has(target.tabId),
       snapshotRows: (this.mobileSessionTabsByWorktree.get(worktreeId)?.tabs ?? []).filter(
-        (row) => row.type === 'terminal' && row.parentTabId === target.tabId
+        (row): row is RuntimeMobileSessionTerminalTab =>
+          row.type === 'terminal' && row.parentTabId === target.tabId
       ),
       graphLeafIds,
       sessionLayout:
@@ -236,7 +243,7 @@ export abstract class OrcaRuntimeWithBuildHeadlessMobileSessionBrowserTabs exten
   ): void {
     const snapshot = this.mobileSessionTabsByWorktree.get(worktreeId)
     const tab = snapshot?.tabs.find(
-      (candidate) =>
+      (candidate): candidate is RuntimeMobileSessionTerminalTab =>
         candidate.type === 'terminal' &&
         candidate.parentTabId === tabId &&
         candidate.leafId === leafId

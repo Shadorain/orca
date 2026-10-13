@@ -1,23 +1,50 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithHydrateHeadlessMobileSessionTabsFromWorkspaceSession } from './session-tabs/mobile-session-hydration'
+import type { OrcaRuntimeWithPruneMobileSessionTabGroupLayout as MobileSessionProjection } from './prune-mobile-session-tab-group-layout'
+import type { OrcaRuntimeWithCloseStructuredAgentSessionTab as StructuredSessionClose } from '../../session-tabs/structured-session-tab-close'
+import type { OrcaRuntimeWithPerformMobileSessionPtyRecordsRefresh as MobileSessionRefresh } from './perform-mobile-session-pty-records-refresh'
+import type { RuntimeWorkspaceCatalog as WorkspaceCatalog } from '../../workspaces/workspace-catalog'
+import type { OrcaRuntimeWithResolveMobileSessionTerminalCommand as MobileTerminalStartup } from '../../terminal/launch/mobile-terminal-startup'
+import type { OrcaRuntimeWithCreateRuntimeOwnedMobileSessionTerminal as OwnedMobileTerminalCreate } from '../../terminal/launch/mobile-terminal-owned-create'
+import { OrcaRuntimeWithHydrateHeadlessMobileSessionTabsFromWorkspaceSession } from '../../session-tabs/mobile-session-hydration'
 import type {
   RuntimeMobileSessionBrowserTab,
   RuntimeMobileSessionSnapshotTab,
   RuntimeMobileSessionTabsSnapshot,
   RuntimeMobileSessionTerminalTab
-} from '../../shared/runtime-types'
-import { headlessBrowserTabsUnchanged } from './mobile-session-browser-equality'
-import { appendBrowserTabOrder } from './mobile-session-browser-group-projection'
-import { parseAppSshPtyId, toComparableRelaySshPtyId } from '../../shared/ssh-pty-id'
-import { toSshExecutionHostId } from '../../shared/execution-host'
-import { parsePaneKey } from '../../shared/stable-pane-id'
-import { sshRemotePtyLeaseAllowsReattach } from '../../shared/ssh-types'
-import type { WorkspaceSessionState } from '../../shared/workspace-session-state-types'
-import type { RuntimeStore } from './runtime-store-contract'
-import { SSH_PANE_RECOVERY_GRACE_MS } from './orca-runtime-core'
-import { findTerminalTabIdForLeaf } from '../persistence/terminal-topology/terminal-topology-membership'
+} from '../../../../shared/runtime-types'
+import { headlessBrowserTabsUnchanged } from '../../mobile-session-browser-equality'
+import { appendBrowserTabOrder } from '../../mobile-session-browser-group-projection'
+import { parseAppSshPtyId, toComparableRelaySshPtyId } from '../../../../shared/ssh-pty-id'
+import { toSshExecutionHostId } from '../../../../shared/execution-host'
+import { parsePaneKey } from '../../../../shared/stable-pane-id'
+import { sshRemotePtyLeaseAllowsReattach } from '../../../../shared/ssh-types'
+import type { WorkspaceSessionState } from '../../../../shared/workspace-session-state-types'
+import type { RuntimeStore } from '../../runtime-store-contract'
+import { SSH_PANE_RECOVERY_GRACE_MS } from '../../orca-runtime-core'
+import { findTerminalTabIdForLeaf } from '../../../persistence/terminal-topology/terminal-topology-membership'
 
 export abstract class OrcaRuntimeWithReconcileHeadlessMobileSessionBrowserTabs extends OrcaRuntimeWithHydrateHeadlessMobileSessionTabsFromWorkspaceSession {
+  protected abstract findPtyForMobileTerminalTab(
+    ...args: Parameters<MobileSessionProjection['findPtyForMobileTerminalTab']>
+  ): ReturnType<MobileSessionProjection['findPtyForMobileTerminalTab']>
+  protected abstract getMobileSessionTerminalRetirementProof(
+    ...args: Parameters<StructuredSessionClose['getMobileSessionTerminalRetirementProof']>
+  ): ReturnType<StructuredSessionClose['getMobileSessionTerminalRetirementProof']>
+  protected abstract performMobileSessionPtyRecordsRefresh(
+    ...args: Parameters<MobileSessionRefresh['performMobileSessionPtyRecordsRefresh']>
+  ): ReturnType<MobileSessionRefresh['performMobileSessionPtyRecordsRefresh']>
+  protected abstract listResolvedWorktrees(
+    ...args: Parameters<WorkspaceCatalog['listResolvedWorktrees']>
+  ): ReturnType<WorkspaceCatalog['listResolvedWorktrees']>
+  protected abstract listKnownResolvedWorktreesForExplicitTarget(
+    ...args: Parameters<WorkspaceCatalog['listKnownResolvedWorktreesForExplicitTarget']>
+  ): ReturnType<WorkspaceCatalog['listKnownResolvedWorktreesForExplicitTarget']>
+  protected abstract resolveMobileSessionTerminalCommand(
+    ...args: Parameters<MobileTerminalStartup['resolveMobileSessionTerminalCommand']>
+  ): ReturnType<MobileTerminalStartup['resolveMobileSessionTerminalCommand']>
+  protected abstract createRuntimeOwnedMobileSessionTerminal(
+    ...args: Parameters<OwnedMobileTerminalCreate['createRuntimeOwnedMobileSessionTerminal']>
+  ): ReturnType<OwnedMobileTerminalCreate['createRuntimeOwnedMobileSessionTerminal']>
+
   // Why: keep an existing snapshot's browser tabs in sync with the live bridge
   // without rebuilding stable terminal state. Replaces browser entries with the
   // current live set and rewrites the browser portion of the primary group order.
@@ -101,7 +128,7 @@ export abstract class OrcaRuntimeWithReconcileHeadlessMobileSessionBrowserTabs e
     // Why resolved lazily and reused: the per-tab question is the same lease sweep with a
     // different tabId, so asking it once per worktree answers every tab. Kept lazy so a
     // worktree whose first tab already owns a serve/SSH pty never sweeps at all.
-    let recoverableTabIds: ReadonlySet<string> | undefined
+    let recoverableTabIds: ReadonlySet<string | undefined> | undefined
     return tabs.some((tab) => {
       if (this.isServeOrSshOwnedPtyId(tab.ptyId)) {
         return true
@@ -180,7 +207,7 @@ export abstract class OrcaRuntimeWithReconcileHeadlessMobileSessionBrowserTabs e
    */
   private resolveExpiredSshLeaseTabId(
     lease: ReturnType<NonNullable<RuntimeStore['getSshRemotePtyLeases']>>[number]
-  ): string {
+  ): string | undefined {
     const currentTabId = lease.leafId
       ? this.findCurrentTerminalTabIdForLeaf(lease.targetId, lease.leafId)
       : undefined
@@ -188,9 +215,11 @@ export abstract class OrcaRuntimeWithReconcileHeadlessMobileSessionBrowserTabs e
   }
 
   /** The tabs a recent eligible expired lease still names, resolved in one sweep of the leases. */
-  protected collectRecentExpiredSshLeaseTabIds(worktreeId: string): ReadonlySet<string> {
+  protected collectRecentExpiredSshLeaseTabIds(
+    worktreeId: string
+  ): ReadonlySet<string | undefined> {
     const now = Date.now()
-    const tabIds = new Set<string>()
+    const tabIds = new Set<string | undefined>()
     for (const lease of this.store?.getSshRemotePtyLeases?.() ?? []) {
       if (this.isRecentExpiredSshLeaseForWorktree(lease, worktreeId, now)) {
         tabIds.add(this.resolveExpiredSshLeaseTabId(lease))

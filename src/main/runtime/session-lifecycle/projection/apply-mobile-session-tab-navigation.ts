@@ -1,25 +1,33 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithPerformMobileSessionPtyRecordsRefresh } from './orca-runtime-perform-mobile-session-pty-records-refresh'
+import type { OrcaRuntimeWithScheduleMobileSessionTabsChanged as MobileSessionPublication } from '../../session-tabs/session-tabs-change-publication'
+import type { OrcaRuntimeWithStoredMobileSnapshotHasStalePreservedTab as MobileSessionPreservation } from '../../session-tabs/mobile-session-publication-preservation'
+import { OrcaRuntimeWithPerformMobileSessionPtyRecordsRefresh } from './perform-mobile-session-pty-records-refresh'
 import type {
   RuntimeMobileSessionTabsResult,
   RuntimeMobileSessionTabsSnapshot,
   RuntimeMobileSessionTerminalTab
-} from '../../shared/runtime-types'
-import type { RuntimeNavigationTarget } from '../../shared/runtime-navigation'
-import { navigationTargetsClients } from '../../shared/runtime-navigation'
+} from '../../../../shared/runtime-types'
+import type { RuntimeNavigationTarget } from '../../../../shared/runtime-navigation'
+import { navigationTargetsClients } from '../../../../shared/runtime-navigation'
 import {
   activateClientSessionTabSelection,
   deriveClientSessionTabSelection,
   projectClientSessionTabSelection
-} from './client-session-tab-selection'
-import { makePaneKey } from '../../shared/stable-pane-id'
-import { runtimeWorktreeIdsEqual } from './runtime-worktree-path-identity'
+} from '../../client-session-tab-selection'
+import { makePaneKey } from '../../../../shared/stable-pane-id'
+import { runtimeWorktreeIdsEqual } from '../../runtime-worktree-path-identity'
 import {
   buildHeadlessMobileSessionTabGroups,
   cloneTerminalLayoutSnapshot
-} from './mobile-session-layout-projection'
+} from '../../mobile-session-layout-projection'
 
-export class OrcaRuntimeWithApplyMobileSessionTabNavigation extends OrcaRuntimeWithPerformMobileSessionPtyRecordsRefresh {
+export abstract class OrcaRuntimeWithApplyMobileSessionTabNavigation extends OrcaRuntimeWithPerformMobileSessionPtyRecordsRefresh {
+  protected abstract emitMobileSessionTabsSnapshotToClient(
+    ...args: Parameters<MobileSessionPublication['emitMobileSessionTabsSnapshotToClient']>
+  ): ReturnType<MobileSessionPublication['emitMobileSessionTabsSnapshotToClient']>
+  protected abstract isHeadlessMobileSessionPublication(
+    ...args: Parameters<MobileSessionPreservation['isHeadlessMobileSessionPublication']>
+  ): ReturnType<MobileSessionPreservation['isHeadlessMobileSessionPublication']>
+
   protected applyMobileSessionTabNavigation(
     snapshot: RuntimeMobileSessionTabsResult,
     activeTabId: string,
