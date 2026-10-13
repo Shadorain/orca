@@ -85,12 +85,17 @@ describe('browserManager', () => {
 
     browserManager.attachGuestPolicies(guest as never)
 
-    const handler = guestSetWindowOpenHandlerMock.mock.calls[0][0] as (details: {
-      url: string
-    }) => { action: 'deny' }
+    const handler: (details: { url: string; postBody?: Electron.PostBody }) => { action: 'deny' } =
+      guestSetWindowOpenHandlerMock.mock.calls[0][0]
 
     expect(handler({ url: 'localhost:3000' })).toEqual({ action: 'deny' })
     expect(handler({ url: 'file:///etc/passwd' })).toEqual({ action: 'deny' })
+    expect(
+      handler({
+        url: 'https://example.com/post',
+        postBody: { contentType: 'application/x-www-form-urlencoded', data: [] }
+      })
+    ).toEqual({ action: 'deny' })
 
     expect(shellOpenExternalMock).toHaveBeenCalledTimes(1)
     expect(shellOpenExternalMock).toHaveBeenCalledWith('http://localhost:3000/')
@@ -196,12 +201,13 @@ describe('browserManager', () => {
       rendererWebContentsId
     })
 
-    const handler = guestSetWindowOpenHandlerMock.mock.calls[0][0] as (details: {
+    const handler: (details: {
       url: string
       frameName: string
       features: string
       disposition: string
-    }) => { action: 'allow' | 'deny' }
+      postBody?: Electron.PostBody
+    }) => { action: 'allow' | 'deny' } = guestSetWindowOpenHandlerMock.mock.calls[0][0]
     const openerDependentOpens = [
       { url: 'https://sso.example.com/auth', frameName: 'ssoWindow', features: '' },
       { url: 'https://sso.example.com/auth', frameName: 'ssoWindow', features: 'noopener=0' },
@@ -210,7 +216,14 @@ describe('browserManager', () => {
         frameName: '',
         features: ''
       },
-      { url: 'about:blank', frameName: '', features: '' }
+      { url: 'about:blank', frameName: '', features: '' },
+      { url: 'about:blank#state', frameName: '', features: '' },
+      {
+        url: 'https://sso.example.com/form',
+        frameName: '',
+        features: '',
+        postBody: { contentType: 'application/x-www-form-urlencoded', data: [] }
+      }
     ]
     for (const disposition of ['foreground-tab', 'background-tab', 'new-window']) {
       for (const open of openerDependentOpens) {
@@ -550,6 +563,7 @@ describe('browserManager', () => {
     const rendererSendMock = vi.fn()
     const guestOnceMock = vi.fn()
     const guest = {
+      session: { marker: 'synthetic-opener-session' },
       id: 150,
       isDestroyed: vi.fn(() => false),
       getType: vi.fn(() => 'webview'),
@@ -595,19 +609,26 @@ describe('browserManager', () => {
       onClosed: popupOnClosedMock
     })
 
-    const handler = guestSetWindowOpenHandlerMock.mock.calls[0][0] as (details: {
-      url: string
-    }) => {
+    const handler: (details: { url: string }) => {
       action: string
       createWindow: (options: Record<string, unknown>) => unknown
-    }
+    } = guestSetWindowOpenHandlerMock.mock.calls[0][0]
     const response = handler({ url: 'https://sso.example.com/auth?code=SECRET' })
     const preCreatedContents = { id: 152 }
-    const options = { webContents: preCreatedContents, width: 500, height: 600 }
+    const options = {
+      webContents: preCreatedContents,
+      width: 500,
+      height: 600,
+      webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false }
+    }
     const returned = response.createWindow(options)
 
     expect(openPopupWithOriginBarMock).toHaveBeenCalledWith(
-      options,
+      {
+        ...options,
+        webPreferences: { ...options.webPreferences, session: guest.session },
+        initialNavigation: { referrer: undefined, postBody: undefined }
+      },
       'https://sso.example.com/auth?code=SECRET'
     )
     expect(returned).toBe(popupContents)

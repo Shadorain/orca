@@ -79,6 +79,15 @@ describe('route guest OAuth popups', () => {
     expect(popupMocks.openPopupWithOriginBar).not.toHaveBeenCalled()
   })
 
+  it('rejects clock rollback instead of treating a future input as a current gesture', () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(GESTURE_CLICK_AT)
+    const { guest } = attachRegisteredGuest()
+    guest.emitInput('mouseDown')
+    vi.setSystemTime(GESTURE_CLICK_AT - 1)
+    expect(guest.openWindow('about:blank')).toEqual({ action: 'deny' })
+  })
+
   it('stops opening popups at the fourth one even while gestures keep arriving', () => {
     const { guest, popups } = attachRegisteredGuest()
 
@@ -151,9 +160,57 @@ describe('route guest OAuth popups', () => {
 
     guest.emitInput('mouseDown')
     expect(guest.openWindow('file:///etc/hosts')).toEqual({ action: 'deny' })
+    for (const url of [
+      'about:blank?state=x',
+      'about:srcdoc',
+      'data:text/html,login',
+      'javascript:alert(1)'
+    ]) {
+      guest.emitInput('mouseDown')
+      expect(guest.openWindow(url)).toEqual({ action: 'deny' })
+    }
+    expect(popupMocks.openPopupWithOriginBar).not.toHaveBeenCalled()
+  })
+
+  it.each(['about:blank', 'about:blank#state'])(
+    'admits a gesture-backed blank bootstrap: %s',
+    (url) => {
+      const { guest, popups } = attachRegisteredGuest()
+      expect(guest.openWindow(url)).toEqual({ action: 'deny' })
+      guest.emitInput('mouseDown')
+      const allowed = guest.openWindow(url)
+      expect(allowed.action).toBe('allow')
+      allowed.createWindow?.(popupOptions(createPopupContents()))
+      expect(popups()[0]?.loaded).toBe(true)
+      expect(guest.openWindow(url)).toEqual({ action: 'deny' })
+    }
+  )
+
+  it('does not treat the quarantine blank-page exemption as popup authority', () => {
+    const { registry, guest } = attachGuest()
+    guest.emitInput('mouseDown')
+    expect(guest.openWindow('about:blank#state')).toEqual({ action: 'deny' })
+    registry.registerGuest(page)
     guest.emitInput('mouseDown')
     expect(guest.openWindow('about:blank')).toEqual({ action: 'deny' })
-    expect(popupMocks.openPopupWithOriginBar).not.toHaveBeenCalled()
+    registry.grantNavigation(page)
+    const claim = registry.claimGuestLifecycle(page)!
+    registry.revokeNavigation(claim)
+    guest.emitInput('mouseDown')
+    expect(guest.openWindow('about:blank')).toEqual({ action: 'deny' })
+  })
+
+  it('spends a gesture on a denial and rechecks authority before adopting a child', () => {
+    const { registry, guest, popups } = attachRegisteredGuest()
+    guest.emitInput('mouseDown')
+    expect(guest.openWindow('file:///etc/hosts')).toEqual({ action: 'deny' })
+    expect(guest.openWindow('about:blank')).toEqual({ action: 'deny' })
+    guest.emitInput('mouseDown')
+    const allowed = guest.openWindow('about:blank')
+    registry.revokeNavigation(registry.claimGuestLifecycle(page)!)
+    allowed.createWindow?.(popupOptions(createPopupContents()))
+    expect(popups()[0]?.loaded).toBe(false)
+    expect(popups()[0]?.closed).toBe(true)
   })
 
   it('holds popups shut until the page is registered and navigation is granted', () => {
@@ -257,6 +314,22 @@ describe('route guest OAuth popups', () => {
     expect(contents.openWindow('https://accounts.example.com/step-2')).toEqual({ action: 'deny' })
     contents.emitInput('mouseDown')
     expect(contents.openWindow('https://accounts.example.com/step-2').action).toBe('allow')
+  })
+
+  it('guards blank descendants and redirects after the root loses authority', () => {
+    const { registry, guest } = attachRegisteredGuest()
+    guest.emitInput('mouseDown')
+    const contents = createPopupContents()
+    guest.openWindow('about:blank#state').createWindow?.(popupOptions(contents))
+    expect(contents.navigate('about:blank#next')).toBe(false)
+    expect(contents.navigate('about:blank?state=synthetic')).toBe(true)
+    expect(contents.navigate('file:///etc/hosts', 'will-redirect')).toBe(true)
+    contents.emitInput('mouseDown')
+    expect(contents.openWindow('about:blank#next').action).toBe('allow')
+    registry.revokeNavigation(registry.claimGuestLifecycle(page)!)
+    expect(contents.navigate('about:blank#next')).toBe(true)
+    contents.emitInput('mouseDown')
+    expect(contents.openWindow('about:blank')).toEqual({ action: 'deny' })
   })
 })
 
@@ -397,6 +470,7 @@ function createPopupContents(options: { partition?: string; webRtcPolicyThrows?:
   emitInput: (type: string) => void
   emitDestroyed: () => void
   openWindow: (url: string) => Electron.WindowOpenHandlerResponse
+  navigate: (url: string, event?: string) => boolean
   isDestroyed: () => boolean
   close: () => void
   on: (event: string, listener: (...args: unknown[]) => void) => void
@@ -439,6 +513,20 @@ function createPopupContents(options: { partition?: string; webRtcPolicyThrows?:
     },
     openWindow: (url: string) =>
       windowOpenHandler?.({ url }) ?? ({ action: 'deny' } as Electron.WindowOpenHandlerResponse),
+    navigate: (url, event = 'will-navigate') => {
+      let prevented = false
+      for (const listener of listeners.get(event) ?? []) {
+        listener(
+          {
+            preventDefault: () => {
+              prevented = true
+            }
+          },
+          url
+        )
+      }
+      return prevented
+    },
     isDestroyed: () => destroyed,
     close: () => {
       destroyed = true

@@ -1,6 +1,6 @@
 import type { Session, WebContents } from 'electron'
-import { normalizeBrowserNavigationUrl } from '../../shared/browser-url'
 import { ORCA_BROWSER_BLANK_URL } from '../../shared/constants'
+import { isBlankBrowserPopupUrl, normalizeBrowserPopupUrl } from './browser-popup-new-tab-intent'
 import { enforceBrowserRouteWebRtcPolicy } from './browser-route-webrtc-policy'
 import {
   trackBrowserGuestInputGesture,
@@ -32,15 +32,22 @@ export type BrowserRouteGuestPopupDependencies = {
 }
 
 export type BrowserRouteGuestPopupController = {
-  windowOpenHandler: (details?: { url?: string }) => Electron.WindowOpenHandlerResponse
+  windowOpenHandler: (details?: PopupRequest) => Electron.WindowOpenHandlerResponse
   /** Fence: opener closed, retired, suspended, or its lease/authority is gone. */
   closeAll: () => void
   dispose: () => void
 }
 
+type PopupRequest = {
+  url?: string
+  referrer?: Electron.Referrer
+  postBody?: Electron.PostBody | null
+}
+
 export function createBrowserRouteGuestPopupController(input: {
   opener: WebContents
   partition: string
+  /** Blank popup documents still require live route authority. */
   isNavigationAllowed: (url: string) => boolean
   dependencies: BrowserRouteGuestPopupDependencies
 }): BrowserRouteGuestPopupController {
@@ -55,8 +62,11 @@ export function createBrowserRouteGuestPopupController(input: {
   // holds new popups shut while the page is fenced.
   let disposed = false
 
+  const navigationAllowed = (url: string): boolean =>
+    input.isNavigationAllowed(isBlankBrowserPopupUrl(url) ? ORCA_BROWSER_BLANK_URL : url)
+
   const onPopupNavigate = (event: Electron.Event, url: string): void => {
-    if (disposed || !input.isNavigationAllowed(url)) {
+    if (disposed || !normalizeBrowserPopupUrl(url) || !navigationAllowed(url)) {
       event.preventDefault()
     }
   }
@@ -70,7 +80,11 @@ export function createBrowserRouteGuestPopupController(input: {
     } catch {
       contentsPartition = null
     }
-    if (disposed || contentsPartition !== input.partition) {
+    if (
+      disposed ||
+      contentsPartition !== input.partition ||
+      !navigationAllowed(ORCA_BROWSER_BLANK_URL)
+    ) {
       return false
     }
     // Fail closed exactly like guest admission: no WebRTC policy, no content — otherwise the STUN
@@ -142,15 +156,16 @@ export function createBrowserRouteGuestPopupController(input: {
 
   function buildWindowOpenHandler(
     gesture: BrowserGuestInputGesture
-  ): (details?: { url?: string }) => Electron.WindowOpenHandlerResponse {
+  ): (details?: PopupRequest) => Electron.WindowOpenHandlerResponse {
     return (details) => {
-      const normalized = normalizeRoutePopupUrl(details?.url)
+      const clicked = gesture.consume()
+      const normalized = normalizeBrowserPopupUrl(details?.url)
       if (
         disposed ||
         !normalized ||
         popups.size >= MAX_BROWSER_ROUTE_GUEST_POPUPS ||
-        !input.isNavigationAllowed(normalized) ||
-        !gesture.consume()
+        !navigationAllowed(normalized) ||
+        !clicked
       ) {
         // Not when disposed: the opener is gone, so there is no pane left to tell.
         if (!disposed) {
@@ -169,7 +184,14 @@ export function createBrowserRouteGuestPopupController(input: {
             partition: input.partition
           }
         },
-        createWindow: (options: PopupChildWindowOptions) => openPopup(options, normalized)
+        createWindow: (options: PopupChildWindowOptions) =>
+          openPopup(
+            {
+              ...options,
+              initialNavigation: { referrer: details?.referrer, postBody: details?.postBody }
+            },
+            details?.url ?? normalized
+          )
       }
     }
   }
@@ -201,18 +223,4 @@ export function createBrowserRouteGuestPopupController(input: {
       }
     }
   }
-}
-
-// A blank popup carries no destination the origin bar can verify and no OAuth flow to complete.
-function normalizeRoutePopupUrl(rawUrl: unknown): string | null {
-  if (typeof rawUrl !== 'string') {
-    return null
-  }
-  let normalized: string | null = null
-  try {
-    normalized = normalizeBrowserNavigationUrl(rawUrl)
-  } catch {
-    return null
-  }
-  return !normalized || normalized === ORCA_BROWSER_BLANK_URL ? null : normalized
 }

@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { isNewBrowserTabPopupIntent } from './browser-popup-new-tab-intent'
+import {
+  isNewBrowserTabPopupIntent,
+  normalizeBrowserPopupUrl
+} from './browser-popup-new-tab-intent'
 
 describe('isNewBrowserTabPopupIntent', () => {
   it.each([
@@ -35,6 +38,39 @@ describe('isNewBrowserTabPopupIntent', () => {
       expect(isNewBrowserTabPopupIntent({ url: url.href, frameName: '', disposition })).toBe(false)
     }
   )
+
+  it('preserves POST requests even when the form has no fields', () => {
+    for (const data of [[], [{ type: 'rawData' as const, bytes: Buffer.from('code=synthetic') }]]) {
+      expect(
+        isNewBrowserTabPopupIntent({
+          url: 'https://example.com/login',
+          frameName: '',
+          disposition: 'foreground-tab',
+          postBody: { contentType: 'application/x-www-form-urlencoded', data }
+        })
+      ).toBe(false)
+    }
+  })
+
+  it.each(['about:blank', 'about:blank#state'])('preserves a blank popup handle: %s', (url) => {
+    expect(normalizeBrowserPopupUrl(url)).toBe(url)
+    expect(isNewBrowserTabPopupIntent({ url, frameName: '', disposition: 'foreground-tab' })).toBe(
+      false
+    )
+  })
+
+  it.each([
+    'about:blank?state=x',
+    'about:srcdoc',
+    'about:blank/other',
+    'file:///tmp/login',
+    'javascript:alert(1)',
+    'data:text/html,login',
+    '',
+    undefined
+  ])('rejects unsafe popup destinations: %s', (url) => {
+    expect(normalizeBrowserPopupUrl(url)).toBeNull()
+  })
 
   it.each([
     'code',

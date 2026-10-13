@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 type Handler = (...args: unknown[]) => void
 
@@ -140,6 +140,7 @@ beforeEach(() => {
   FakeBaseWindow.instances = []
   FakeWebContentsView.instances = []
 })
+afterEach(() => vi.unstubAllEnvs())
 
 describe('describePopupOrigin', () => {
   it('reduces URLs to origin only', () => {
@@ -192,7 +193,35 @@ describe('openPopupWithOriginBar', () => {
   it('loads the target itself only when no pre-created contents were provided', () => {
     const popup = openPopupWithOriginBar({}, 'https://example.com/login')
     expect(lastViews().content.options).not.toHaveProperty('webContents')
-    expect(popup.contentWebContents.loadURL).toHaveBeenCalledWith('https://example.com/login')
+    expect(popup.contentWebContents.loadURL).toHaveBeenCalledWith('https://example.com/login', {})
+  })
+
+  it('honors explicit hidden windows and background launches even when the page asks to show', () => {
+    vi.stubEnv('ORCA_BACKGROUND_LAUNCH', undefined)
+    openPopupWithOriginBar({ show: false }, 'about:blank')
+    expect(lastWindow().options.show).toBe(false)
+    vi.stubEnv('ORCA_BACKGROUND_LAUNCH', '1')
+    openPopupWithOriginBar({ show: true }, 'about:blank')
+    expect(lastWindow().options.show).toBe(false)
+  })
+
+  it('preserves the fallback request body, multipart header and referrer policy', () => {
+    const data: Electron.PostBody['data'] = [{ type: 'rawData', bytes: Buffer.from('synthetic') }]
+    const referrer: Electron.Referrer = { url: 'https://example.com/form', policy: 'no-referrer' }
+    const popup = openPopupWithOriginBar(
+      {
+        initialNavigation: {
+          referrer,
+          postBody: { contentType: 'multipart/form-data', boundary: 'synthetic-boundary', data }
+        }
+      },
+      'https://example.com/login'
+    )
+    expect(popup.contentWebContents.loadURL).toHaveBeenCalledWith('https://example.com/login', {
+      httpReferrer: referrer,
+      postData: data,
+      extraHeaders: 'Content-Type: multipart/form-data; boundary=synthetic-boundary'
+    })
   })
 
   it('reserves an origin-bar strip above the requested content size', () => {

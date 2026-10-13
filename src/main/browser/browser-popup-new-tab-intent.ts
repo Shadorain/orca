@@ -10,12 +10,39 @@ export function isNewBrowserTabPopupIntent(details: {
   url: string
   frameName: string
   disposition: string
+  postBody?: Electron.PostBody | null
 }): boolean {
   return (
     details.frameName === '' &&
     (details.disposition === 'foreground-tab' || details.disposition === 'background-tab') &&
+    !details.postBody &&
+    !isBlankBrowserPopupUrl(details.url) &&
     !isOAuthAuthorizationUrl(details.url)
   )
+}
+
+export function isBlankBrowserPopupUrl(rawUrl: string): boolean {
+  try {
+    const url = new URL(rawUrl)
+    return url.protocol === 'about:' && url.pathname === 'blank' && url.search === ''
+  } catch {
+    return false
+  }
+}
+
+/** Popup destinations are Chromium URLs, never address-bar searches or local files. */
+export function normalizeBrowserPopupUrl(rawUrl: unknown): string | null {
+  if (typeof rawUrl !== 'string') {
+    return null
+  }
+  try {
+    const url = new URL(rawUrl)
+    return url.protocol === 'https:' || url.protocol === 'http:' || isBlankBrowserPopupUrl(rawUrl)
+      ? url.href
+      : null
+  } catch {
+    return null
+  }
 }
 
 // Unnamed window.open(url), used by Deel, has the same disposition as an ordinary new-tab link.
