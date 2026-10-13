@@ -8,6 +8,8 @@ import {
 import { SAFE_POPUP_WINDOW_OPTIONS, safeOrigin } from './browser-manager-types'
 import type { PopupChildWindowOptions } from './popup-origin-bar-window'
 import { BrowserManagerNavigation } from './browser-manager-navigation'
+import { allowNativeBrowserPopup, isNativeBrowserPopupRequest } from './browser-popup-native-window'
+import { isBrowserRouteGuestPopup } from './browser-route-guest-popup-ownership'
 
 export abstract class BrowserManagerGuestPopupPolicy extends BrowserManagerNavigation {
   protected installGuestPopupPolicy(guest: Electron.WebContents): () => void {
@@ -15,10 +17,12 @@ export abstract class BrowserManagerGuestPopupPolicy extends BrowserManagerNavig
     const gesture = trackBrowserGuestInputGesture(guest)
     const handleDidCreateWindow = (window: Electron.BrowserWindow): void => {
       // Why: popup descendants inherit the opener's owner context but must not replace its primary registration.
-      this.attachGuestPolicies(window.webContents, this.resolvePopupOwnerContext(guest.id))
+      if (!isBrowserRouteGuestPopup(window.webContents.id)) {
+        this.attachGuestPolicies(window.webContents, this.resolvePopupOwnerContext(guest.id))
+      }
     }
     guest.on('did-create-window', handleDidCreateWindow)
-    guest.setWindowOpenHandler(({ url, frameName, disposition, postBody, referrer }) => {
+    guest.setWindowOpenHandler(({ url, frameName, disposition, postBody, features }) => {
       // Why: as in Chrome, every open spends the click, so a popup's click cannot fund a later tab.
       const clicked = gesture.consume()
       const ownerContext = this.resolvePopupOwnerContext(guest.id)
@@ -59,6 +63,14 @@ export abstract class BrowserManagerGuestPopupPolicy extends BrowserManagerNavig
       // Why: file URLs are fine for in-pane previews, but must not spawn native child windows targeting local paths.
       const canOpenAsChild = normalizeBrowserPopupUrl(url) !== null
       if (browserTabId && canOpenAsChild) {
+        if (isNativeBrowserPopupRequest({ disposition, features, frameName })) {
+          return allowNativeBrowserPopup({
+            opener: guest,
+            targetUrl: url,
+            options: SAFE_POPUP_WINDOW_OPTIONS,
+            onCreated: (options) => this.createPopupChildWindowWithOriginBar(guest, url, options)
+          })
+        }
         // Why: OAuth may request size/position, but content must not create deceptive or inescapable native chrome.
         return {
           action: 'allow',
@@ -68,8 +80,7 @@ export abstract class BrowserManagerGuestPopupPolicy extends BrowserManagerNavig
             this.createPopupChildWindowWithOriginBar(guest, url, {
               ...options,
               // Link-created contents have no inherited session until we bind the opener's jar.
-              webPreferences: { ...options.webPreferences, session: guest.session },
-              initialNavigation: { referrer, postBody }
+              webPreferences: { ...options.webPreferences, session: guest.session }
             })
         }
       } else if (externalUrl && !postBody) {

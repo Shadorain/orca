@@ -15,6 +15,7 @@ import {
   type BrowserRouteGuestPopupWindow
 } from './browser-route-guest-popup-window-options'
 import { openPopupWithOriginBar, type PopupChildWindowOptions } from './popup-origin-bar-window'
+import { allowNativeBrowserPopup, isNativeBrowserPopupRequest } from './browser-popup-native-window'
 
 /** Bounded so a page holding a real gesture stream cannot paper the desktop in windows. */
 export const MAX_BROWSER_ROUTE_GUEST_POPUPS = 4
@@ -42,6 +43,9 @@ type PopupRequest = {
   url?: string
   referrer?: Electron.Referrer
   postBody?: Electron.PostBody | null
+  disposition?: string
+  features?: string
+  frameName?: string
 }
 
 export function createBrowserRouteGuestPopupController(input: {
@@ -103,6 +107,12 @@ export function createBrowserRouteGuestPopupController(input: {
       // an unowned route popup fails closed instead of routing to the opener's remote workspace.
       // Descendants register against the root opener, so a chain never needs walking.
       registerPopupOwnership(popupWebContentsId)
+      if (disposed || !navigationAllowed(ORCA_BROWSER_BLANK_URL)) {
+        releasePopupOwnership(popupWebContentsId)
+        gestures.delete(gesture)
+        gesture.dispose()
+        return false
+      }
       contents.once('destroyed', () => {
         releasePopupOwnership(popupWebContentsId)
         gestures.delete(gesture)
@@ -145,6 +155,9 @@ export function createBrowserRouteGuestPopupController(input: {
   }
 
   const openPopup = (options: PopupChildWindowOptions, targetUrl: string): WebContents => {
+    if (!options.webContents && !options.nativeWindow) {
+      reportBlockedPopup(targetUrl)
+    }
     const popup = openPopupWindow(options, targetUrl, preparePopupContents)
     popups.add(popup)
     popup.onClosed(() => popups.delete(popup))
@@ -173,25 +186,28 @@ export function createBrowserRouteGuestPopupController(input: {
         }
         return { action: 'deny' }
       }
+      const options = {
+        ...ROUTE_POPUP_WINDOW_OPTIONS,
+        webPreferences: {
+          ...ROUTE_POPUP_WINDOW_OPTIONS.webPreferences,
+          // Why: the opener's cookie jar AND its fixed SOCKS proxy — egress stays remote even
+          // for contents Chromium creates without an opener relationship.
+          partition: input.partition
+        }
+      }
+      if (isNativeBrowserPopupRequest(details ?? {})) {
+        return allowNativeBrowserPopup({
+          opener: input.opener,
+          targetUrl: details?.url ?? normalized,
+          options,
+          onCreated: (nativeOptions) => openPopup(nativeOptions, details?.url ?? normalized)
+        })
+      }
       return {
         action: 'allow',
-        overrideBrowserWindowOptions: {
-          ...ROUTE_POPUP_WINDOW_OPTIONS,
-          webPreferences: {
-            ...ROUTE_POPUP_WINDOW_OPTIONS.webPreferences,
-            // Why: the opener's cookie jar AND its fixed SOCKS proxy — egress stays remote even
-            // for contents Chromium creates without an opener relationship.
-            partition: input.partition
-          }
-        },
+        overrideBrowserWindowOptions: options,
         createWindow: (options: PopupChildWindowOptions) =>
-          openPopup(
-            {
-              ...options,
-              initialNavigation: { referrer: details?.referrer, postBody: details?.postBody }
-            },
-            details?.url ?? normalized
-          )
+          openPopup(options, details?.url ?? normalized)
       }
     }
   }

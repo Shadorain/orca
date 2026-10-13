@@ -1,0 +1,124 @@
+import { app, type BrowserWindow, type WebContents } from 'electron'
+import { isBackgroundLaunch } from '../window/foreground-activation-policy'
+import { safeOrigin } from './browser-manager-types'
+import type { PopupChildWindowOptions, PopupOriginBarWindow } from './popup-origin-bar-window'
+
+/** Chromium's OpenURL path has no adoptable contents or public navigation callback. */
+export function isNativeBrowserPopupRequest(input: {
+  disposition?: string
+  features?: string
+  frameName?: string
+}): boolean {
+  return input.disposition === 'new-window' && input.features === '' && input.frameName === ''
+}
+
+/** Electron constructs this window synchronously before resuming its native navigation. */
+export function allowNativeBrowserPopup(input: {
+  opener: WebContents
+  targetUrl: string
+  options: Electron.BrowserWindowConstructorOptions
+  onCreated: (options: PopupChildWindowOptions) => WebContents
+}): Electron.WindowOpenHandlerResponse {
+  const onCreated = (_event: Electron.Event, window: BrowserWindow): void => {
+    try {
+      if (input.opener.isDestroyed() || window.webContents.session !== input.opener.session) {
+        rejectNativeBrowserPopup(window)
+        return
+      }
+      input.onCreated({ ...input.options, nativeWindow: window })
+    } catch {
+      rejectNativeBrowserPopup(window)
+    }
+  }
+  // Prepend prevents another browser-window-created listener from navigating the child first.
+  app.prependOnceListener('browser-window-created', onCreated)
+  // A canceled native creation must not grant the next unrelated window this admission.
+  queueMicrotask(() => app.off('browser-window-created', onCreated))
+  return {
+    action: 'allow',
+    overrideBrowserWindowOptions: {
+      ...input.options,
+      title: safeOrigin(input.targetUrl),
+      fullscreenable: false,
+      show: !isBackgroundLaunch() && input.options.show !== false,
+      webPreferences: { ...input.options.webPreferences, session: input.opener.session }
+    }
+  }
+}
+
+function rejectNativeBrowserPopup(window: BrowserWindow): void {
+  const contents = window.webContents
+  const denyNavigation = (event: Electron.Event): void => event.preventDefault()
+  if (!contents.isDestroyed()) {
+    contents.on('will-navigate', denyNavigation)
+    contents.on('will-frame-navigate', denyNavigation)
+    contents.on('will-redirect', denyNavigation)
+    contents.setWindowOpenHandler(() => ({ action: 'deny' }))
+    // close() is asynchronous during construction; the guards stop the pending native request.
+    try {
+      contents.close()
+    } catch {}
+  }
+  // Destroy only after Electron's constructor returns, even if close failed or was intercepted.
+  queueMicrotask(() => {
+    if (!window.isDestroyed()) {
+      window.destroy()
+    }
+  })
+}
+
+/** The native frame is the trust surface; public APIs cannot reparent its primary contents. */
+export function prepareNativeBrowserPopup(
+  window: BrowserWindow,
+  initialUrl: string,
+  prepareContent?: (contents: WebContents) => boolean
+): PopupOriginBarWindow {
+  const contents = window.webContents
+  const closedListeners: (() => void)[] = []
+  let closed = false
+  window.once('closed', () => {
+    closed = true
+    for (const listener of closedListeners.splice(0)) {
+      listener()
+    }
+  })
+  const close = (): void => {
+    if (!contents.isDestroyed()) {
+      contents.close()
+    }
+  }
+  const popup = {
+    contentWebContents: contents,
+    close,
+    onClosed: (listener: () => void): void => {
+      if (closed) {
+        listener()
+      } else {
+        closedListeners.push(listener)
+      }
+    }
+  }
+  let prepared = false
+  try {
+    prepared = prepareContent?.(contents) ?? true
+  } catch {}
+  if (!prepared) {
+    rejectNativeBrowserPopup(window)
+    return popup
+  }
+  const updateOrigin = (url: string): void => {
+    if (!window.isDestroyed()) {
+      window.setTitle(safeOrigin(url))
+    }
+  }
+  window.on('page-title-updated', (event) => event.preventDefault())
+  // A blocked/uncommitted redirect must never lend its origin to the old document.
+  contents.on('did-navigate', (_event, url) => updateOrigin(url))
+  contents.on('did-navigate-in-page', (_event, url, isMainFrame) => {
+    if (isMainFrame) {
+      updateOrigin(url)
+    }
+  })
+  updateOrigin(initialUrl)
+  return popup
+}

@@ -17,6 +17,8 @@ const browserMocks = vi.hoisted(() => ({
 
 vi.mock('electron', () => ({
   app: {
+    prependOnceListener: vi.fn(),
+    off: vi.fn(),
     getPath: browserMocks.appGetPathMock
   },
   BrowserWindow: {
@@ -498,7 +500,7 @@ describe('browserManager', () => {
       disposition: string
     }) => {
       action: 'allow' | 'deny'
-      createWindow?: (options: Record<string, never>) => unknown
+      createWindow?: (options: Record<string, unknown>) => unknown
     }
     const handler = guestSetWindowOpenHandlerMock.mock.calls[0][0] as WindowOpenHandler
 
@@ -529,7 +531,8 @@ describe('browserManager', () => {
         disposition: 'new-window'
       })
       expect(result).toMatchObject({ action: 'allow' })
-      result.createWindow?.({})
+      result.createWindow?.({ webContents: child })
+      openPopupWithOriginBarMock.mock.calls.at(-1)?.[2](child)
       return childSetWindowOpenHandlerMock.mock.calls[0][0] as WindowOpenHandler
     }
 
@@ -592,6 +595,7 @@ describe('browserManager', () => {
     })
 
     const popupContents = {
+      session: guest.session,
       id: 151,
       isDestroyed: vi.fn(() => false),
       getType: vi.fn(() => 'window'),
@@ -622,14 +626,15 @@ describe('browserManager', () => {
       webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false }
     }
     const returned = response.createWindow(options)
+    openPopupWithOriginBarMock.mock.calls.at(-1)?.[2](popupContents)
 
     expect(openPopupWithOriginBarMock).toHaveBeenCalledWith(
       {
         ...options,
-        webPreferences: { ...options.webPreferences, session: guest.session },
-        initialNavigation: { referrer: undefined, postBody: undefined }
+        webPreferences: { ...options.webPreferences, session: guest.session }
       },
-      'https://sso.example.com/auth?code=SECRET'
+      'https://sso.example.com/auth?code=SECRET',
+      expect.any(Function)
     )
     expect(returned).toBe(popupContents)
     // did-create-window does not fire for createWindow-created children, so

@@ -1,5 +1,6 @@
 import { BaseWindow, WebContentsView } from 'electron'
 import { isBackgroundLaunch } from '../window/foreground-activation-policy'
+import { prepareNativeBrowserPopup } from './browser-popup-native-window'
 
 // Why: Electron passes the pre-created popup WebContents through the
 // createWindow options (present at runtime, absent from the published d.ts).
@@ -7,7 +8,7 @@ import { isBackgroundLaunch } from '../window/foreground-activation-policy'
 // window.opener and the inherited session that OAuth/SSO popups depend on.
 export type PopupChildWindowOptions = Electron.BrowserWindowConstructorOptions & {
   webContents?: Electron.WebContents
-  initialNavigation?: { referrer?: Electron.Referrer; postBody?: Electron.PostBody | null }
+  nativeWindow?: Electron.BrowserWindow
 }
 
 export type PopupOriginBarWindow = {
@@ -144,6 +145,9 @@ export function openPopupWithOriginBar(
   // that must hold before content runs (route-guest WebRTC) has to be applied here or not at all.
   prepareContent?: (contents: Electron.WebContents) => boolean
 ): PopupOriginBarWindow {
+  if (options.nativeWindow) {
+    return prepareNativeBrowserPopup(options.nativeWindow, initialUrl, prepareContent)
+  }
   const { width, height } = clampPopupContentSize(options)
   const initialOrigin = describePopupOrigin(initialUrl)
   const window = new BaseWindow({
@@ -158,7 +162,7 @@ export function openPopupWithOriginBar(
     minWidth: MIN_POPUP_CONTENT_WIDTH,
     minHeight: MIN_POPUP_CONTENT_HEIGHT + POPUP_ORIGIN_BAR_HEIGHT,
     title: initialOrigin.label,
-    show: !isBackgroundLaunch() && options.show !== false
+    show: Boolean(options.webContents) && !isBackgroundLaunch() && options.show !== false
   })
 
   // Why: the origin bar renders only Orca's own data: URL and must stay
@@ -195,7 +199,7 @@ export function openPopupWithOriginBar(
   layoutViews()
 
   const contentWebContents = contentView.webContents
-  if (prepareContent && !prepareContent(contentWebContents)) {
+  if (!options.webContents || (prepareContent && !prepareContent(contentWebContents))) {
     return closeUnpreparedPopup(window, contentWebContents, originBarWebContents)
   }
   let currentUrl = initialUrl
@@ -237,23 +241,6 @@ export function openPopupWithOriginBar(
     }
   }
   contentWebContents.on('page-title-updated', handlePageTitleUpdated)
-
-  // Why: with no adopted contents there is no Chromium-driven navigation for
-  // this popup, so load the target ourselves (opener handle is already gone).
-  if (!options.webContents) {
-    const { referrer, postBody } = options.initialNavigation ?? {}
-    void contentWebContents
-      .loadURL(initialUrl, {
-        ...(referrer ? { httpReferrer: referrer } : {}),
-        ...(postBody
-          ? {
-              postData: postBody.data,
-              extraHeaders: `Content-Type: ${postBody.contentType}${postBody.boundary ? `; boundary=${postBody.boundary}` : ''}`
-            }
-          : {})
-      })
-      .catch(() => {})
-  }
 
   const closedListeners: (() => void)[] = []
   const handleContentDestroyed = (): void => {

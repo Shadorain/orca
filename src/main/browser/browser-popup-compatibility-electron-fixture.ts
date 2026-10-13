@@ -13,6 +13,10 @@ import { BrowserManager } from './browser-manager'
 import { BrowserRouteWebContentsRegistry } from './browser-route-webcontents-registry'
 import { initializeBrowserProcessUserAgent } from './browser-process-user-agent'
 import type { PopupChildWindowOptions } from './popup-origin-bar-window'
+import {
+  BrowserPopupNativeFixture,
+  popupFixtureContentSecurity as contentSecurity
+} from './browser-popup-native-electron-fixture'
 import type {
   BrowserRouteGuestLifecycleClaim,
   BrowserRoutePageGuestIdentity
@@ -32,8 +36,7 @@ class FixtureBrowserManager extends BrowserManager {
   tabOpens: { url: string; activate: boolean | undefined }[] = []
   childRequests: {
     adopted: boolean
-    hasPostBody: boolean
-    hasReferrer: boolean
+    native: boolean
     sessionMatches: boolean
     security: ReturnType<typeof contentSecurity>
     permission?: string
@@ -51,8 +54,7 @@ class FixtureBrowserManager extends BrowserManager {
     const contents = super.createPopupChildWindowWithOriginBar(opener, targetUrl, options)
     const record = {
       adopted: Boolean(options.webContents),
-      hasPostBody: Boolean(options.initialNavigation?.postBody),
-      hasReferrer: Boolean(options.initialNavigation?.referrer),
+      native: Boolean(options.nativeWindow),
       sessionMatches: contents.session === opener.session,
       security: contentSecurity(contents),
       permission: 'pending'
@@ -85,36 +87,21 @@ let routeIdentity: BrowserRoutePageGuestIdentity | null = null
 let routeClaim: BrowserRouteGuestLifecycleClaim | null = null
 let routeGranted = true
 let fixtureRouteSession: Session | null = null
-
-function contentSecurity(contents: WebContents): {
-  sandbox: boolean | undefined
-  contextIsolation: boolean | undefined
-  nodeIntegration: boolean | undefined
-} {
-  if (
-    !('getLastWebPreferences' in contents) ||
-    typeof contents.getLastWebPreferences !== 'function'
-  ) {
-    throw new Error('Electron cannot report popup security preferences')
-  }
-  const preferences: unknown = contents.getLastWebPreferences()
-  if (
-    typeof preferences !== 'object' ||
-    preferences === null ||
-    !('sandbox' in preferences) ||
-    !('contextIsolation' in preferences) ||
-    !('nodeIntegration' in preferences)
-  ) {
-    throw new Error('Electron returned incomplete popup security preferences')
-  }
-  return {
-    sandbox: typeof preferences.sandbox === 'boolean' ? preferences.sandbox : undefined,
-    contextIsolation:
-      typeof preferences.contextIsolation === 'boolean' ? preferences.contextIsolation : undefined,
-    nodeIntegration:
-      typeof preferences.nodeIntegration === 'boolean' ? preferences.nodeIntegration : undefined
-  }
-}
+const authority = Symbol('fixture-route-authority')
+let fixtureAuthority: symbol | null = authority
+let fixtureAuthorityThrows = false
+const native = new BrowserPopupNativeFixture({
+  routeSession: () => fixtureRouteSession,
+  failAuthority: (throwOnRead) => {
+    fixtureAuthority = null
+    fixtureAuthorityThrows = throwOnRead
+  },
+  restoreAuthority: () => {
+    fixtureAuthority = authority
+    fixtureAuthorityThrows = false
+  },
+  writeStatus
+})
 
 function writeStatus(error?: string): void {
   writeFileSync(
@@ -125,6 +112,7 @@ function writeStatus(error?: string): void {
       error,
       tabOpens: manager.tabOpens,
       childRequests: manager.childRequests,
+      native: native.snapshot(),
       routeGranted,
       routeContents: webContents
         .getAllWebContents()
@@ -161,6 +149,7 @@ async function createHost(name: 'local' | 'route', partition: string): Promise<v
       void (async () => {
         await new Promise<void>((resolve) => guest.once('did-finish-load', () => resolve()))
         guests.set(name, guest)
+        native.trackRequests(guest)
         guest.on('input-event', (_event, input) => {
           inputs.push(input.type)
           writeStatus()
@@ -206,6 +195,8 @@ async function createHost(name: 'local' | 'route', partition: string): Promise<v
               guest.close()
             } else if (message === 'orca-popup-fixture:snapshot') {
               writeStatus()
+            } else {
+              native.handleMessage(message)
             }
           })
         }
@@ -268,10 +259,14 @@ async function run(): Promise<void> {
   })
   phase = 'proxy'
   writeStatus()
-  const authority = Symbol('fixture-route-authority')
   registry = new BrowserRouteWebContentsRegistry({
     getPartitionForSession: (candidate) => (candidate === routeSession ? routePartition : null),
-    getPreparedPageAuthority: () => authority,
+    getPreparedPageAuthority: () => {
+      if (fixtureAuthorityThrows) {
+        throw new Error('Synthetic authority lookup failure')
+      }
+      return fixtureAuthority
+    },
     retirePreparedPage: () => true,
     retirePreparedPagesOwnedByRenderer: () => 0,
     reportBlockedPopup: (input) => {

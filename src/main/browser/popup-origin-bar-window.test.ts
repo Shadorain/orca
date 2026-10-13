@@ -115,6 +115,11 @@ import {
 
 const { createFakeWebContents, FakeWebContentsView, FakeBaseWindow } = fakeElectron
 
+function fakePopupContents(): Electron.WebContents {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: The fake implements every WebContents member exercised by the popup factory.
+  return createFakeWebContents() as unknown as Electron.WebContents
+}
+
 function lastWindow(): InstanceType<typeof FakeBaseWindow> {
   const instance = FakeBaseWindow.instances.at(-1)
   if (!instance) {
@@ -190,38 +195,22 @@ describe('openPopupWithOriginBar', () => {
     expect(adopted.loadURL).not.toHaveBeenCalled()
   })
 
-  it('loads the target itself only when no pre-created contents were provided', () => {
+  it('fails closed without replaying a request when no adopted contents were supplied', () => {
     const popup = openPopupWithOriginBar({}, 'https://example.com/login')
-    expect(lastViews().content.options).not.toHaveProperty('webContents')
-    expect(popup.contentWebContents.loadURL).toHaveBeenCalledWith('https://example.com/login', {})
+    const onClosed = vi.fn()
+    popup.onClosed(onClosed)
+    expect(popup.contentWebContents.loadURL).not.toHaveBeenCalled()
+    expect(lastWindow().close).toHaveBeenCalledTimes(1)
+    expect(onClosed).toHaveBeenCalledTimes(1)
   })
 
-  it('honors explicit hidden windows and background launches even when the page asks to show', () => {
+  it('honors explicit hidden windows and background launches', () => {
     vi.stubEnv('ORCA_BACKGROUND_LAUNCH', undefined)
-    openPopupWithOriginBar({ show: false }, 'about:blank')
+    openPopupWithOriginBar({ show: false, webContents: fakePopupContents() }, 'about:blank')
     expect(lastWindow().options.show).toBe(false)
     vi.stubEnv('ORCA_BACKGROUND_LAUNCH', '1')
-    openPopupWithOriginBar({ show: true }, 'about:blank')
+    openPopupWithOriginBar({ show: true, webContents: fakePopupContents() }, 'about:blank')
     expect(lastWindow().options.show).toBe(false)
-  })
-
-  it('preserves the fallback request body, multipart header and referrer policy', () => {
-    const data: Electron.PostBody['data'] = [{ type: 'rawData', bytes: Buffer.from('synthetic') }]
-    const referrer: Electron.Referrer = { url: 'https://example.com/form', policy: 'no-referrer' }
-    const popup = openPopupWithOriginBar(
-      {
-        initialNavigation: {
-          referrer,
-          postBody: { contentType: 'multipart/form-data', boundary: 'synthetic-boundary', data }
-        }
-      },
-      'https://example.com/login'
-    )
-    expect(popup.contentWebContents.loadURL).toHaveBeenCalledWith('https://example.com/login', {
-      httpReferrer: referrer,
-      postData: data,
-      extraHeaders: 'Content-Type: multipart/form-data; boundary=synthetic-boundary'
-    })
   })
 
   it('reserves an origin-bar strip above the requested content size', () => {
@@ -372,7 +361,10 @@ describe('openPopupWithOriginBar', () => {
     const originBars: FakeWebContents[] = []
 
     for (let cycle = 0; cycle < cycleCount; cycle += 1) {
-      const popup = openPopupWithOriginBar({}, `https://example.com/${cycle}`)
+      const popup = openPopupWithOriginBar(
+        { webContents: fakePopupContents() },
+        `https://example.com/${cycle}`
+      )
       originBars.push(lastViews().bar.webContents)
       popup.close()
     }
