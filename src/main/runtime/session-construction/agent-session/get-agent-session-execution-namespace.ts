@@ -1,30 +1,32 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithResolveWorktreeRemovalTarget } from './workspaces/workspace-removal-target'
-import type { TerminalWorkspaceLaunchScope } from './runtime-legacy-worker-terminal-recovery-types'
-import type { TuiAgent } from '../../shared/tui-agent'
-import { parseWslUncPath } from '../../shared/wsl-paths'
+import { OrcaRuntimeWithResolveWorktreeRemovalTarget } from '../../workspaces/workspace-removal-target'
+import type { TerminalWorkspaceLaunchScope } from '../../runtime-legacy-worker-terminal-recovery-types'
+import type { TuiAgent } from '../../../../shared/tui-agent'
+import { parseWslUncPath } from '../../../../shared/wsl-paths'
 import type {
   AgentLaunchPreferences,
   RuntimeAgentSessionRpcCaller,
   RuntimeEnsureAgentSessionRequest,
   RuntimeEnsureAgentSessionResult
-} from '../../shared/agent-session-host-authority'
-import { canonicalizeAgentSessionIdentity } from './agent-session-claim-identity'
-import { isTuiAgentEnabled } from '../../shared/tui-agent-selection'
-import { resolveLocalWindowsAgentStartupShell } from '../../shared/windows-terminal-shell'
-import { buildAgentResumeStartupPlan } from '../../shared/tui-agent-startup'
-import { OrchestrationError } from './orchestration/orchestration-error'
-import { withAgentSessionAccountEnv } from './agent-session-account-env'
+} from '../../../../shared/agent-session-host-authority'
+import {
+  canonicalizeAgentSessionIdentity,
+  type ProviderExecutionNamespace
+} from '../../agent-session-claim-identity'
+import { isTuiAgentEnabled } from '../../../../shared/tui-agent-selection'
+import { resolveLocalWindowsAgentStartupShell } from '../../../../shared/windows-terminal-shell'
+import { buildAgentResumeStartupPlan } from '../../../../shared/tui-agent-startup'
+import { OrchestrationError } from '../../orchestration/orchestration-error'
+import { withAgentSessionAccountEnv } from '../../agent-session-account-env'
 import {
   resolveTuiAgentLaunchArgs,
   resolveTuiAgentLaunchEnv
-} from '../../shared/tui-agent-launch-defaults'
+} from '../../../../shared/tui-agent-launch-defaults'
 
-export class OrcaRuntimeWithGetAgentSessionExecutionNamespace extends OrcaRuntimeWithResolveWorktreeRemovalTarget {
+export abstract class OrcaRuntimeWithGetAgentSessionExecutionNamespace extends OrcaRuntimeWithResolveWorktreeRemovalTarget {
   protected getAgentSessionExecutionNamespace(
     workspace: TerminalWorkspaceLaunchScope,
     agent: TuiAgent
-  ): { machine: string; principal: string; container: string; providerRoot: string } | null {
+  ): ProviderExecutionNamespace | null {
     if (workspace.connectionId) {
       // Why: SSH target ids are not execution-namespace proof. Preserve the
       // legacy launch until an attested route can safely participate in claims.
