@@ -246,18 +246,13 @@ function waitForAgentDraftInputReadyOnTab(args: {
   spawnTimeoutMs: number
   readinessTimeoutMs: number
   readySignal: Parameters<typeof waitForAgentDraftInputReady>[2]
-  /** Names the PTY to deliver to; the tab's first is only watched until then. */
   launchPty?: Promise<string | null>
 }): Promise<{ ptyId: string; ready: boolean } | null> {
   return new Promise((resolve) => {
-    let selectedPtyId: string | null = null
-    // Until a launch names its pane's PTY, no watched PTY may be delivered to.
-    let deliverablePtyId: string | null = null
-    const readyByPtyId = new Map<string, boolean>()
+    const readinessByPtyId = new Map<string, Promise<boolean>>()
     let settled = false
     let spawnTimer: number | null = null
     let unsubscribeStore: (() => void) | null = null
-
     const finish = (result: { ptyId: string; ready: boolean } | null): void => {
       if (settled) {
         return
@@ -269,51 +264,42 @@ function waitForAgentDraftInputReadyOnTab(args: {
       unsubscribeStore?.()
       resolve(result)
     }
-    const settleIfDeliverable = (ptyId: string): void => {
-      const ready = readyByPtyId.get(ptyId)
-      if (ready !== undefined && (!args.launchPty || deliverablePtyId === ptyId)) {
-        finish({ ptyId, ready })
+    const watchPty = (ptyId: string): Promise<boolean> => {
+      const existing = readinessByPtyId.get(ptyId)
+      if (existing) {
+        return existing
       }
+      const readiness = waitForAgentDraftInputReady(
+        ptyId,
+        args.readinessTimeoutMs,
+        args.readySignal
+      )
+      readinessByPtyId.set(ptyId, readiness)
+      return readiness
     }
-    const bindPty = (ptyId: string): void => {
-      if (selectedPtyId === ptyId || settled) {
+    const deliverPty = (ptyId: string): void => {
+      if (settled) {
         return
       }
-      selectedPtyId = ptyId
       if (spawnTimer !== null) {
         window.clearTimeout(spawnTimer)
       }
       unsubscribeStore?.()
-      // Why: Zustand subscribers run inside updateTabPtyId. Registering the
-      // sidecar here precedes the transport's immediate pre-handler drain.
-      void waitForAgentDraftInputReady(ptyId, args.readinessTimeoutMs, args.readySignal).then(
-        (ready) => {
-          readyByPtyId.set(ptyId, ready)
-          settleIfDeliverable(ptyId)
-        }
-      )
+      void watchPty(ptyId).then((ready) => finish({ ptyId, ready }))
     }
     const bindFromState = (state: ReturnType<typeof useAppStore.getState>): void => {
-      const ptyId = state.ptyIdsByTabId[args.tabId]?.[0]
-      if (ptyId && !selectedPtyId) {
-        bindPty(ptyId)
+      const ptyIds = state.ptyIdsByTabId[args.tabId] ?? []
+      if (args.launchPty) {
+        // Each pane's readiness attaches before its primary handler drains startup bytes.
+        for (const ptyId of ptyIds) {
+          watchPty(ptyId)
+        }
+      } else if (ptyIds[0]) {
+        deliverPty(ptyIds[0])
       }
     }
-
     if (args.launchPty) {
-      // A split made while the agent starts can bind its own shell first: the launch pane's PTY wins.
-      void args.launchPty.then((ptyId) => {
-        if (!ptyId) {
-          finish(null)
-          return
-        }
-        deliverablePtyId = ptyId
-        if (readyByPtyId.has(ptyId)) {
-          settleIfDeliverable(ptyId)
-        } else {
-          bindPty(ptyId)
-        }
-      })
+      void args.launchPty.then((ptyId) => (ptyId ? deliverPty(ptyId) : finish(null)))
     } else {
       spawnTimer = window.setTimeout(() => finish(null), args.spawnTimeoutMs)
     }

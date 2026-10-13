@@ -41,9 +41,6 @@ vi.mock('@/components/terminal-pane/pty-data-sidecar-subscriptions', () => ({
     return () => testState.ptyWatchers.delete(ptyId)
   }
 }))
-vi.mock('@/components/terminal-pane/pty-pre-handler-buffer', () => ({
-  replayPreHandlerPtyData: vi.fn()
-}))
 vi.mock('@/runtime/runtime-terminal-inspection', () => ({
   isRemoteRuntimePtyId: () => false,
   inspectRuntimeTerminalProcess: vi.fn(async () => null),
@@ -58,6 +55,8 @@ vi.mock('@/lib/telemetry', () => ({ track: vi.fn(), tuiAgentToAgentKind: () => '
 vi.mock('sonner', () => ({ toast: { error: vi.fn(), message: vi.fn() } }))
 
 const { launchNewTabPromptThroughHost } = await import('./launch-agent-new-tab-host-route')
+const { bufferPreHandlerPtyData, drainPreHandlerPtyData, clearPreHandlerPtyState } =
+  await import('@/components/terminal-pane/pty-pre-handler-buffer')
 
 function attachHostPty(ptyId: string): void {
   testState.appState.ptyIdsByTabId = { [TAB]: [ptyId] }
@@ -81,6 +80,7 @@ describe('an AI button whose agent is ready before the host answers', () => {
   })
 
   afterEach(() => {
+    clearPreHandlerPtyState('launch-agent')
     vi.unstubAllGlobals()
     vi.useRealTimers()
   })
@@ -183,5 +183,41 @@ describe('an AI button whose agent is ready before the host answers', () => {
       { ptyId: 'launch-agent', data: '\x1b[200~resolve the conflicts\x1b[201~' },
       { ptyId: 'launch-agent', data: '\r' }
     ])
+  })
+
+  // Regression: with a split bound first, the launch pane's ready bytes were drained to its primary
+  // handler before its own watcher attached, so a ready agent never got its prompt.
+  it("sees the launch pane's ready output even when a split bound first and it drained at once", async () => {
+    let answer!: (startedPtyId: string | null) => void
+    testState.launchAgentThroughHost.mockReturnValue({
+      tabId: TAB,
+      started: new Promise<string | null>((done) => (answer = done))
+    })
+    const { promptDeliveryResult } = launchNewTabPromptThroughHost({
+      agent: 'codex',
+      worktreeId: 'wt-1',
+      prompt: 'task',
+      pasteContent: 'task',
+      submit: true
+    })
+
+    await vi.advanceTimersByTimeAsync(13_000)
+    attachHostPty('split-shell')
+    bufferPreHandlerPtyData(
+      'launch-agent',
+      '\x1b[?1049h\x1b[1m›\x1b[0m Implement {feature}\x1b[?2004h'
+    )
+    // The connect continuation answers, publishes the binding and drains, with no await between.
+    answer('launch-agent')
+    testState.appState.ptyIdsByTabId = { [TAB]: ['split-shell', 'launch-agent'] }
+    for (const subscriber of testState.storeSubscribers) {
+      subscriber(testState.appState)
+    }
+    drainPreHandlerPtyData('launch-agent', vi.fn())
+    await vi.advanceTimersByTimeAsync(25_000)
+
+    await expect(promptDeliveryResult).resolves.toEqual({ delivered: true, failureNotified: false })
+    expect(new Set(testState.writes.map(({ ptyId }) => ptyId))).toEqual(new Set(['launch-agent']))
+    expect(testState.writes.filter(({ data }) => data.includes('task'))).toHaveLength(1)
   })
 })
