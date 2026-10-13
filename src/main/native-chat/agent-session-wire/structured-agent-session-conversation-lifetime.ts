@@ -9,6 +9,7 @@ import {
   AgentSessionRefusalError,
   agentSessionRefusalError
 } from '../../../shared/agent-session-wire-refusals'
+import type { AgentSessionLease } from '../../../shared/agent-session-record'
 import type { AgentChildWorkView } from '../../../shared/agent-status-child-work-view'
 import { createJournalOpenReadRefusals } from '../agent-session-journal/journal-open-failure'
 import type { StructuredAgentSessionConversations } from './structured-agent-session-conversations'
@@ -27,6 +28,18 @@ import { AGENT_SESSION_NOT_ATTACHED } from './structured-agent-session-mutation-
 import { deferredStructuredAgentSessionLogger } from './structured-agent-session-logger'
 import { sameProviderChild } from './structured-agent-session-provider-child'
 import type { StructuredAgentSessionExpiredStartup } from './structured-agent-session-startup-attempt'
+
+/** Released with no owner, reservation or handoff, a lease holds nothing, with or without proof
+ *  its last owner exited: recovery released it because nothing can drive that owner, and anything
+ *  it still writes keeps the chat's files recent. */
+function leaseHeld(lease: AgentSessionLease): boolean {
+  return (
+    lease.claimStatus !== 'released' ||
+    lease.ownerProcess !== null ||
+    lease.reservedSpawnToken !== null ||
+    lease.handoffStage !== null
+  )
+}
 
 export type StructuredAgentSessionConversationLifetime = ReturnType<
   typeof createStructuredAgentSessionConversationLifetime
@@ -77,6 +90,28 @@ export function createStructuredAgentSessionConversationLifetime(host: {
     return closed
   }
 
+  const hasOpenDispatch = (sessionId: string): boolean => {
+    const record = deps().store.getRecord(sessionId)
+    return record !== null && deps().hasOpenDispatch?.(record) === true
+  }
+  const providerHoldsDispatch = (sessionId: string): boolean =>
+    deps().adapter.holdsDispatch?.(sessionId) === true
+
+  /** Execution the host still holds, or may hold, for a chat: a child in any phase, a delivery, a
+   *  send the provider or an orchestration dispatch holds, or a lease still held or mid-handoff.
+   *  Without any of these a leftover prompt or turn row is only history. */
+  const holdsExecution = (sessionId: string): boolean => {
+    const record = deps().store.getRecord(sessionId)
+    return (
+      !record ||
+      leaseHeld(record.lease) ||
+      Boolean(sessions.get(sessionId)?.child) ||
+      host.deliveryActive(sessionId) ||
+      providerHoldsDispatch(sessionId) ||
+      hasOpenDispatch(sessionId)
+    )
+  }
+
   const idleSweep = new StructuredAgentSessionIdleSweep({
     sessions,
     serialize,
@@ -84,11 +119,8 @@ export function createStructuredAgentSessionConversationLifetime(host: {
     isDisposed: () => disposed,
     deliveryActive: host.deliveryActive,
     childWork: host.readChildWork,
-    hasOpenDispatch: (sessionId) => {
-      const record = deps().store.getRecord(sessionId)
-      return record !== null && deps().hasOpenDispatch?.(record) === true
-    },
-    providerHoldsDispatch: (sessionId) => deps().adapter.holdsDispatch?.(sessionId) === true,
+    hasOpenDispatch,
+    providerHoldsDispatch,
     // The host puts an idle agent to rest: a turn it cuts short is news, not the user's Stop.
     stopAgent: (sessionId) => stopAgent(sessionId, { cause: 'evict', resting: true }),
     // A host stop: the child's end rejects what it was handed and writes the one error row, and
@@ -130,6 +162,12 @@ export function createStructuredAgentSessionConversationLifetime(host: {
         })
       )
     },
+    /** Runs `task` under the chat's lifecycle lock, so no start interleaves with it, unless the
+     *  host still holds execution for the chat or quit has begun; null then. */
+    runWhileExecutionIdle: <T>(sessionId: string, task: () => Promise<T>): Promise<T | null> =>
+      serialize(sessionId, async () =>
+        disposed || holdsExecution(sessionId) ? null : await task()
+      ),
     /** Quit has begun: nothing opens a conversation or sweeps one after this. */
     dispose: (): void => {
       disposed = true

@@ -98,6 +98,7 @@ export const SQLITE_RUNTIME_INCLUDE = [
   'src/main/native-chat/agent-session-wire/structured-agent-session-dead-generation-settlement.test.ts',
   'src/main/native-chat/agent-session-wire/structured-agent-session-drivability.test.ts',
   'src/main/native-chat/agent-session-wire/structured-agent-session-event-sink.test.ts',
+  'src/main/native-chat/agent-session-wire/structured-agent-session-execution-idle.test.ts',
   'src/main/native-chat/agent-session-wire/structured-agent-session-failed-create-owner-verdict.test.ts',
   'src/main/native-chat/agent-session-wire/structured-agent-session-failed-create-sink-release.test.ts',
   'src/main/native-chat/agent-session-wire/structured-agent-session-forget-status.test.ts',

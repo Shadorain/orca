@@ -68,10 +68,8 @@ import {
   type RuntimeAgentAccountHomeResolver
 } from './structured-agent-model-catalog-wiring'
 import type { ClaudeCliFlagSupport } from '../claude/claude-cli-flag-support'
-import {
-  scheduleNativeChatVisualsSweep,
-  type NativeChatVisualsSweepDeps
-} from '../native-chat/native-chat-visuals-sweep'
+import { scheduleNativeChatScratchSweep } from '../native-chat/native-chat-scratch-sweep'
+import { readJournalSessionLastActivityAt } from '../native-chat/agent-session-journal/journal-row-table'
 
 /** Whether this profile holds a structured chat: a record or tab in the journal database. */
 export function hasPersistedStructuredAgentSessionStore(
@@ -104,12 +102,12 @@ export type StructuredAgentSessionRuntimeDeps = {
   openPiConnection?: PiRpcSessionDeps['openConnection']
   /** Which version-gated flags a Claude CLI takes; absent never passes one. */
   claudeCliFlags?: ClaudeCliFlagSupport
-  /** Gives each chat a scratch folder and the visuals skill that teaches it, and sweeps folders whose chat
-   *  is gone. Wired by the real hosts only, so a test runtime never loads the bundled skill. */
+  /** Gives each chat a scratch folder and the visuals skill that teaches it, and sweeps folders
+   *  whose chat is gone or long unused. Wired by the real hosts only, so a test runtime never
+   *  loads the bundled skill. */
   nativeChatVisuals?: {
     /** Read this host's preference when a chat starts a provider process. */
     isEnabled: () => boolean
-    workspaceVerdicts: NonNullable<NativeChatVisualsSweepDeps['workspaceVerdicts']>
   }
   /** Provider transports are overridden only to drive the runtime against scripted children. */
   openCodexConnection?: CodexStructuredSessionAdapterDeps['openConnection']
@@ -361,11 +359,12 @@ async function installOnJournal(
     logger: deps.logger
   })
   const stopVisualsSweep = deps.nativeChatVisuals
-    ? scheduleNativeChatVisualsSweep({
+    ? scheduleNativeChatScratchSweep({
         stateDirectory: deps.stateDirectory,
         listHeldSessionIds: () => (store.readOnly ? null : store.listHeldSessionIds()),
-        locationOf: (sessionId) => store.getRecord(sessionId)?.location ?? null,
-        workspaceVerdicts: deps.nativeChatVisuals.workspaceVerdicts,
+        lastJournalActivityAt: (sessionId) =>
+          readJournalSessionLastActivityAt(journalDatabase.db, sessionId),
+        runWhileExecutionIdle: host.runWhileExecutionIdle,
         logger: deps.logger
       })
     : undefined
