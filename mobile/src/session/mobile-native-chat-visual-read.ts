@@ -1,18 +1,26 @@
 import { z } from 'zod'
 import { NATIVE_CHAT_VISUAL_MAX_BYTES } from '../../../src/shared/native-chat-visual-directive'
+import { nativeChatVisualHostPath } from '../../../src/shared/native-chat-visual-host-path'
 import { bindDeferredRpcOperation, defineRpcOperation } from '../transport/rpc-operation'
 import { rpcResultVariant } from '../transport/rpc-operation-result-reader'
 import { isMobileMethodUnavailableError } from '../transport/mobile-method-unavailable'
 import type { RpcClient } from '../transport/rpc-client'
+import { readMobileNativeChatVisualFile } from './mobile-native-chat-visual-file-read'
 
 /** Where a chat's visuals are read from: the host that owns the structured session. */
 export type MobileNativeChatVisualSource = {
   client: RpcClient
   sessionId: string
+  /**
+   * The chat's scratch folder as its host published it, on a host that reads visuals as ordinary
+   * files by path. Null (an older host, or a chat the host gives no folder) keeps the
+   * session-scoped reader.
+   */
+  scratchDirectory: string | null
 }
 
 export type MobileNativeChatVisualRead =
-  | { kind: 'ready'; html: string; revision: string }
+  | { kind: 'ready'; html: string }
   /** The host positively refused (missing, too large, outside the folder...) or cannot serve visuals. */
   | { kind: 'refused' }
   /** No verdict: no answer, an error reply, an unreadable answer. Worth asking again. */
@@ -47,7 +55,8 @@ const READ_TIMEOUT_MS = 15_000
 const MAX_CACHE_ENTRIES = 16
 const MAX_CACHE_CHARS = 4 * 1024 * 1024
 
-type CachedVisual = { html: string; revision: string }
+// `revision` revalidates a session-scoped read; a path read has none and compares content.
+type CachedVisual = { html: string; revision: string | null }
 
 const cache = new Map<string, CachedVisual>()
 const inFlight = new Map<string, Promise<MobileNativeChatVisualRead>>()
@@ -95,7 +104,26 @@ export function cachedMobileNativeChatVisual(
   return cache.get(cacheKey(source, file)) ?? null
 }
 
-async function readOnce(
+async function readByPath(
+  client: RpcClient,
+  scratchDirectory: string,
+  file: string,
+  key: string
+): Promise<MobileNativeChatVisualRead> {
+  const path = nativeChatVisualHostPath(scratchDirectory, file)
+  if (path === null) {
+    return { kind: 'refused' }
+  }
+  const read = await readMobileNativeChatVisualFile(client, path)
+  if (read.kind === 'ready') {
+    remember(key, { html: read.html, revision: null })
+  } else if (read.kind === 'refused') {
+    cache.delete(key)
+  }
+  return read
+}
+
+async function readBySession(
   source: MobileNativeChatVisualSource,
   file: string,
   key: string
@@ -108,7 +136,7 @@ async function readOnce(
       {
         sessionId: source.sessionId,
         file,
-        ...(known ? { knownRevision: known.revision } : {})
+        ...(known?.revision ? { knownRevision: known.revision } : {})
       },
       { timeoutMs: READ_TIMEOUT_MS, budgetSpansConnect: true }
     )
@@ -131,19 +159,20 @@ async function readOnce(
   }
   if ('html' in reply) {
     remember(key, { html: reply.html, revision: reply.revision })
-    return { kind: 'ready', html: reply.html, revision: reply.revision }
+    return { kind: 'ready', html: reply.html }
   }
   // `unchanged` answers the revision this phone sent; anything else is a host that lost track.
   if (known && known.revision === reply.revision) {
     remember(key, known)
-    return { kind: 'ready', html: known.html, revision: known.revision }
+    return { kind: 'ready', html: known.html }
   }
   cache.delete(key)
   return { kind: 'unreachable' }
 }
 
 /**
- * Reads one visual from the chat's owning host, revalidating what the phone already holds by
+ * Reads one visual from the chat's owning host: as an ordinary file in the chat's published
+ * folder where the host serves that, else through the session-scoped reader, revalidating by
  * revision. Concurrent reads of the same visual share one request.
  */
 export function readMobileNativeChatVisual(
@@ -155,7 +184,11 @@ export function readMobileNativeChatVisual(
   if (pending) {
     return pending
   }
-  const read = readOnce(source, file, key).finally(() => {
+  const sourceRead =
+    source.scratchDirectory === null
+      ? readBySession(source, file, key)
+      : readByPath(source.client, source.scratchDirectory, file, key)
+  const read = sourceRead.finally(() => {
     inFlight.delete(key)
   })
   inFlight.set(key, read)

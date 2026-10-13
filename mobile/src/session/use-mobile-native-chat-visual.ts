@@ -7,7 +7,7 @@ import {
 
 export type MobileNativeChatVisualState =
   | { kind: 'loading' }
-  | { kind: 'ready'; html: string; revision: string }
+  | { kind: 'ready'; html: string }
   | { kind: 'unavailable' }
 
 /** Automatic re-asks after a read that got no answer; the reader's tap starts a fresh round. */
@@ -18,7 +18,7 @@ function initialState(
   file: string
 ): MobileNativeChatVisualState {
   const cached = cachedMobileNativeChatVisual(source, file)
-  return cached ? { kind: 'ready', ...cached } : { kind: 'loading' }
+  return cached ? { kind: 'ready', html: cached.html } : { kind: 'loading' }
 }
 
 /**
@@ -42,11 +42,11 @@ export function useMobileNativeChatVisual(
         return
       }
       if (read.kind === 'ready') {
-        // Same revision keeps the same state object, so the frame does not reload its document.
+        // The same page keeps the same state object, so the frame does not reload its document.
         setState((current) =>
-          current.kind === 'ready' && current.revision === read.revision
+          current.kind === 'ready' && current.html === read.html
             ? current
-            : { kind: 'ready', html: read.html, revision: read.revision }
+            : { kind: 'ready', html: read.html }
         )
         return
       }

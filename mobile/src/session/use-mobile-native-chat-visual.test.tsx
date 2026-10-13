@@ -23,7 +23,7 @@ import {
 } from './use-mobile-native-chat-visual'
 
 // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the read module is mocked; the client is only an identity here.
-const source = { client: {} as RpcClient, sessionId: 'session-1' }
+const source = { client: {} as RpcClient, sessionId: 'session-1', scratchDirectory: null }
 
 let latest: { state: MobileNativeChatVisualState; retry: () => void } | null = null
 function Probe() {
@@ -70,14 +70,33 @@ describe('useMobileNativeChatVisual', () => {
   })
 
   it('does not latch a failure: a retry asks again and can succeed', async () => {
-    reads.next = [{ kind: 'refused' }, { kind: 'ready', html: '<p>', revision: 'a'.repeat(32) }]
+    reads.next = [{ kind: 'refused' }, { kind: 'ready', html: '<p>' }]
     await mount()
     expect(latest?.state).toEqual({ kind: 'unavailable' })
     await act(async () => {
       latest?.retry()
     })
     expect(reads.calls).toBe(2)
-    expect(latest?.state).toEqual({ kind: 'ready', html: '<p>', revision: 'a'.repeat(32) })
+    expect(latest?.state).toEqual({ kind: 'ready', html: '<p>' })
+  })
+
+  it('keeps the shown page when a read returns the same content and swaps it when it changed', async () => {
+    reads.next = [
+      { kind: 'ready', html: '<p>' },
+      { kind: 'ready', html: '<p>' },
+      { kind: 'ready', html: '<hr>' }
+    ]
+    await mount()
+    const shown = latest?.state
+    await act(async () => {
+      latest?.retry()
+    })
+    // The same object, so the frame does not reload its document.
+    expect(latest?.state).toBe(shown)
+    await act(async () => {
+      latest?.retry()
+    })
+    expect(latest?.state).toEqual({ kind: 'ready', html: '<hr>' })
   })
 
   it('stops re-asking after unmount', async () => {

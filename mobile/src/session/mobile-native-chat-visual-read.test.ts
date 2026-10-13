@@ -22,7 +22,7 @@ function failure(code: string): RpcResponse {
 function sourceWith(sendRequest: ReturnType<typeof vi.fn>): MobileNativeChatVisualSource {
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the reader calls only sendRequest; the rest of RpcClient is connection lifecycle it never touches.
   const client = { sendRequest } as unknown as RpcClient
-  return { client, sessionId: 'session-1' }
+  return { client, sessionId: 'session-1', scratchDirectory: null }
 }
 
 afterEach(() => {
@@ -38,8 +38,7 @@ describe('readMobileNativeChatVisual', () => {
 
     await expect(readMobileNativeChatVisual(source, 'chart.html')).resolves.toEqual({
       kind: 'ready',
-      html: '<p>',
-      revision: REVISION_A
+      html: '<p>'
     })
     expect(sendRequest).toHaveBeenCalledWith(
       'agentSession.readVisual',
@@ -64,8 +63,7 @@ describe('readMobileNativeChatVisual', () => {
 
     await expect(readMobileNativeChatVisual(source, 'chart.html')).resolves.toEqual({
       kind: 'ready',
-      html: '<p>',
-      revision: REVISION_A
+      html: '<p>'
     })
     expect(sendRequest.mock.calls[1]?.[1]).toEqual({
       sessionId: 'session-1',
