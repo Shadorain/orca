@@ -1,23 +1,22 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithHasExactPersistedTerminalSurfaceIdentity } from './orca-runtime-has-exact-persisted-terminal-surface-identity'
+import { OrcaRuntimeWithHasExactPersistedTerminalSurfaceIdentity } from '../../orca-runtime-has-exact-persisted-terminal-surface-identity'
 import type {
   OrchestrationEnvironmentCallOptions,
   OrchestrationWorkerServer
-} from './orchestration/environment-transport'
-import type { RuntimeOrchestrationEnvelope } from '../../shared/runtime-rpc-envelope'
-import type { ExecutionHostId } from '../../shared/execution-host'
+} from '../../orchestration/environment-transport'
+import type { RuntimeOrchestrationEnvelope } from '../../../../shared/runtime-rpc-envelope'
+import type { ExecutionHostId } from '../../../../shared/execution-host'
 import {
   LOCAL_EXECUTION_HOST_ID,
   getRepoExecutionHostId,
   parseExecutionHostId,
   toSshExecutionHostId
-} from '../../shared/execution-host'
-import type { RuntimeTerminalSummary } from '../../shared/runtime-types'
-import type { ResolvedWorktree } from './runtime-worktree-path-identity'
-import { FLOATING_TERMINAL_WORKTREE_ID } from '../../shared/constants'
-import type { WorkspaceSessionState } from '../../shared/workspace-session-state-types'
+} from '../../../../shared/execution-host'
+import type { RuntimeTerminalSummary } from '../../../../shared/runtime-types'
+import type { ResolvedWorktree } from '../../runtime-worktree-path-identity'
+import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../../shared/constants'
+import type { WorkspaceSessionState } from '../../../../shared/workspace-session-state-types'
 
-export class OrcaRuntimeWithGetRuntimeId extends OrcaRuntimeWithHasExactPersistedTerminalSurfaceIdentity {
+export abstract class OrcaRuntimeWithGetRuntimeId extends OrcaRuntimeWithHasExactPersistedTerminalSurfaceIdentity {
   getRuntimeId(): string {
     return this.runtimeId
   }

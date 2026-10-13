@@ -1,11 +1,10 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithWaitForLeafPtyId } from './terminal/view/renderer-terminal-snapshot'
-import type { RuntimeTerminalFocus } from '../../shared/runtime-types'
-import { parsePaneKey } from '../../shared/stable-pane-id'
-import { getLatestPtyTitle } from './runtime-worktree-status-projection'
-import { copySleepingAgentLaunchConfig } from './runtime-agent-launch-resolution'
+import { OrcaRuntimeWithWaitForLeafPtyId } from '../view/renderer-terminal-snapshot'
+import type { RuntimeTerminalFocus } from '../../../../shared/runtime-types'
+import { parsePaneKey } from '../../../../shared/stable-pane-id'
+import { getLatestPtyTitle } from '../../runtime-worktree-status-projection'
+import { copySleepingAgentLaunchConfig } from '../../runtime-agent-launch-resolution'
 
-export class OrcaRuntimeWithFocusTerminal extends OrcaRuntimeWithWaitForLeafPtyId {
+export abstract class OrcaRuntimeWithFocusTerminal extends OrcaRuntimeWithWaitForLeafPtyId {
   async focusTerminal(
     handle: string,
     options: { navigateHost?: boolean } = {}

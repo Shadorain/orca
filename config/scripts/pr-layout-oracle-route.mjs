@@ -42,6 +42,7 @@ const LAYOUT_ORACLE_PREFIXES = [
   'src/main/runtime/session-tabs/mobile-session-hydration.ts',
   'src/main/runtime/session-tabs/mobile-session-reconciliation.ts',
   'src/main/runtime/session-tabs/mobile-session-preservation.ts',
+  'src/main/runtime/workspaces/session-hosts/get-runtime-id.ts',
   'src/renderer/src/components/terminal/terminal-tab-actions.ts',
   'src/renderer/src/components/tab-bar/web-runtime-tab-move-mirror.ts',
   'src/shared/rpc-contract/workspace-layout-params.ts',

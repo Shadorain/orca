@@ -43,6 +43,7 @@ const STACK_WRITERS = [
   'src/main/runtime/session-tabs/mobile-session-hydration.ts',
   'src/main/runtime/session-tabs/mobile-session-reconciliation.ts',
   'src/main/runtime/session-tabs/mobile-session-preservation.ts',
+  'src/main/runtime/workspaces/session-hosts/get-runtime-id.ts',
   'src/main/runtime/mobile-session-layout-projection.ts',
   'src/main/runtime/headless-runtime-graph.ts',
   'src/main/persistence/loading-store/session-host-partitions.ts',

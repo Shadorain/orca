@@ -11,9 +11,7 @@ src/main/runtime/orca-runtime-deliver-pending-messages.ts
 src/main/runtime/orca-runtime-automation-operations.ts
 src/main/runtime/orca-runtime-file-commands.ts
 src/main/runtime/orca-runtime-fit-override-listeners.ts
-src/main/runtime/orca-runtime-focus-terminal.ts
 src/main/runtime/orca-runtime-get-agent-session-execution-namespace.ts
-src/main/runtime/orca-runtime-get-runtime-id.ts
 src/main/runtime/orca-runtime-has-exact-persisted-terminal-surface-identity.ts
 src/main/runtime/orca-runtime-has-live-or-persisted-serve-or-ssh-owned-pty-binding.ts
 src/main/runtime/orca-runtime-linear-commands.ts
