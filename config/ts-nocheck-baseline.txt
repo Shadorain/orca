@@ -12,7 +12,6 @@ src/main/runtime/orca-runtime-has-exact-persisted-terminal-surface-identity.ts
 src/main/runtime/orca-runtime-linear-commands.ts
 src/main/runtime/orca-runtime-preserved-branch-cleanup.ts
 src/main/runtime/orca-runtime-publish-pty-backed-mobile-session-terminal.ts
-src/main/runtime/orca-runtime-resolve-terminal-pane.ts
 src/main/runtime/orca-runtime-runtime-id.ts
 src/main/runtime/orca-runtime-state-fields.ts
 src/main/runtime/orca-runtime-stop-requested-pty-ids.ts

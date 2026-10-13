@@ -1,26 +1,62 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import type { OrcaRuntimeWithCreateTerminal } from './terminal/launch/terminal-create'
-import { OrcaRuntimeWithGetTerminalInteractiveWait } from './terminal/wait/terminal-interactive-wait'
+import type { OrcaRuntimeWithCreateTerminal } from '../launch/terminal-create'
+import { OrcaRuntimeWithGetTerminalInteractiveWait } from '../wait/terminal-interactive-wait'
 import type {
   RuntimeTerminalRead,
   RuntimeTerminalResolvePane,
   RuntimeTerminalShow
-} from '../../shared/runtime-types'
-import type { RuntimeProviderSnapshotReadOptions } from './runtime-terminal-contracts'
-import { parsePaneKey } from '../../shared/stable-pane-id'
+} from '../../../../shared/runtime-types'
+import type {
+  RuntimeTerminalCreate,
+  RuntimeTerminalSummary
+} from '../../../../shared/runtime-terminal-contracts'
+import type {
+  RuntimeProviderSnapshotReadOptions,
+  TerminalHandleRecord
+} from '../../runtime-terminal-contracts'
+import type {
+  RuntimeLeafRecord,
+  RuntimePtyWorktreeRecord
+} from '../../runtime-terminal-state-records'
+import type { ResolvedWorktree } from '../../runtime-worktree-path-identity'
+import { parsePaneKey } from '../../../../shared/stable-pane-id'
 import {
   buildVisibleSnapshotReadFallback,
   labelTerminalReadSource,
   readTerminalTail
-} from './terminal-tail-read'
-import { getTerminalState } from './terminal-wait-results'
-import { readStructuredWorkerTerminal } from './structured-worker-terminal-read'
+} from '../../terminal-tail-read'
+import { getTerminalState } from '../../terminal-wait-results'
+import { readStructuredWorkerTerminal } from '../../structured-worker-terminal-read'
 
 export abstract class OrcaRuntimeWithResolveTerminalPane extends OrcaRuntimeWithGetTerminalInteractiveWait {
   protected abstract assertLiveTerminalHandleTargetsPty(handle: string, expectedPtyId: string): void
   abstract createTerminal(
     ...args: Parameters<OrcaRuntimeWithCreateTerminal['createTerminal']>
   ): ReturnType<OrcaRuntimeWithCreateTerminal['createTerminal']>
+
+  abstract getTerminalHandleForPaneKey(paneKey: string): string | null
+  abstract getPtyExecutionHostMetadata(
+    ptyId: string | null
+  ): Pick<RuntimeTerminalCreate, 'executionHostId' | 'hostPlatform' | 'incarnationId'>
+  protected abstract getPaneKeyForTerminalHandle(handle: string): string | null
+  protected abstract getResolvedWorktreeMap(): Promise<Map<string, ResolvedWorktree>>
+  protected abstract buildPtyTerminalSummary(
+    pty: RuntimePtyWorktreeRecord,
+    worktreesById: Map<string, ResolvedWorktree>
+  ): RuntimeTerminalSummary
+  protected abstract getLiveLeafForHandle(handle: string): {
+    record: TerminalHandleRecord
+    leaf: RuntimeLeafRecord
+  }
+  protected abstract buildTerminalSummary(
+    leaf: RuntimeLeafRecord,
+    worktreesById: Map<string, ResolvedWorktree>,
+    provenLivePtyIds?: ReadonlySet<string> | null
+  ): RuntimeTerminalSummary
+  protected abstract readPtyTerminal(
+    handle: string,
+    pty: RuntimePtyWorktreeRecord,
+    opts?: { cursor?: number; limit?: number }
+  ): RuntimeTerminalRead
 
   resolveTerminalPane(paneKey: string, expectedWorktreeId?: string): RuntimeTerminalResolvePane {
     // Why: the renderer context menu only knows the stable pane key; main owns
