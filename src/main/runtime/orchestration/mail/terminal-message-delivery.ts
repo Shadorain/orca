@@ -1,10 +1,9 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithResolveExitWaiters } from './terminal/wait/terminal-wait-settlements'
-import type { RuntimeLeafRecord } from './runtime-terminal-state-records'
-import { formatMessagePointer } from './orchestration/formatter'
-import { isCursorAgentOrchestrationTarget } from './orca-runtime-core'
+import { OrcaRuntimeWithResolveExitWaiters } from '../../terminal/wait/terminal-wait-settlements'
+import type { RuntimeLeafRecord } from '../../runtime-terminal-state-records'
+import { formatMessagePointer } from '../formatter'
+import { isCursorAgentOrchestrationTarget } from '../../orca-runtime-core'
 
-export class OrcaRuntimeWithDeliverPendingMessages extends OrcaRuntimeWithResolveExitWaiters {
+export abstract class OrcaRuntimeWithDeliverPendingMessages extends OrcaRuntimeWithResolveExitWaiters {
   // Why: normal delivery stays event-driven; the bounded mailbox retry only repairs missed liveness edges.
   protected deliverPendingMessages(
     leaf: RuntimeLeafRecord,

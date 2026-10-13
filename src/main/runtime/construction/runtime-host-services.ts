@@ -1,57 +1,84 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithTerminalDrivers } from './orca-runtime-terminal-drivers'
-import type { FolderWorkspace } from '../../shared/folder-workspace-types'
-import type { ResolvedWorktree } from './runtime-worktree-path-identity'
-import { confirmRunTerminalShellAlone, readRunTerminalClientUse } from './run-terminal-client-use'
-import { ALL_EXECUTION_HOSTS_SCOPE, type ExecutionHostScope } from '../../shared/execution-host'
-import { RuntimePreservedBranchCleanup } from './runtime-preserved-branch-cleanup'
-import type { IPtyProvider } from '../providers/pty-provider-contract'
+import type * as Calls from './runtime-host-service-calls'
+import type { RuntimeConstructionBindings as HostBindings } from './runtime-construction-dependencies'
+
+import type { RuntimeRepositoryCommandSurface } from '../runtime-repository-command-surface'
+
+import type { ExecutionHostId } from '../../../shared/execution-host'
+import type { LegacyWorkerRecoveryCandidate } from '../runtime-legacy-worker-terminal-recovery-types'
+
+import type { LegacyWorkerTerminalRecoveryPlan } from '../orchestration/orchestration-legacy-worker-terminal-recovery'
+
+import { OrcaRuntimeWithTerminalDrivers } from '../terminal/driver/terminal-driver-resources'
+import type { FolderWorkspace } from '../../../shared/folder-workspace-types'
+import type { ResolvedWorktree } from '../runtime-worktree-path-identity'
+import { confirmRunTerminalShellAlone, readRunTerminalClientUse } from '../run-terminal-client-use'
+import { ALL_EXECUTION_HOSTS_SCOPE } from '../../../shared/execution-host'
+import { RuntimePreservedBranchCleanup } from '../runtime-preserved-branch-cleanup'
 import type {
   AgentSessionCreateOperation,
   OrchestrationCompatibilitySshAttachmentAuthority,
-  RestoredOrchestrationAuthorityReceipt,
-  RuntimeTerminalAgentStatusEvent
-} from './runtime-terminal-contracts'
-import type { TerminalSideEffectBatch } from '../../shared/terminal-side-effect-facts'
-import type { ClaudeTerminalEvidence } from '../../shared/claude-terminal-interrupt'
-import type { AgentStatusIpcPayload } from '../../shared/agent-status-types'
-import type { StructuredAgentSessionStatusSink } from '../native-chat/agent-session-wire/structured-agent-session-status-feed'
-import type { ObservedAgentStatusPaneIdentity } from '../ipc/agent-status-ipc-boundary'
-import type { AgentHookAuthorityAttestation } from '../agent-hooks/server'
-import type { RuntimeDesktopWindowStatus } from '../../shared/runtime-types'
-import type {
-  AiVaultPrepareSessionResumeArgs,
-  AiVaultPrepareSessionResumeResult
-} from '../../shared/ai-vault-resume-preparation'
-import type { AgentSessionClaimSigner } from './agent-session-claim-identity'
-import type { AgentStatus } from '../../shared/agent-detection'
-import { RuntimeLegacyWorkerTerminalRecoveryPersistence } from './runtime-legacy-worker-terminal-recovery-persistence'
-import { RuntimeLegacyWorkerTerminalRecoveryController } from './runtime-legacy-worker-terminal-recovery-controller'
-import { reconcileRequestedWorkerTerminalReleases } from './orchestration/worker-terminal-release-reconciliation'
-import type { RuntimeCommandSurfaceHost } from './orca-runtime-core'
-import { RuntimeAccountController } from './runtime-account-controller'
-import { RuntimeMobileSpeechCatalog } from './runtime-mobile-speech-catalog'
-import { RuntimeMobileDictationController } from './runtime-mobile-dictation-controller'
-import { RuntimeProjectHostSetupController } from './runtime-project-host-setup-controller'
-import { RuntimeProjectGroupController } from './runtime-project-group-controller'
-import { RuntimeNestedRepoImport } from './runtime-nested-repo-import'
-import { RuntimeRepositoryRegistrationController } from './runtime-repository-registration-controller'
-import { RuntimeRepositoryCloneController } from './runtime-repository-clone-controller'
-import { RuntimeRepositorySettingsController } from './runtime-repository-settings-controller'
-import { RuntimeRepositorySparsePresets } from './runtime-repository-sparse-presets'
-import { RuntimeRepositoryRefQueries } from './runtime-repository-ref-queries'
-import { RuntimeServerEnvironmentCommands } from './runtime-server-environment-commands'
-import { RuntimeRepositoryForkBackfill } from './runtime-repository-fork-backfill'
-import { RuntimeWorkspaceSessionController } from './runtime-workspace-session-controller'
-import { RuntimeAiVaultCommands } from './runtime-ai-vault-commands'
-import { ClaudeAgentTeamsService } from './claude-agent-teams-service'
-import { teardownFolderWorkspacePtys } from './folder-workspace-pty-teardown'
-import { countRepoTerminalsNotKnownExited } from './project-removal-impact'
+  RestoredOrchestrationAuthorityReceipt
+} from '../runtime-terminal-contracts'
 
-import type { Worktree } from '../../shared/worktree/types'
-import type { TerminalWorkspaceLaunchScope } from './runtime-legacy-worker-terminal-recovery-types'
+import type { AgentStatusIpcPayload } from '../../../shared/agent-status-types'
+
+import type { AgentStatus } from '../../../shared/agent-detection'
+import { RuntimeLegacyWorkerTerminalRecoveryPersistence } from '../runtime-legacy-worker-terminal-recovery-persistence'
+import { RuntimeLegacyWorkerTerminalRecoveryController } from '../runtime-legacy-worker-terminal-recovery-controller'
+import { reconcileRequestedWorkerTerminalReleases } from '../orchestration/worker-terminal-release-reconciliation'
+
+import { RuntimeAccountController } from '../runtime-account-controller'
+import { RuntimeMobileSpeechCatalog } from '../runtime-mobile-speech-catalog'
+import { RuntimeMobileDictationController } from '../runtime-mobile-dictation-controller'
+import { RuntimeProjectHostSetupController } from '../runtime-project-host-setup-controller'
+import { RuntimeProjectGroupController } from '../runtime-project-group-controller'
+import { RuntimeNestedRepoImport } from '../runtime-nested-repo-import'
+import { RuntimeRepositoryRegistrationController } from '../runtime-repository-registration-controller'
+import { RuntimeRepositoryCloneController } from '../runtime-repository-clone-controller'
+import { RuntimeRepositorySettingsController } from '../runtime-repository-settings-controller'
+import { RuntimeRepositorySparsePresets } from '../runtime-repository-sparse-presets'
+import { RuntimeRepositoryRefQueries } from '../runtime-repository-ref-queries'
+import { RuntimeServerEnvironmentCommands } from '../runtime-server-environment-commands'
+import { RuntimeRepositoryForkBackfill } from '../runtime-repository-fork-backfill'
+import { RuntimeWorkspaceSessionController } from '../runtime-workspace-session-controller'
+import { RuntimeAiVaultCommands } from '../runtime-ai-vault-commands'
+import { ClaudeAgentTeamsService } from '../claude-agent-teams-service'
+import { teardownFolderWorkspacePtys } from '../folder-workspace-pty-teardown'
+import { countRepoTerminalsNotKnownExited } from '../project-removal-impact'
 
 export abstract class OrcaRuntimeWithPreservedBranchCleanup extends OrcaRuntimeWithTerminalDrivers {
+  declare addRepo: RuntimeRepositoryCommandSurface['addRepo']
+  declare cloneRepo: RuntimeRepositoryCommandSurface['cloneRepo']
+  protected abstract tryGetWorkspaceSessionHostIdForWorktree(
+    worktreeId: string
+  ): ExecutionHostId | null
+  protected abstract getLegacyWorkerRecoveryActivation(
+    ...args: Calls.GetLegacyWorkerRecoveryActivationArgs
+  ): Calls.GetLegacyWorkerRecoveryActivationResult
+  protected abstract hasExactPersistedTerminalSurfaceIdentity(
+    ...args: Calls.HasExactPersistedTerminalSurfaceIdentityArgs
+  ): Calls.HasExactPersistedTerminalSurfaceIdentityResult
+  protected abstract hasExactTerminalSurfaceIdentity(
+    ...args: Calls.HasExactTerminalSurfaceIdentityArgs
+  ): Calls.HasExactTerminalSurfaceIdentityResult
+  protected abstract adoptLegacyWorkerTerminal(
+    ...args: Calls.AdoptLegacyWorkerTerminalArgs
+  ): Calls.AdoptLegacyWorkerTerminalResult
+  protected abstract revealLegacyWorkerTerminal(
+    candidate: LegacyWorkerRecoveryCandidate
+  ): Promise<boolean | null>
+  abstract onPtyExit(...args: Calls.OnPtyExitArgs): Calls.OnPtyExitResult
+  protected abstract rollbackLegacyWorkerTerminalSurface(
+    candidate: LegacyWorkerTerminalRecoveryPlan['candidates'][number]
+  ): void
+  abstract reconcileLegacyWorkerTerminals(
+    ...args: Calls.ReconcileLegacyWorkerTerminalsArgs
+  ): Calls.ReconcileLegacyWorkerTerminalsResult
+  protected abstract updateLegacyWorkerTerminalRecoveryRetry(
+    ...args: Calls.UpdateLegacyWorkerTerminalRecoveryRetryArgs
+  ): Calls.UpdateLegacyWorkerTerminalRecoveryRetryResult
+  protected abstract resolveFolderWorkspaceConnectionId(workspace: FolderWorkspace): string | null
+
   protected abstract runWorktreeTerminalMutation<T>(
     worktreeId: string,
     operation: () => Promise<T>
@@ -60,45 +87,36 @@ export abstract class OrcaRuntimeWithPreservedBranchCleanup extends OrcaRuntimeW
     folderWorkspace: FolderWorkspace
   ): ResolvedWorktree
 
-  abstract resolveTerminalWorkspaceLaunchScope(
-    selector: string,
-    createdWorktree?: Worktree
-  ): Promise<TerminalWorkspaceLaunchScope>
-
   readonly preservedBranchCleanup = new RuntimePreservedBranchCleanup(() =>
     this.store ? this.requireStore() : null
   )
 
-  protected readonly getLocalProviderFn: (() => IPtyProvider) | null
+  protected readonly getLocalProviderFn!: HostBindings['getLocalProvider'] | null
 
-  readonly onPtyStopped: ((ptyId: string) => void) | null
+  readonly onPtyStopped!: HostBindings['onPtyStopped'] | null
 
-  protected readonly onTerminalAgentStatus:
-    | ((event: RuntimeTerminalAgentStatusEvent) => void)
-    | null
+  protected readonly onTerminalAgentStatus!: HostBindings['onTerminalAgentStatus'] | null
 
-  protected readonly onTerminalSideEffects: ((batch: TerminalSideEffectBatch) => void) | null
+  protected readonly onTerminalSideEffects!: HostBindings['onTerminalSideEffects'] | null
 
-  protected readonly onClaudeTerminalEvidence:
-    | ((paneKey: string, evidence: ClaudeTerminalEvidence) => void)
-    | null
+  protected readonly onClaudeTerminalEvidence!: HostBindings['onClaudeTerminalEvidence'] | null
 
   protected terminalSideEffectLocalConsumerAvailable = false
 
   protected terminalSideEffectConsumerAvailable = false
 
-  readonly getAgentStatusSnapshotFn: (() => AgentStatusIpcPayload[]) | null
+  readonly getAgentStatusSnapshotFn!: HostBindings['getAgentStatusSnapshot'] | null
 
-  protected readonly structuredAgentStatusSinkFn: StructuredAgentSessionStatusSink | null
+  protected readonly structuredAgentStatusSinkFn!: HostBindings['structuredAgentStatusSink'] | null
 
-  readonly readObservedAgentStatusPaneIdentityFn: (
-    paneKey: string
-  ) => ObservedAgentStatusPaneIdentity
+  readonly readObservedAgentStatusPaneIdentityFn!: HostBindings['readObservedAgentStatusPaneIdentity']
 
-  protected readonly getAgentProviderSessionSnapshotFn: (() => AgentStatusIpcPayload[]) | null
+  protected readonly getAgentProviderSessionSnapshotFn!:
+    | HostBindings['getAgentProviderSessionSnapshot']
+    | null
 
-  protected readonly getAgentProviderSessionRowsForPaneFn:
-    | ((paneKey: string) => AgentStatusIpcPayload[])
+  protected readonly getAgentProviderSessionRowsForPaneFn!:
+    | HostBindings['getAgentProviderSessionRowsForPane']
     | null
 
   /** See run-terminal-client-use.ts. */
@@ -125,52 +143,49 @@ export abstract class OrcaRuntimeWithPreservedBranchCleanup extends OrcaRuntimeW
     return this.getAgentProviderSessionRowsForPaneFn?.(paneKey) ?? []
   }
 
-  protected readonly attestAgentHookCompatibilityAuthorityFn:
-    | ((candidate: {
-        paneKey: string
-        launchTokenHash: string
-        connectionId: string | null
-        terminalProvenance: 'current_runtime' | 'restored'
-      }) => AgentHookAuthorityAttestation | null)
+  protected readonly attestAgentHookCompatibilityAuthorityFn!:
+    | HostBindings['attestAgentHookCompatibilityAuthority']
     | null
 
-  protected readonly retireAgentHookCompatibilityAuthorityFn: ((paneKey: string) => void) | null
-
-  protected readonly checkHookAgentPresenceFn:
-    | ((paneKey: string) => Promise<'live' | 'unverifiable' | 'exited' | null>)
+  protected readonly retireAgentHookCompatibilityAuthorityFn!:
+    | HostBindings['retireAgentHookCompatibilityAuthority']
     | null
 
-  protected readonly reconcileAgentStatusForEndedProcessFn:
-    | ((paneKeys: Iterable<string>) => void)
+  protected readonly checkHookAgentPresenceFn!: HostBindings['checkHookAgentPresence'] | null
+
+  protected readonly reconcileAgentStatusForEndedProcessFn!:
+    | HostBindings['reconcileAgentStatusForEndedProcess']
     | null
 
-  protected readonly dropAgentStatusForRemovedWorktreeFn:
-    | ((worktreeId: string, host?: ExecutionHostScope) => void)
+  protected readonly dropAgentStatusForRemovedWorktreeFn!:
+    | HostBindings['dropAgentStatusForRemovedWorktree']
     | null
 
-  protected readonly canRecoverPersistentLocalPtysFn: () => boolean
+  protected readonly canRecoverPersistentLocalPtysFn!: HostBindings['canRecoverPersistentLocalPtys']
 
-  protected readonly getPairedDeviceNameFn: (pairedDeviceId: string) => string | null
+  protected readonly getPairedDeviceNameFn!: HostBindings['getPairedDeviceName']
 
-  protected readonly buildAgentHookPtyEnv: (() => Record<string, string>) | null
+  protected readonly buildAgentHookPtyEnv!: HostBindings['buildAgentHookPtyEnv'] | null
 
-  protected readonly getDesktopWindowStatusFn: () => RuntimeDesktopWindowStatus
+  protected readonly getDesktopWindowStatusFn!: HostBindings['getDesktopWindowStatus']
 
-  protected readonly prepareAiVaultSessionResumeFn:
-    | ((args: AiVaultPrepareSessionResumeArgs) => Promise<AiVaultPrepareSessionResumeResult>)
+  protected readonly prepareAiVaultSessionResumeFn!:
+    | HostBindings['prepareAiVaultSessionResume']
     | null
 
-  protected readonly prepareCodexStructuredLaunchFn:
-    | ((input: { launchEnv: NodeJS.ProcessEnv }) => string | null | Promise<string | null>)
+  protected readonly prepareCodexStructuredLaunchFn!:
+    | HostBindings['prepareCodexStructuredLaunch']
     | null
 
-  protected readonly resolveCodexStructuredLaunchHomeFn:
-    | ((input: { launchEnv: NodeJS.ProcessEnv }) => string | null | Promise<string | null>)
+  protected readonly resolveCodexStructuredLaunchHomeFn!:
+    | HostBindings['resolveCodexStructuredLaunchHome']
     | null
 
-  protected readonly prepareCodexCatalogProbeHomeFn: ((homePath: string) => void) | null
+  protected readonly prepareCodexCatalogProbeHomeFn!:
+    | HostBindings['prepareCodexCatalogProbeHome']
+    | null
 
-  protected readonly agentSessionClaimSigner: AgentSessionClaimSigner
+  protected readonly agentSessionClaimSigner!: HostBindings['agentSessionClaimSigner']
 
   protected readonly agentSessionCreateOperations = new Map<string, AgentSessionCreateOperation>()
 
@@ -237,8 +252,7 @@ export abstract class OrcaRuntimeWithPreservedBranchCleanup extends OrcaRuntimeW
     isTerminalProvenAbsent: (candidate) => this.isLeafPtyProvenAbsent(candidate.ptyId),
     hasRequestedReleases: () =>
       this.getOrchestrationDb().listWorkerTerminalReleaseBacklog(1).length > 0,
-    reconcileRequestedReleases: () =>
-      reconcileRequestedWorkerTerminalReleases(this as RuntimeCommandSurfaceHost<this>),
+    reconcileRequestedReleases: () => reconcileRequestedWorkerTerminalReleases(this),
     reconcile: (options) => this.reconcileLegacyWorkerTerminals(options),
     updateRetry: (plan, deferredDispatchIds, options) =>
       this.updateLegacyWorkerTerminalRecoveryRetry(plan, deferredDispatchIds, options)
@@ -264,10 +278,8 @@ export abstract class OrcaRuntimeWithPreservedBranchCleanup extends OrcaRuntimeW
   protected readonly projectHostSetups = new RuntimeProjectHostSetupController({
     getStore: () => this.store,
     listRepos: () => this.listRepos(),
-    addRepo: (path, kind, hostId) =>
-      (this as RuntimeCommandSurfaceHost<this>).addRepo(path, kind, hostId),
-    cloneRepo: (url, destination, hostId) =>
-      (this as RuntimeCommandSurfaceHost<this>).cloneRepo(url, destination, hostId),
+    addRepo: (path, kind, hostId) => this.addRepo(path, kind, hostId),
+    cloneRepo: (url, destination, hostId) => this.cloneRepo(url, destination, hostId),
     invalidateResolvedWorktrees: () => this.invalidateResolvedWorktreeCache(),
     invalidateWorktreeScan: (repoId) => this.invalidateWorktreeScanCacheForRepo(repoId),
     notifyReposChanged: () => this.notifyReposChanged(),

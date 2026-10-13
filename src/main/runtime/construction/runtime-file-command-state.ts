@@ -1,32 +1,88 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import type { RuntimeTerminalAgentStatus } from '../../shared/runtime-terminal-contracts'
-import { OrcaRuntimeWithPreservedBranchCleanup } from './orca-runtime-preserved-branch-cleanup'
-import { RuntimeFileCommands } from './orca-runtime-files'
-import { nativeChatTranscriptIncludesPath } from '../native-chat/native-chat-file-provenance'
-import { createRuntimeFileWatcherRemoval } from './runtime-file-watcher-removal'
-import { RuntimeGitCommands } from './orca-runtime-git'
-import type { GlobalSettings } from '../../shared/global-settings-types'
-import { RuntimeHostedReviewCommands } from './runtime-hosted-review-commands'
-import { RuntimeGitHubRepositoryQueryCommands } from './runtime-github-repository-query-commands'
-import { RuntimeGitLabQueryCommands } from './runtime-gitlab-query-commands'
-import { recordGitLabProjectRecent } from '../gitlab/gitlab-project-recents'
-import { RuntimeGitLabMutationCommands } from './runtime-gitlab-mutation-commands'
-import { RuntimeGitHubReviewQueryCommands } from './runtime-github-review-query-commands'
-import { RuntimeGitHubReviewMutationCommands } from './runtime-github-review-mutation-commands'
-import { RuntimeGitHubIssueCommentCommands } from './runtime-github-issue-comment-commands'
-import { RuntimeGitHubProjectCommands } from './runtime-github-project-commands'
-import { RuntimeRepositoryHooksCommands } from './runtime-repository-hooks-commands'
-import { RuntimeRepositoryIssueCommand } from './runtime-repository-issue-command'
-import { ClientHostedBrowserRowPublisher } from './client-hosted-browser-row-publication'
-import { getRuntimeBrowserPageRegistry } from './runtime-browser-page-registry'
-import { getBrowserHostLeaseRegistry } from './browser-host-lease-registry-instance'
-import type { RuntimeLeafRecord } from './runtime-terminal-state-records'
+import type { ExecutionHostId } from '../../../shared/execution-host'
+import type { RuntimeMobileSessionTabsResult } from '../../../shared/runtime-types'
+import type { GitAdmissionTier } from '../../git/command-runner/git-exec-options'
+import type { LocalProjectGhExecOptions } from '../../project-runtime-git-options'
+import type { RuntimeTerminalAgentStatus } from '../../../shared/runtime-terminal-contracts'
+import { OrcaRuntimeWithPreservedBranchCleanup } from './runtime-host-services'
+import { RuntimeFileCommands } from '../orca-runtime-files'
+import { nativeChatTranscriptIncludesPath } from '../../native-chat/native-chat-file-provenance'
+import { createRuntimeFileWatcherRemoval } from '../runtime-file-watcher-removal'
+import { RuntimeGitCommands } from '../orca-runtime-git'
+import { RuntimeHostedReviewCommands } from '../runtime-hosted-review-commands'
+import { RuntimeGitHubRepositoryQueryCommands } from '../runtime-github-repository-query-commands'
+import { RuntimeGitLabQueryCommands } from '../runtime-gitlab-query-commands'
+import { recordGitLabProjectRecent } from '../../gitlab/gitlab-project-recents'
+import { RuntimeGitLabMutationCommands } from '../runtime-gitlab-mutation-commands'
+import { RuntimeGitHubReviewQueryCommands } from '../runtime-github-review-query-commands'
+import { RuntimeGitHubReviewMutationCommands } from '../runtime-github-review-mutation-commands'
+import { RuntimeGitHubIssueCommentCommands } from '../runtime-github-issue-comment-commands'
+import { RuntimeGitHubProjectCommands } from '../runtime-github-project-commands'
+import { RuntimeRepositoryHooksCommands } from '../runtime-repository-hooks-commands'
+import { RuntimeRepositoryIssueCommand } from '../runtime-repository-issue-command'
+import { ClientHostedBrowserRowPublisher } from '../client-hosted-browser-row-publication'
+import { getRuntimeBrowserPageRegistry } from '../runtime-browser-page-registry'
+import { getBrowserHostLeaseRegistry } from '../browser-host-lease-registry-instance'
+import type { RuntimeLeafRecord } from '../runtime-terminal-state-records'
 
-import type { RuntimeStore } from './runtime-store-contract'
-import type { ResolvedWorktree } from './runtime-worktree-path-identity'
-import type { Repo } from '../../shared/repo-types'
+import type { RuntimeStore } from '../runtime-store-contract'
+import type { ResolvedWorktree } from '../runtime-worktree-path-identity'
+import type { Repo } from '../../../shared/repo-types'
 
 export abstract class OrcaRuntimeWithFileCommands extends OrcaRuntimeWithPreservedBranchCleanup {
+  abstract resolveRuntimeFileTarget(worktreeSelector: string): Promise<{
+    worktree: ResolvedWorktree
+    executionHostId: ExecutionHostId
+  }>
+  protected abstract resolveKnownWorkspaceFileTarget(
+    absolutePath: string,
+    executionHostId: ExecutionHostId
+  ): Promise<{
+    worktree: ResolvedWorktree
+    executionHostId: ExecutionHostId
+    relativePath: string
+  } | null>
+  abstract resolveTerminalCwd(handle: string): Promise<string | null>
+  abstract resolveTerminalContext(handle: string): {
+    worktreeId: string
+    connectionId: string | null
+  } | null
+  abstract resolveTerminalFileUriHostname(handle: string): string | null
+  abstract hasRecentTerminalOutputPath(
+    handle: string,
+    pathText: string,
+    absolutePath: string
+  ): boolean
+  protected abstract getMobileSessionTabsForWorktree(
+    worktreeId: string,
+    clientNavigationId?: string
+  ): RuntimeMobileSessionTabsResult
+  protected abstract resolveRuntimeGitTarget(worktreeSelector: string): Promise<{
+    worktree: ResolvedWorktree
+    repo?: Repo
+    executionHostId: ExecutionHostId
+    localGitOptions?: {
+      wslDistro?: string
+    }
+  }>
+  protected abstract resolveHostedReviewTarget(args: {
+    repoSelector: string
+    worktreeSelector?: string
+  }): Promise<{
+    repo: Repo
+    repoPath: string
+  }>
+  protected abstract getHostedReviewExecutionOptions(
+    repo: Repo,
+    admissionTier?: GitAdmissionTier
+  ):
+    | {
+        localGitExecOptions: LocalProjectGhExecOptions & {
+          admissionTier?: GitAdmissionTier
+        }
+      }
+    | undefined
+  protected abstract getLocalGitExecutionOptionArgs(repo: Repo): [] | [LocalProjectGhExecOptions]
+
   abstract requireStore(): RuntimeStore
 
   protected abstract resolveWorktreeSelector(selector: string): Promise<ResolvedWorktree>
@@ -87,7 +143,7 @@ export abstract class OrcaRuntimeWithFileCommands extends OrcaRuntimeWithPreserv
 
   protected readonly gitCommands = new RuntimeGitCommands({
     resolveRuntimeGitTarget: (selector) => this.resolveRuntimeGitTarget(selector),
-    getRuntimeSettings: () => this.requireStore().getSettings() as GlobalSettings,
+    getRuntimeSettings: () => this.requireStore().getSettings(),
     getCommitMessageAgentEnvironment: () => this.accounts.getCommitMessageAgentEnvironment(),
     // Why: resolved worktrees are cached for a second, so link/unlink would lag
     // generation; meta is keyed by the same id the resolver returns.

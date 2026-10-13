@@ -29,7 +29,7 @@ import { OrcaRuntimeService } from './orca-runtime'
 import { _resetTracerForTests, setActiveSink } from '../observability/tracer'
 import type { StructuredAgentSessionStatusSink } from '../native-chat/agent-session-wire/structured-agent-session-status-feed'
 import * as structuredMailTarget from './orchestration/structured-session-mail-target'
-import { OrcaRuntimeWithRuntimeId } from './orca-runtime-runtime-id'
+import { OrcaRuntimeWithRuntimeId } from './construction/runtime-identity-state'
 
 describe('structured status sink wiring', () => {
   afterEach(() => {
@@ -47,8 +47,6 @@ describe('structured status sink wiring', () => {
     expect(installed.deps?.['statusSink']).toBe(sink)
   })
 
-  // The runtime class does not typecheck its own calls, so the required logger is pinned here:
-  // a logger that writes nowhere would pass every host test while the desktop dropped failures.
   it('hands the host the trace-file logger', async () => {
     installed.logger = null
     const push = vi.fn()
@@ -161,7 +159,7 @@ describe('mail dispatch through the current runtime', () => {
   })
 })
 
-class MailSchedulerPhaseProbe extends OrcaRuntimeWithRuntimeId {
+abstract class MailSchedulerPhaseProbe extends OrcaRuntimeWithRuntimeId {
   readonly pendingMailDuringConstruction = this.mailPointerRepointScheduler.pendingCount
 }
 
@@ -174,7 +172,12 @@ class ConstructorMailStatusProbe extends OrcaRuntimeService {
 
 describe('input state before later runtime layers initialize', () => {
   it('makes the scheduler available immediately after the original base layer', () => {
-    expect(new MailSchedulerPhaseProbe().pendingMailDuringConstruction).toBe(0)
+    expect(
+      Object.getOwnPropertyDescriptor(
+        Reflect.construct(MailSchedulerPhaseProbe, []),
+        'pendingMailDuringConstruction'
+      )?.value
+    ).toBe(0)
   })
 
   it('preserves mail method reentry from the original constructor getter seam', () => {
@@ -186,5 +189,77 @@ describe('input state before later runtime layers initialize', () => {
     const descriptor = Object.getOwnPropertyDescriptor(target, 'mailPointerRepointScheduler')
     expect(descriptor?.value).toBe(target['mailPointerRepointScheduler'])
     expect(Object.hasOwn(target, 'mailboxControl')).toBe(false)
+  })
+})
+
+describe('checked runtime construction', () => {
+  it('adds one empty base without allocating service state there', () => {
+    const base = Object.getPrototypeOf(OrcaRuntimeWithRuntimeId.prototype)
+    expect(Object.getOwnPropertyNames(base)).toEqual(['constructor'])
+    expect(Object.getOwnPropertyNames(Reflect.construct(base.constructor, []))).toEqual([])
+    expect(Object.getPrototypeOf(base)).toBe(Object.prototype)
+    expect(new OrcaRuntimeService()).toBeInstanceOf(OrcaRuntimeWithRuntimeId)
+  })
+
+  it('reads the existing fetch resource during construction through virtual getters', () => {
+    const reads: string[] = []
+    class FetchResourceProbe extends OrcaRuntimeService {
+      protected get canonicalFetchKeyCache(): ReadonlyMap<string, string> {
+        reads.push('key')
+        expect(this.store).toBeNull()
+        expect(this.skillCommands).toBeDefined()
+        expect(this.stopRequestedPtyIds).toBeInstanceOf(Set)
+        return super.canonicalFetchKeyCache
+      }
+      protected get fetchLastCompletedAt(): ReadonlyMap<string, number> {
+        reads.push('time')
+        expect(this.getAgentStatusSnapshotFn).toBeUndefined()
+        return super.fetchLastCompletedAt
+      }
+      get maps() {
+        return [super.canonicalFetchKeyCache, super.fetchLastCompletedAt]
+      }
+    }
+    const first = new FetchResourceProbe(null)
+    const second = new FetchResourceProbe()
+    expect(reads).toEqual(['key', 'time', 'key', 'time'])
+    expect(first.getAgentStatusSnapshotFn).toBeNull()
+    expect(second.getAgentStatusSnapshotFn).toBeNull()
+    expect(first.maps).toEqual([new Map(), new Map()])
+    expect(first.maps[0]).not.toBe(second.maps[0])
+    expect(first.maps[1]).not.toBe(second.maps[1])
+    expect(Object.hasOwn(first, 'canonicalFetchKeyCache')).toBe(false)
+    expect(Object.hasOwn(first, 'fetchLastCompletedAt')).toBe(false)
+  })
+
+  it('installs subscription callbacks on the runtime with their real registry receiver', () => {
+    const runtime = new OrcaRuntimeService()
+    const cleanup = vi.fn()
+    runtime.registerSubscriptionCleanup('construction-subscription', cleanup)
+    expect(Object.hasOwn(runtime, 'registerSubscriptionCleanup')).toBe(true)
+    expect(Object.hasOwn(runtime, 'cleanupSubscription')).toBe(true)
+    runtime.cleanupSubscription('construction-subscription')
+    expect(cleanup).toHaveBeenCalledOnce()
+    runtime.cleanupSubscription('construction-subscription')
+    expect(cleanup).toHaveBeenCalledOnce()
+  })
+
+  it('keeps constructor callbacks lazy and the canonical status producer identity', () => {
+    const snapshot = vi.fn(() => [])
+    const stopped = vi.fn()
+    const runtime = new OrcaRuntimeService(null, undefined, {
+      getAgentStatusSnapshot: snapshot,
+      onPtyStopped: stopped
+    })
+    expect(runtime.getAgentStatusSnapshotFn).toBe(snapshot)
+    expect(runtime['onPtyStopped']).toBe(stopped)
+    expect(snapshot).not.toHaveBeenCalled()
+    expect(stopped).not.toHaveBeenCalled()
+    expect(Object.getOwnPropertyDescriptor(runtime, 'getAgentStatusSnapshotFn')).toMatchObject({
+      writable: true,
+      enumerable: true,
+      configurable: true,
+      value: snapshot
+    })
   })
 })

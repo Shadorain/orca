@@ -1,20 +1,19 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import type { WaitBlockedCheckState } from './wait-blocked-check-state'
-import { OrcaRuntimeWithStopRequestedPtyIds } from './orca-runtime-stop-requested-pty-ids'
-import { RuntimeSubscriptionRegistry } from './runtime-subscription-registry'
-import { RuntimeMobileNotificationController } from './runtime-mobile-notification-controller'
+import type { WaitBlockedCheckState } from '../../wait-blocked-check-state'
+import { OrcaRuntimeWithStopRequestedPtyIds } from '../../construction/runtime-service-state'
+import { RuntimeSubscriptionRegistry } from '../../runtime-subscription-registry'
+import { RuntimeMobileNotificationController } from '../../runtime-mobile-notification-controller'
 import type {
   ProviderBufferAcquisition,
   RuntimeHeadlessTerminal,
   RuntimePtyTitleTrackerEntry,
   RuntimePtyWorktreeRecord,
   RuntimeVisibleTerminalState
-} from './runtime-terminal-state-records'
-import type { TerminalKittyKeyboardModeTracker } from '../../shared/terminal-kitty-keyboard-mode-tracker'
-import type { PtyProviderBufferSnapshot } from '../providers/pty-provider-contract'
-import type { createAgentStatusOscProcessor } from '../../shared/agent-status-osc'
-import { RuntimeTerminalViewSubscribers } from './runtime-terminal-view-subscribers'
-import { parseAppSshPtyId } from '../../shared/ssh-pty-id'
+} from '../../runtime-terminal-state-records'
+import type { TerminalKittyKeyboardModeTracker } from '../../../../shared/terminal-kitty-keyboard-mode-tracker'
+import type { PtyProviderBufferSnapshot } from '../../../providers/pty-provider-contract'
+import type { createAgentStatusOscProcessor } from '../../../../shared/agent-status-osc'
+import { RuntimeTerminalViewSubscribers } from '../../runtime-terminal-view-subscribers'
+import { parseAppSshPtyId } from '../../../../shared/ssh-pty-id'
 
 export abstract class OrcaRuntimeWithFitOverrideListeners extends OrcaRuntimeWithStopRequestedPtyIds {
   protected abstract notifyRemoteTerminalViewPresenceChanged(ptyId: string): void

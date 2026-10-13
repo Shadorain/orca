@@ -1,50 +1,88 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithLinearCommands } from './integrations/linear/linear-commands'
-import type { ExecutionHostScope } from '../../shared/execution-host'
-import type { RuntimeStore } from './runtime-store-contract'
-import type { StatsCollector } from '../stats/collector'
-import type { IPtyProvider } from '../providers/pty-provider-contract'
-import type { PrepareClaudeAuth } from '../ipc/pty/host-env/types'
-import type { RuntimeTerminalAgentStatusEvent } from './runtime-terminal-contracts'
-import type { TerminalSideEffectBatch } from '../../shared/terminal-side-effect-facts'
-import type { ClaudeTerminalEvidence } from '../../shared/claude-terminal-interrupt'
-import type { AgentStatusIpcPayload } from '../../shared/agent-status-types'
-import type { StructuredAgentSessionStatusSink } from '../native-chat/agent-session-wire/structured-agent-session-status-feed'
-import type { ObservedAgentStatusPaneIdentity } from '../ipc/agent-status-ipc-boundary'
-import type { AgentHookAuthorityAttestation } from '../agent-hooks/server'
-import type {
-  AiVaultPrepareSessionResumeArgs,
-  AiVaultPrepareSessionResumeResult
-} from '../../shared/ai-vault-resume-preparation'
-import type { RuntimeDesktopWindowStatus } from '../../shared/runtime-types'
-import type { AgentSessionClaimSigner } from './agent-session-claim-identity'
-import type { OrchestrationEnvironmentTransport } from './orchestration/environment-transport'
-import type { RuntimeCommandSurfaceHost } from './orca-runtime-core'
-import { installRuntimeFileCommandSurface } from './runtime-file-command-surface'
-import { installRuntimeGitCommandSurface } from './runtime-git-command-surface'
-import { installRuntimeRepositoryCommandSurface } from './runtime-repository-command-surface'
-import { installRuntimeReviewCommandSurface } from './runtime-review-command-surface'
-import { installRuntimeServiceCommandSurface } from './runtime-service-command-surface'
+import type { RuntimeConstructionDependencies } from './runtime-construction-dependencies'
+import type { OrcaRuntimeWithRuntimeId as IdentityState } from './runtime-identity-state'
+import type { OrcaRuntimeWithStopRequestedPtyIds as ServiceState } from './runtime-service-state'
+import type { OrcaRuntimeWithPreservedBranchCleanup as HostServices } from './runtime-host-services'
+import type { RuntimeFileCommandSurface } from '../runtime-file-command-surface'
+import type { RuntimeGitCommandSurface } from '../runtime-git-command-surface'
+import type { RuntimeRepositoryCommandSurface } from '../runtime-repository-command-surface'
+import type { RuntimeReviewCommandSurface } from '../runtime-review-command-surface'
+import type { RuntimeServiceCommandSurface } from '../runtime-service-command-surface'
+import type { RuntimeSkillCommandSurface } from '../runtime-skill-command-contract'
+import type { RuntimeEdgeCommandSurface } from '../runtime-edge-command-controller'
+import type { OrcaRuntimeWithListManagedWorktrees as ListManagedWorktrees } from '../workspaces/managed-workspace-operations'
+import type { ProjectExecutionRuntimeResolution } from '../../../shared/project-execution-runtime'
+import { OrcaRuntimeWithLinearCommands } from '../integrations/linear/linear-commands'
+
+import type { RuntimeStore } from '../runtime-store-contract'
+import type { StatsCollector } from '../../stats/collector'
+
+import type { PrepareClaudeAuth } from '../../ipc/pty/host-env/types'
+
+import type { AgentStatusIpcPayload } from '../../../shared/agent-status-types'
+
+import { installRuntimeFileCommandSurface } from '../runtime-file-command-surface'
+import { installRuntimeGitCommandSurface } from '../runtime-git-command-surface'
+import { installRuntimeRepositoryCommandSurface } from '../runtime-repository-command-surface'
+import { installRuntimeReviewCommandSurface } from '../runtime-review-command-surface'
+import { installRuntimeServiceCommandSurface } from '../runtime-service-command-surface'
 import {
   RuntimeSkillCommands,
   installRuntimeSkillCommandSurface
-} from './runtime-skill-command-surface'
-import { getAppEnvironment } from '../../shared/app-environment'
-import { RuntimeClientSettingsController } from './runtime-client-settings'
-import {
-  RuntimeSessionSearchSettingsController,
-  type SessionSearchSettingsApply
-} from './runtime-session-search-settings'
-import { RuntimeAutomationController } from './runtime-automation-controller'
-import { RuntimeOrchestrationFederation } from './runtime-orchestration-federation'
-import { configureAiVaultSessionSources } from '../ai-vault/cached-session-list'
-import { configureHostReadableTranscriptPathSources } from '../native-chat/host-readable-transcript-path'
-import { createEphemeralAgentSessionClaimSigner } from './agent-session-claim-identity'
-import { registerConptyDa1OverrideInstaller } from './terminal-model-query-authority'
-import { registerTerminalViewAttributesApplier } from './terminal-view-attribute-store'
-import { RuntimeMachineName } from './runtime-machine-name'
+} from '../runtime-skill-command-surface'
+import { getAppEnvironment } from '../../../shared/app-environment'
+import { RuntimeClientSettingsController } from '../runtime-client-settings'
+import { RuntimeSessionSearchSettingsController } from '../runtime-session-search-settings'
+import { RuntimeAutomationController } from '../runtime-automation-controller'
+import { RuntimeOrchestrationFederation } from '../runtime-orchestration-federation'
+import { configureAiVaultSessionSources } from '../../ai-vault/cached-session-list'
+import { configureHostReadableTranscriptPathSources } from '../../native-chat/host-readable-transcript-path'
+import { createEphemeralAgentSessionClaimSigner } from '../agent-session-claim-identity'
+import { registerConptyDa1OverrideInstaller } from '../terminal-model-query-authority'
+import { registerTerminalViewAttributesApplier } from '../terminal-view-attribute-store'
+import { RuntimeMachineName } from '../runtime-machine-name'
 
-export class OrcaRuntimeWithStateFields extends OrcaRuntimeWithLinearCommands {
+// oxlint-disable-next-line typescript/no-unsafe-declaration-merging -- SAFETY: The constructor installs every checked canonical surface.
+export abstract class OrcaRuntimeWithStateFields extends OrcaRuntimeWithLinearCommands {
+  // Earlier layers allocate these slots; this constructor assigns their readonly values.
+  declare protected readonly getLocalProviderFn: HostServices['getLocalProviderFn']
+  declare readonly onPtyStopped: HostServices['onPtyStopped']
+  declare protected readonly onTerminalAgentStatus: HostServices['onTerminalAgentStatus']
+  declare protected readonly onTerminalSideEffects: HostServices['onTerminalSideEffects']
+  declare protected readonly onClaudeTerminalEvidence: HostServices['onClaudeTerminalEvidence']
+  declare readonly getAgentStatusSnapshotFn: HostServices['getAgentStatusSnapshotFn']
+  declare protected readonly structuredAgentStatusSinkFn: HostServices['structuredAgentStatusSinkFn']
+  declare readonly readObservedAgentStatusPaneIdentityFn: HostServices['readObservedAgentStatusPaneIdentityFn']
+  declare protected readonly getAgentProviderSessionSnapshotFn: HostServices['getAgentProviderSessionSnapshotFn']
+  declare protected readonly getAgentProviderSessionRowsForPaneFn: HostServices['getAgentProviderSessionRowsForPaneFn']
+  declare protected readonly attestAgentHookCompatibilityAuthorityFn: HostServices['attestAgentHookCompatibilityAuthorityFn']
+  declare protected readonly retireAgentHookCompatibilityAuthorityFn: HostServices['retireAgentHookCompatibilityAuthorityFn']
+  declare protected readonly checkHookAgentPresenceFn: HostServices['checkHookAgentPresenceFn']
+  declare protected readonly reconcileAgentStatusForEndedProcessFn: HostServices['reconcileAgentStatusForEndedProcessFn']
+  declare protected readonly dropAgentStatusForRemovedWorktreeFn: HostServices['dropAgentStatusForRemovedWorktreeFn']
+  declare protected readonly canRecoverPersistentLocalPtysFn: HostServices['canRecoverPersistentLocalPtysFn']
+  declare protected readonly getPairedDeviceNameFn: HostServices['getPairedDeviceNameFn']
+  declare protected readonly buildAgentHookPtyEnv: HostServices['buildAgentHookPtyEnv']
+  declare protected readonly getDesktopWindowStatusFn: HostServices['getDesktopWindowStatusFn']
+  declare protected readonly prepareAiVaultSessionResumeFn: HostServices['prepareAiVaultSessionResumeFn']
+  declare protected readonly prepareCodexStructuredLaunchFn: HostServices['prepareCodexStructuredLaunchFn']
+  declare protected readonly resolveCodexStructuredLaunchHomeFn: HostServices['resolveCodexStructuredLaunchHomeFn']
+  declare protected readonly prepareCodexCatalogProbeHomeFn: HostServices['prepareCodexCatalogProbeHomeFn']
+  declare protected readonly agentSessionClaimSigner: HostServices['agentSessionClaimSigner']
+  declare protected readonly store: IdentityState['store']
+  declare protected readonly clientSettings: IdentityState['clientSettings']
+  declare protected readonly automation: IdentityState['automation']
+  declare protected readonly orchestrationEnvironmentTransport: IdentityState['orchestrationEnvironmentTransport']
+  declare protected readonly orchestrationFederation: IdentityState['orchestrationFederation']
+  declare protected readonly skillCommands: ServiceState['skillCommands']
+
+  abstract showManagedWorktree(
+    worktreeSelector: string
+  ): ReturnType<ListManagedWorktrees['showManagedWorktree']>
+  abstract resolveProjectRuntimeForWorktree(
+    worktreeId: string | null | undefined
+  ): ProjectExecutionRuntimeResolution | undefined
+  protected abstract ensureNativeWindowsConptyDa1Override(ptyId: string): void
+
   protected readonly prepareClaudeAuth?: PrepareClaudeAuth
 
   protected readonly getAgentStatusSnapshotForPaneFn:
@@ -58,81 +96,14 @@ export class OrcaRuntimeWithStateFields extends OrcaRuntimeWithLinearCommands {
   constructor(
     store: RuntimeStore | null = null,
     stats?: StatsCollector,
-    deps?: {
-      getLocalProvider?: () => IPtyProvider
-      prepareClaudeAuth?: PrepareClaudeAuth
-      onPtyStopped?: (ptyId: string) => void
-      onTerminalAgentStatus?: (event: RuntimeTerminalAgentStatusEvent) => void
-      onTerminalSideEffects?: (batch: TerminalSideEffectBatch) => void
-      onClaudeTerminalEvidence?: (paneKey: string, evidence: ClaudeTerminalEvidence) => void
-      // Why: agent status mostly arrives via hooks (agent-hooks/server), not OSC
-      // terminal output. worktree.ps reads this at query time so mobile shows the
-      // same inline agent rows the desktop sidebar does — same source, 1:1.
-      getAgentStatusSnapshot?: () => AgentStatusIpcPayload[]
-      getAgentStatusSnapshotForPane?: (paneKey: string) => AgentStatusIpcPayload[]
-      /** Where structured (native chat) sessions publish into that same store, so the snapshot
-       *  above lists them like every other agent. */
-      structuredAgentStatusSink?: StructuredAgentSessionStatusSink
-      /** The identity the runtime resolved for a pane as each status arrived. Without it the
-       *  fleet path reminted cached rows against whatever the pane owns now. */
-      readObservedAgentStatusPaneIdentity?: (paneKey: string) => ObservedAgentStatusPaneIdentity
-      /** Same rows, but including the resume-identity-only ones `getAgentStatusSnapshot`
-       *  filters out so they can't read as running agents. Mobile native chat needs
-       *  them: for an agent that publishes identity separately (Pi), that row is the
-       *  only carrier of the provider session a transcript is addressed by. */
-      getAgentProviderSessionSnapshot?: () => AgentStatusIpcPayload[]
-      getAgentProviderSessionRowsForPane?: (paneKey: string) => AgentStatusIpcPayload[]
-      attestAgentHookCompatibilityAuthority?: (candidate: {
-        paneKey: string
-        launchTokenHash: string
-        connectionId: string | null
-        terminalProvenance: 'current_runtime' | 'restored'
-      }) => AgentHookAuthorityAttestation | null
-      retireAgentHookCompatibilityAuthority?: (paneKey: string) => void
-      checkHookAgentPresence?: (
-        paneKey: string
-      ) => Promise<'live' | 'unverifiable' | 'exited' | null>
-      reconcileAgentStatusForEndedProcess?: (paneKeys: Iterable<string>) => void
-      dropAgentStatusForRemovedWorktree?: (worktreeId: string, host?: ExecutionHostScope) => void
-      canRecoverPersistentLocalPtys?: () => boolean
-      // Why: the device registry lives on the RPC server, which is constructed with this runtime;
-      // a closure defers the lookup past that ordering instead of inverting ownership.
-      getPairedDeviceName?: (pairedDeviceId: string) => string | null
-      // Why: codex-home paths for the Agent Session History scan must be sourced
-      // here, not via the window-only registerCoreHandlers path — that path never
-      // runs under `orca serve`, so remote/SSH hosts would silently drop
-      // managed-Codex sessions. The runtime ctor runs in BOTH window and serve.
-      getAdditionalAiVaultCodexHomePaths?: () => readonly string[]
-      prepareAiVaultSessionResume?: (
-        args: AiVaultPrepareSessionResumeArgs
-      ) => Promise<AiVaultPrepareSessionResumeResult>
-      prepareCodexStructuredLaunch?: (input: {
-        launchEnv: NodeJS.ProcessEnv
-      }) => string | null | Promise<string | null>
-      // Why a sibling of prepare: record-less catalog reads must resolve the
-      // same launch home with none of launch prep's side effects (no sync, no
-      // bridge, no cleared selection).
-      resolveCodexStructuredLaunchHome?: (input: {
-        launchEnv: NodeJS.ProcessEnv
-      }) => string | null | Promise<string | null>
-      // The sync launch prep runs on the shared mirror, for the catalog probe's read-only server.
-      prepareCodexCatalogProbeHome?: (homePath: string) => void
-      buildAgentHookPtyEnv?: () => Record<string, string>
-      getDesktopWindowStatus?: () => RuntimeDesktopWindowStatus
-      agentSessionClaimSigner?: AgentSessionClaimSigner
-      skillTransactionRecovery?: Promise<unknown>
-      // Why a host hook and not a direct call: the process that owns this runtime's index
-      // differs per host (scanner child on the desktop, in-process on orcad), and on orcad
-      // it is installed after construction, so the closure has to resolve it at call time.
-      applySessionSearchSettings?: SessionSearchSettingsApply
-      orchestrationEnvironmentTransport?: OrchestrationEnvironmentTransport
-    }
+    deps?: RuntimeConstructionDependencies
   ) {
     super()
     this.store = store
     this.machineName.start()
     this.prepareClaudeAuth = deps?.prepareClaudeAuth
-    const runtime = this as RuntimeCommandSurfaceHost<this>
+    // oxlint-disable-next-line typescript/no-this-alias -- SAFETY: Preserve the constructor receiver captured by callbacks.
+    const runtime: this = this
     installRuntimeFileCommandSurface(runtime, this.fileCommands)
     installRuntimeGitCommandSurface(runtime, this.gitCommands)
     installRuntimeRepositoryCommandSurface(runtime, {
@@ -288,3 +259,14 @@ export class OrcaRuntimeWithStateFields extends OrcaRuntimeWithLinearCommands {
     })
   }
 }
+
+// oxlint-disable-next-line typescript/consistent-type-definitions -- SAFETY: This merge models the constructor-installed canonical methods.
+export interface OrcaRuntimeWithStateFields
+  extends
+    RuntimeFileCommandSurface,
+    RuntimeGitCommandSurface,
+    RuntimeRepositoryCommandSurface,
+    RuntimeReviewCommandSurface,
+    RuntimeServiceCommandSurface,
+    RuntimeSkillCommandSurface,
+    RuntimeEdgeCommandSurface {}

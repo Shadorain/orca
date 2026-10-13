@@ -1,72 +1,47 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrchestrationStructuredMailboxPointerDelivery } from './orchestration/structured-mailbox-pointer-delivery'
-import type { RuntimeLeafRecord } from './runtime-terminal-state-records'
-import type { ResolvedWorktree } from './runtime-worktree-path-identity'
-import type * as PtyControllerContract from './runtime-pty-controller-contract'
-import { createStructuredMailboxPointerHost } from './orchestration/structured-mailbox-pointer-host'
-import { localOrchestrationCliCommand } from './orchestration/cli-command'
-import { RuntimeOrchestrationSenderNames } from './runtime-orchestration-sender-names'
-import { isStructuredWorkerHandle } from './structured-worker-identity'
-import { ORCA_SESSION_ADDRESS_PREFIX } from '../../shared/orca-session-address'
-import { resolveStructuredWorkerAuthority } from './structured-worker-authority'
-import { OrcaRuntimeWithRuntimeId } from './orca-runtime-runtime-id'
-import { RuntimeTerminalAgentPresence } from './runtime-terminal-agent-presence'
-import type { RuntimeNotifier } from './runtime-notifier-contract'
-import { RuntimeClientEventBus } from './runtime-client-event-bus'
-import { RuntimeNativeChatDraftResolutions } from './runtime-native-chat-draft-resolutions'
-import { RuntimeWorktreeLifecycleEvents } from './runtime-worktree-lifecycle-events'
+import { OrchestrationStructuredMailboxPointerDelivery } from '../orchestration/structured-mailbox-pointer-delivery'
+
+import { createStructuredMailboxPointerHost } from '../orchestration/structured-mailbox-pointer-host'
+import { localOrchestrationCliCommand } from '../orchestration/cli-command'
+import { RuntimeOrchestrationSenderNames } from '../runtime-orchestration-sender-names'
+import { isStructuredWorkerHandle } from '../structured-worker-identity'
+import { ORCA_SESSION_ADDRESS_PREFIX } from '../../../shared/orca-session-address'
+import { resolveStructuredWorkerAuthority } from '../structured-worker-authority'
+import { OrcaRuntimeWithRuntimeId } from './runtime-identity-state'
+import { RuntimeTerminalAgentPresence } from '../runtime-terminal-agent-presence'
+import type { RuntimeNotifier } from '../runtime-notifier-contract'
+import { RuntimeClientEventBus } from '../runtime-client-event-bus'
+import { RuntimeNativeChatDraftResolutions } from '../runtime-native-chat-draft-resolutions'
+import { RuntimeWorktreeLifecycleEvents } from '../runtime-worktree-lifecycle-events'
 import type {
   RuntimeWorktreeLifecycleEvent,
   RuntimeWorktreeScanCache,
   RuntimeWorktreeScanInFlight
-} from './orca-runtime-core'
-import type { AgentBrowserBridge } from '../browser/agent-browser-bridge'
-import type { BrowserBackend } from '../browser/browser-backend'
-import type { EmulatorBridge } from '../emulator/emulator-bridge'
-import { RuntimeResolvedWorktreeCache } from './runtime-resolved-worktree-cache'
-import { RuntimeWorktreeLineageController } from './runtime-worktree-lineage-controller'
-import { RuntimeAgentOrchestrationProjection } from './runtime-agent-orchestration-projection'
-import { RuntimeTerminalList } from './runtime-terminal-list'
-import { RuntimeManagedWorktreeQueries } from './runtime-managed-worktree-queries'
-import { RuntimePtyForegroundAgent } from './runtime-pty-foreground-agent'
-import { OpenCodeRunLifetimeStatus } from './opencode-run-lifetime-status'
-import { readLocalPtyForegroundCommandLine } from './local-pty-foreground-command-line'
-import { isAgentStatusHooksEnabledForAgent } from '../../shared/agent-status-hooks-setting'
-import { RuntimeTerminalAgentStatusQuery } from './runtime-terminal-agent-status-query'
-import type { OrchestrationDb } from './orchestration/db'
-import { OrchestrationMailboxOwner } from './orchestration/mailbox-owner'
-import { OrchestrationMailboxDeliveryTarget } from './orchestration/mailbox-delivery-target'
-import { OrchestrationMailboxPointerDelivery } from './orchestration/mailbox-pointer-delivery'
-import { OrchestrationMailboxNotificationCoordinator } from './orchestration/mailbox-notification-coordinator'
-import type { RuntimeMessageWaiter } from './runtime-message-waiters'
-import { RuntimeMessageWaiters } from './runtime-message-waiters'
-import type { RuntimeSkillCommands } from './runtime-skill-command-surface'
-import { RuntimeTerminalStreamConsumers } from './runtime-terminal-stream-consumers'
-import type { RecentPtyOutputBuffer } from './recent-pty-output-buffer'
-
-import type { LiveTerminalPty } from './terminal/query/pty-terminal-summary'
-import type { FreshExplicitAgentStatus } from './runtime-hook-agent-row-selection'
+} from '../orca-runtime-core'
+import type { AgentBrowserBridge } from '../../browser/agent-browser-bridge'
+import type { BrowserBackend } from '../../browser/browser-backend'
+import type { EmulatorBridge } from '../../emulator/emulator-bridge'
+import { RuntimeResolvedWorktreeCache } from '../runtime-resolved-worktree-cache'
+import { RuntimeWorktreeLineageController } from '../runtime-worktree-lineage-controller'
+import { RuntimeAgentOrchestrationProjection } from '../runtime-agent-orchestration-projection'
+import { RuntimeTerminalList } from '../runtime-terminal-list'
+import { RuntimeManagedWorktreeQueries } from '../runtime-managed-worktree-queries'
+import { RuntimePtyForegroundAgent } from '../runtime-pty-foreground-agent'
+import { OpenCodeRunLifetimeStatus } from '../opencode-run-lifetime-status'
+import { readLocalPtyForegroundCommandLine } from '../local-pty-foreground-command-line'
+import { isAgentStatusHooksEnabledForAgent } from '../../../shared/agent-status-hooks-setting'
+import { RuntimeTerminalAgentStatusQuery } from '../runtime-terminal-agent-status-query'
+import type { OrchestrationDb } from '../orchestration/db'
+import { OrchestrationMailboxOwner } from '../orchestration/mailbox-owner'
+import { OrchestrationMailboxDeliveryTarget } from '../orchestration/mailbox-delivery-target'
+import { OrchestrationMailboxPointerDelivery } from '../orchestration/mailbox-pointer-delivery'
+import { OrchestrationMailboxNotificationCoordinator } from '../orchestration/mailbox-notification-coordinator'
+import type { RuntimeMessageWaiter } from '../runtime-message-waiters'
+import { RuntimeMessageWaiters } from '../runtime-message-waiters'
+import type { RuntimeSkillCommands } from '../runtime-skill-command-surface'
+import { RuntimeTerminalStreamConsumers } from '../runtime-terminal-stream-consumers'
+import type { RecentPtyOutputBuffer } from '../recent-pty-output-buffer'
 
 export abstract class OrcaRuntimeWithStopRequestedPtyIds extends OrcaRuntimeWithRuntimeId {
-  protected abstract getLeavesForPty(ptyId: string): RuntimeLeafRecord[]
-  abstract notifyMessageArrived(handle: string, messageType?: string): void
-  protected abstract resolveWorktreeSelector(selector: string): Promise<ResolvedWorktree>
-  protected abstract refreshPtyWorktreeRecordsWithControllerInventory(
-    resolvedWorktrees: ResolvedWorktree[],
-    targetWorktreeId?: string | null,
-    deadline?: number,
-    connectionId?: string | null,
-    retryStale?: boolean,
-    inventoryOptions?: PtyControllerContract.PtyInventoryRefreshOptions
-  ): Promise<PtyControllerContract.PtyControllerInventory | null>
-
-  protected abstract getLivePtyForHandle(handle: string): LiveTerminalPty
-
-  protected abstract getFreshExplicitAgentStatusForHandle(
-    handle: string,
-    paneKeyOverride?: string | null
-  ): FreshExplicitAgentStatus
-
   protected readonly stopRequestedPtyIds = new Set<string>()
 
   protected readonly ptyExitListenersByPtyId = new Map<string, Set<() => void>>()
@@ -324,7 +299,7 @@ export abstract class OrcaRuntimeWithStopRequestedPtyIds extends OrcaRuntimeWith
 
   protected readonly messageWaiters = new RuntimeMessageWaiters()
 
-  protected readonly skillCommands: RuntimeSkillCommands
+  protected readonly skillCommands!: RuntimeSkillCommands
 
   // Why: mobile clients subscribe to terminal output via terminal.subscribe.
   // These listeners fire on every onPtyData call, enabling real-time streaming

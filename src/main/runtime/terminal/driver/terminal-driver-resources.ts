@@ -1,27 +1,94 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithFitOverrideListeners } from './orca-runtime-fit-override-listeners'
+import type { RuntimeServiceCommandSurface } from '../../runtime-service-command-surface'
+import type { ResolvedWorktree } from '../../runtime-worktree-path-identity'
+import type { ExecutionHostId } from '../../../../shared/execution-host'
+import type { BrowserNetworkExecutionHost } from '../../../../shared/browser-client-host-protocol'
+import type { BrowserWindow } from 'electron'
+import type { BrowserSessionTabSelectionOptions } from '../../browser-tab-create-publication'
+import type { RuntimeStore } from '../../runtime-store-contract'
+import type { PtyLivenessVerdict } from '../../../../shared/pty-liveness-verdict'
+import type {
+  RuntimeTerminalClose,
+  RuntimeTerminalRead
+} from '../../../../shared/runtime-terminal-contracts'
+import type { ExactWorkerProviderSession } from '../../../../shared/orchestration-worker-output'
+import type { RuntimeProviderSnapshotReadOptions } from '../../runtime-terminal-contracts'
+import { OrcaRuntimeWithFitOverrideListeners } from '../lifecycle/terminal-view-resources'
 import type {
   DriverState,
   ApplyLayoutResult,
   PtyLayoutTarget,
   LayoutQueueEntry,
-  PtyLayoutState,
-  RuntimeCommandSurfaceHost
-} from './orca-runtime-core'
+  PtyLayoutState
+} from '../../orca-runtime-core'
 
-import { RuntimeTerminalDriverController } from './runtime-terminal-driver-controller'
-import { RuntimeEdgeCommandController } from './runtime-edge-command-controller'
-import { getBrowserHostLeaseRegistry } from './browser-host-lease-registry-instance'
-import { getRuntimeBrowserPageRegistry } from './runtime-browser-page-registry'
+import { RuntimeTerminalDriverController } from '../../runtime-terminal-driver-controller'
+import { RuntimeEdgeCommandController } from '../../runtime-edge-command-controller'
+import { getBrowserHostLeaseRegistry } from '../../browser-host-lease-registry-instance'
+import { getRuntimeBrowserPageRegistry } from '../../runtime-browser-page-registry'
 
-import { RuntimeBrowserDriverController } from './runtime-browser-driver-controller'
-import { RemoteDesktopTerminalFloor } from './remote-desktop-terminal-floor'
-import type { StatsCollector } from '../stats/collector'
-import { RuntimeRemoteFetchController } from './runtime-remote-fetch-controller'
-import { RuntimeWorktreeBaseReconciliation } from './runtime-worktree-base-reconciliation'
-import { RuntimeWorktreeRemovalInFlight } from './runtime-worktree-removal-in-flight'
+import { RuntimeBrowserDriverController } from '../../runtime-browser-driver-controller'
+import { RemoteDesktopTerminalFloor } from '../../remote-desktop-terminal-floor'
+import type { StatsCollector } from '../../../stats/collector'
+import { RuntimeRemoteFetchController } from '../../runtime-remote-fetch-controller'
+import { RuntimeWorktreeBaseReconciliation } from '../../runtime-worktree-base-reconciliation'
+import { RuntimeWorktreeRemovalInFlight } from '../../runtime-worktree-removal-in-flight'
 
 export abstract class OrcaRuntimeWithTerminalDrivers extends OrcaRuntimeWithFitOverrideListeners {
+  protected get canonicalFetchKeyCache(): ReadonlyMap<string, string> {
+    return this.remoteFetches.getCanonicalFetchKeyCache()
+  }
+  protected get fetchLastCompletedAt(): ReadonlyMap<string, number> {
+    return this.remoteFetches.getFetchLastCompletedAt()
+  }
+
+  declare registerSubscriptionCleanup: RuntimeServiceCommandSurface['registerSubscriptionCleanup']
+  declare cleanupSubscription: RuntimeServiceCommandSurface['cleanupSubscription']
+
+  protected abstract resolveBrowserWorkspace(selector: string): Promise<ResolvedWorktree>
+  protected abstract resolveBrowserNetworkExecutionHostForWorktree(worktree?: {
+    id: string
+    repoId?: string
+    hostId?: ExecutionHostId
+  }): BrowserNetworkExecutionHost | Promise<BrowserNetworkExecutionHost>
+  abstract getAuthoritativeWindow(): BrowserWindow
+  protected abstract getAvailableAuthoritativeWindow(): BrowserWindow | null
+  protected abstract markHeadlessBrowserSessionTabActive(
+    worktreeId: string | undefined,
+    browserPageId: string,
+    options: BrowserSessionTabSelectionOptions
+  ): void
+  abstract notifyMobileSessionTabsChanged(worktreeId?: string): void
+  abstract retireRuntimeOwnedBrowserSessionTab(worktreeId: string, browserPageId: string): boolean
+  protected abstract resolveEmulatorWorkspaceId(selector: string): Promise<string>
+  protected abstract resolveEmulatorCleanupWorkspaceId(selector: string): Promise<string>
+  abstract requireStore(): RuntimeStore
+  abstract getRuntimeId(): string
+  abstract hasRawTerminalViewSubscriber(ptyId: string): boolean
+  abstract resolveTerminalHandleByProcessIncarnation(
+    processIncarnation: string,
+    serializedHostScope: string | null
+  ): string | null
+  abstract getTerminalLivenessVerdict(handle: string): PtyLivenessVerdict | null
+  abstract ensureStructuredAgentSessionHost(): Promise<void>
+  abstract inspectTerminalProcessIncarnationLiveness(
+    processIncarnation: string,
+    serializedHostScope: string | null
+  ): Promise<'live' | 'exited' | 'unverifiable'>
+  abstract closeTerminal(handle: string): Promise<RuntimeTerminalClose>
+  abstract getExactWorkerProviderSession(
+    handle: string,
+    observedAfter: number
+  ): ExactWorkerProviderSession | null
+  abstract readTerminal(
+    handle: string,
+    opts?: {
+      cursor?: number
+      limit?: number
+      screen?: boolean
+    },
+    providerSnapshot?: RuntimeProviderSnapshotReadOptions
+  ): Promise<RuntimeTerminalRead>
+
   abstract getDriver(ptyId: string): DriverState
   protected abstract enqueueLayout(
     ptyId: string,
@@ -74,13 +141,8 @@ export abstract class OrcaRuntimeWithTerminalDrivers extends OrcaRuntimeWithFitO
     },
     screencast: {
       registerSubscriptionCleanup: (subscriptionId, cleanup, connectionId) =>
-        (this as RuntimeCommandSurfaceHost<this>).registerSubscriptionCleanup(
-          subscriptionId,
-          cleanup,
-          connectionId
-        ),
-      cleanupSubscription: (subscriptionId) =>
-        (this as RuntimeCommandSurfaceHost<this>).cleanupSubscription(subscriptionId),
+        this.registerSubscriptionCleanup(subscriptionId, cleanup, connectionId),
+      cleanupSubscription: (subscriptionId) => this.cleanupSubscription(subscriptionId),
       getDriver: (browserPageId) => this.browserDrivers.get(browserPageId),
       setDriver: (browserPageId, next) => this.browserDrivers.set(browserPageId, next),
       notifyRemoteViewersChanged: (browserPageId, hasRemoteViewers) =>

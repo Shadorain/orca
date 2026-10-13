@@ -1,6 +1,6 @@
 import type { RuntimeTerminalShow } from '../../../../shared/runtime-terminal-contracts'
 import type { ResolvedWorktree } from '../../runtime-worktree-path-identity'
-import { OrcaRuntimeWithFileCommands } from '../../orca-runtime-file-commands'
+import { OrcaRuntimeWithFileCommands } from '../../construction/runtime-file-command-state'
 import { RuntimeLinearCommands } from '../../runtime-linear-connection-commands'
 
 export abstract class OrcaRuntimeWithLinearCommands extends OrcaRuntimeWithFileCommands {

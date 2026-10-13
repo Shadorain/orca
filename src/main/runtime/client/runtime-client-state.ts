@@ -1,4 +1,4 @@
-import { OrcaRuntimeWithStateFields } from '../orca-runtime-state-fields'
+import { OrcaRuntimeWithStateFields } from '../construction/runtime-construction'
 import {
   persistClientHostedBrowserPages,
   rehydrateClientHostedBrowserPages
@@ -58,15 +58,6 @@ export abstract class OrcaRuntimeWithPtyForegroundProcessReads extends OrcaRunti
   // Compatibility seam for diagnostics/tests that inspect waiter ownership.
   get messageWaitersByHandle() {
     return this.messageWaiters.map
-  }
-
-  // Why: retained as read-only compatibility seams for cache-boundary tests.
-  protected get canonicalFetchKeyCache(): ReadonlyMap<string, string> {
-    return this.remoteFetches.getCanonicalFetchKeyCache()
-  }
-
-  protected get fetchLastCompletedAt(): ReadonlyMap<string, number> {
-    return this.remoteFetches.getFetchLastCompletedAt()
   }
 
   /**

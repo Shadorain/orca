@@ -1,14 +1,13 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
 import { randomUUID } from 'node:crypto'
-import { preserveTerminalRetirementProofs } from './mobile-session-terminal-retirement-proof'
-import type { TuiAgent } from '../../shared/tui-agent'
-import { isTuiAgent } from '../../shared/tui-agent-config'
-import type { RuntimeStore } from './runtime-store-contract'
-import type { RuntimeClientSettingsController } from './runtime-client-settings'
-import type { RuntimeAutomationController } from './runtime-automation-controller'
-import { RuntimeArtifactController } from './runtime-artifact-controller'
-import type { OrchestrationEnvironmentTransport } from './orchestration/environment-transport'
-import type { RuntimeOrchestrationFederation } from './runtime-orchestration-federation'
+import { preserveTerminalRetirementProofs } from '../mobile-session-terminal-retirement-proof'
+import type { TuiAgent } from '../../../shared/tui-agent'
+import { isTuiAgent } from '../../../shared/tui-agent-config'
+import type { RuntimeStore } from '../runtime-store-contract'
+import type { RuntimeClientSettingsController } from '../runtime-client-settings'
+import type { RuntimeAutomationController } from '../runtime-automation-controller'
+import { RuntimeArtifactController } from '../runtime-artifact-controller'
+import type { OrchestrationEnvironmentTransport } from '../orchestration/environment-transport'
+import type { RuntimeOrchestrationFederation } from '../runtime-orchestration-federation'
 import type {
   RuntimeGraphStatus,
   RuntimeMobileSessionCreateTerminalResult,
@@ -18,61 +17,63 @@ import type {
   RuntimeTerminalFocus,
   RuntimeTerminalResolvePane,
   RuntimeWorktreeTerminalSleepResult
-} from '../../shared/runtime-types'
+} from '../../../shared/runtime-types'
 import {
   RUNTIME_GRAPH_RELOAD_TIMEOUT_MS,
   RuntimeGraphReloadLifecycle
-} from './runtime-graph-reload-lifecycle'
-import { ClientHostedPageReconciliationWindow } from './client-hosted-page-reconciliation-window'
-import { ClientSessionTabSelectionStore } from './client-session-tab-selection'
-import { WorktreeTerminalMutationLock } from './worktree-terminal-mutation-lock'
-import { RemoteRuntimeTerminalCreateIdempotency } from './remote-runtime-terminal-create-idempotency'
-import type { PtyIncarnationId } from '../../shared/pty-incarnation'
-import type { MobileSessionTabsNotifyCoalescer } from './mobile-session-tabs-notify-coalescer'
-import { createMobileSessionTabsNotifyCoalescer } from './mobile-session-tabs-notify-coalescer'
-import type { MobileSessionTabsAgentStatusHeartbeat } from './mobile-session-tabs-agent-status-heartbeat'
-import { createMobileSessionTabsAgentStatusHeartbeat } from './mobile-session-tabs-agent-status-heartbeat'
-import { TerminalFocusNavigationCoalescer } from './terminal-focus-navigation-coalescer'
+} from '../runtime-graph-reload-lifecycle'
+import { ClientHostedPageReconciliationWindow } from '../client-hosted-page-reconciliation-window'
+import { ClientSessionTabSelectionStore } from '../client-session-tab-selection'
+import { WorktreeTerminalMutationLock } from '../worktree-terminal-mutation-lock'
+import { RemoteRuntimeTerminalCreateIdempotency } from '../remote-runtime-terminal-create-idempotency'
+import type { PtyIncarnationId } from '../../../shared/pty-incarnation'
+import type { MobileSessionTabsNotifyCoalescer } from '../mobile-session-tabs-notify-coalescer'
+import { createMobileSessionTabsNotifyCoalescer } from '../mobile-session-tabs-notify-coalescer'
+import type { MobileSessionTabsAgentStatusHeartbeat } from '../mobile-session-tabs-agent-status-heartbeat'
+import { createMobileSessionTabsAgentStatusHeartbeat } from '../mobile-session-tabs-agent-status-heartbeat'
+import { TerminalFocusNavigationCoalescer } from '../terminal-focus-navigation-coalescer'
 import type {
   PtyControllerInventory,
   RuntimePtyController
-} from './runtime-pty-controller-contract'
-import type { RuntimeLeafRecord } from './runtime-terminal-state-records'
-import type { TerminalHandleRecord } from './runtime-terminal-contracts'
-import type { PtyIncarnationHandleRecord } from './orca-runtime-core'
-import { MailPointerRepointScheduler } from './orchestration/mail-pointer-repoint-scheduler'
-import { RuntimeTerminalWaiterRegistry } from './terminal/wait/terminal-waiter-registry'
-import { RuntimeTerminalWriter } from './runtime-terminal-writer'
-import { writeRefused } from '../../shared/pty-write-settlement'
-import { RuntimeTerminalIdlePolls } from './terminal/wait/terminal-idle-polls'
-import { TerminalIntentionalStops } from './terminal-intentional-stops'
-import { TerminalRunFactsRegister, type TerminalSpawnCommit } from './terminal-run-facts'
-import type { TuiIdleEvidenceSource } from './tui-idle-evidence-source'
-import { hasTerminalCommandPainted } from './terminal-command-paint'
+} from '../runtime-pty-controller-contract'
+import type { RuntimeLeafRecord } from '../runtime-terminal-state-records'
+import type { TerminalHandleRecord } from '../runtime-terminal-contracts'
+import type { PtyIncarnationHandleRecord } from '../orca-runtime-core'
+import { MailPointerRepointScheduler } from '../orchestration/mail-pointer-repoint-scheduler'
+import { RuntimeTerminalWaiterRegistry } from '../terminal/wait/terminal-waiter-registry'
+import { RuntimeTerminalWriter } from '../runtime-terminal-writer'
+import { writeRefused } from '../../../shared/pty-write-settlement'
+import { RuntimeTerminalIdlePolls } from '../terminal/wait/terminal-idle-polls'
+import { TerminalIntentionalStops } from '../terminal-intentional-stops'
+import { TerminalRunFactsRegister, type TerminalSpawnCommit } from '../terminal-run-facts'
+import type { TuiIdleEvidenceSource } from '../tui-idle-evidence-source'
+import { hasTerminalCommandPainted } from '../terminal-command-paint'
 import {
   TUI_IDLE_DEFAULT_TIMEOUT_MS,
   TUI_IDLE_POLL_INTERVAL_MS,
   TUI_IDLE_QUIESCENCE_MS
-} from './orca-runtime-postlude'
-import { RuntimeTerminalWait as RuntimeTerminalWaitController } from './terminal/wait/terminal-wait'
-import type { PtyLivenessVerdict } from '../../shared/pty-liveness-verdict'
+} from '../orca-runtime-postlude'
+import { RuntimeTerminalWait as RuntimeTerminalWaitController } from '../terminal/wait/terminal-wait'
+import type { PtyLivenessVerdict } from '../../../shared/pty-liveness-verdict'
 
-export class OrcaRuntimeWithRuntimeId {
+import { RuntimeConstructionServices } from './runtime-construction-services'
+
+export abstract class OrcaRuntimeWithRuntimeId extends RuntimeConstructionServices {
   protected readonly runtimeId = randomUUID()
 
   protected readonly startedAt = Date.now()
 
-  protected readonly store: RuntimeStore | null
+  protected readonly store!: RuntimeStore | null
 
-  protected readonly clientSettings: RuntimeClientSettingsController
+  protected readonly clientSettings!: RuntimeClientSettingsController
 
-  protected readonly automation: RuntimeAutomationController
+  protected readonly automation!: RuntimeAutomationController
 
   protected readonly artifacts = new RuntimeArtifactController()
 
-  protected readonly orchestrationEnvironmentTransport: OrchestrationEnvironmentTransport | null
+  protected readonly orchestrationEnvironmentTransport!: OrchestrationEnvironmentTransport | null
 
-  protected readonly orchestrationFederation: RuntimeOrchestrationFederation
+  protected readonly orchestrationFederation!: RuntimeOrchestrationFederation
 
   protected rendererGraphEpoch = 0
 
