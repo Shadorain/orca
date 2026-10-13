@@ -18,6 +18,7 @@ import type { SshCredentialKind } from '../ssh/ssh-connection-utils'
 import type { SshTarget } from '../../shared/ssh-types'
 import { isSshCredentialDeclined } from '../ssh/ssh-credential-decline'
 import { createSshIpcHarness } from './ssh-ipc-test-harness'
+import { createSshConnectionCallbacks } from './ssh-connection-state-callbacks'
 
 const { mockSshStore, mockConnectionManager } = mocks
 
@@ -43,19 +44,16 @@ describe('a cancelled SSH sign-in', () => {
     targetId: string,
     kind: SshCredentialKind,
     detail: string
-  ): Promise<string | null> {
-    const current: unknown = mockConnectionManager.callbacksRef.current
-    if (
-      !current ||
-      typeof current !== 'object' ||
-      !('onCredentialRequest' in current) ||
-      typeof current.onCredentialRequest !== 'function'
-    ) {
-      throw new Error('connection callbacks were not installed')
+  ): Promise<string | null> | undefined {
+    return createSshConnectionCallbacks().onCredentialRequest?.(targetId, kind, detail)
+  }
+
+  async function submitCredential(value: string | null): Promise<void> {
+    const request: unknown = credentialRequests().at(-1)?.[1]
+    if (!request || typeof request !== 'object' || !('requestId' in request)) {
+      throw new Error('no credential prompt was shown')
     }
-    return Promise.resolve(
-      Reflect.apply(current.onCredentialRequest, current, [targetId, kind, detail])
-    )
+    await handlers.get('ssh:submitCredential')!(null, { requestId: request.requestId, value })
   }
 
   function credentialRequests(): unknown[] {
@@ -67,16 +65,17 @@ describe('a cancelled SSH sign-in', () => {
   /** What any connect does when its key or password is needed: ask, and the user cancels. */
   async function promptAndCancel(): Promise<void> {
     const pending = requestCredential(target.id, 'password', target.host)
-    const request: unknown = credentialRequests().at(-1)?.[1]
-    if (!request || typeof request !== 'object' || !('requestId' in request)) {
-      throw new Error('no credential prompt was shown')
-    }
-    await handlers.get('ssh:submitCredential')!(null, {
-      requestId: request.requestId,
-      value: null
-    })
+    await submitCredential(null)
     await expect(pending).resolves.toBeNull()
   }
+
+  it('records nothing when the user answers the prompt', async () => {
+    const pending = requestCredential(target.id, 'password', target.host)
+    await submitCredential('secret')
+
+    await expect(pending).resolves.toBe('secret')
+    expect(isSshCredentialDeclined(target.id)).toBe(false)
+  })
 
   it('is not re-prompted by a later automatic credential request for that host', async () => {
     await promptAndCancel()
