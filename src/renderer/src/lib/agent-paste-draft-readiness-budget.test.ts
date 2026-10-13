@@ -166,11 +166,12 @@ describe('pty-bound agent draft readiness budget', () => {
   it.each([true, false])(
     'starts the spawn budget when the pane says whether it started (%s)',
     async (started) => {
+      testState.waitForReady.mockResolvedValue(true)
       let answer!: (started: boolean) => void
       const promise = pasteDraftWhenAgentReady({
         tabId: 'tab-late',
         content: 'task',
-        agent: 'codex',
+        agent: 'claude',
         submit: true,
         forcePaste: true,
         sendGate: new Promise<boolean>((resolve) => {
@@ -185,7 +186,10 @@ describe('pty-bound agent draft readiness budget', () => {
       await vi.advanceTimersByTimeAsync(12_000)
 
       await expect(promise).resolves.toBe(started)
-      expect(testState.sendInput.mock.calls.length > 0).toBe(started)
+      const writes = testState.sendInput.mock.calls.map((call) => String(call[1]))
+      expect(writes.filter((data) => data.includes('task'))).toHaveLength(started ? 1 : 0)
+      expect(writes.filter((data) => data === '\r')).toHaveLength(started ? 1 : 0)
+      expect(writes).toHaveLength(started ? 2 : 0)
     }
   )
 
