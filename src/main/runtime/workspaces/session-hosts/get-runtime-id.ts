@@ -187,7 +187,7 @@ export abstract class OrcaRuntimeWithGetRuntimeId extends OrcaRuntimeWithHasExac
     )
   }
 
-  protected getWorkspaceSessionForWorktree(worktreeId: string): WorkspaceSessionState | null {
+  getWorkspaceSessionForWorktree(worktreeId: string): WorkspaceSessionState | null {
     return this.workspaceSessions.get(worktreeId)
   }
 
@@ -195,10 +195,7 @@ export abstract class OrcaRuntimeWithGetRuntimeId extends OrcaRuntimeWithHasExac
     return this.workspaceSessions.getOwnPartition(worktreeId)
   }
 
-  protected setWorkspaceSessionForWorktree(
-    worktreeId: string,
-    session: WorkspaceSessionState
-  ): void {
+  setWorkspaceSessionForWorktree(worktreeId: string, session: WorkspaceSessionState): void {
     this.workspaceSessions.setForWorktree(worktreeId, session)
   }
 

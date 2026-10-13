@@ -94,7 +94,7 @@ export abstract class OrcaRuntimeWithHydrateHeadlessMobileSessionTabsFromWorkspa
 
   protected abstract getAvailableAuthoritativeWindow(): BrowserWindow | null
 
-  protected hydrateHeadlessMobileSessionTabsFromWorkspaceSession(
+  hydrateHeadlessMobileSessionTabsFromWorkspaceSession(
     worktreeId?: string,
     options: {
       force?: boolean

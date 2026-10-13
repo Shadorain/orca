@@ -1,12 +1,60 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithReconcileHeadlessMobileSessionBrowserTabs } from './session-lifecycle/projection/reconcile-headless-mobile-session-browser-tabs'
+import type { OrcaRuntimeWithRestoreLivePairedRendererSessionOwnedMobileTerminals as RendererTerminalRescue } from '../../session-tabs/renderer-session-terminal-rescue'
+import type { OrcaRuntimeWithCloseStructuredAgentSessionTab as StructuredSessionClose } from '../../session-tabs/structured-session-tab-close'
+import type { OrcaRuntimeWithTransitionGraphReloadToTerminalState as SessionGraphAuthority } from '../../session-graph/session-graph-authority'
+import type { OrcaRuntimeWithWaitForMobileTerminalSurface as MobileTerminalSurface } from '../../terminal/view/mobile-terminal-surface'
+import type { OrcaRuntimeWithCloseHeadlessMobileTerminalTab as HeadlessTerminalClose } from '../../session-tabs/headless-terminal-tab-close'
+import { OrcaRuntimeWithReconcileHeadlessMobileSessionBrowserTabs } from '../projection/reconcile-headless-mobile-session-browser-tabs'
 import type {
   RuntimeMobileSessionTabsSnapshot,
   RuntimeMobileSessionTerminalTab
-} from '../../shared/runtime-types'
-import { SSH_PANE_RECOVERY_GRACE_MS } from './orca-runtime-core'
+} from '../../../../shared/runtime-types'
+import { SSH_PANE_RECOVERY_GRACE_MS } from '../../orca-runtime-core'
 
-export class OrcaRuntimeWithHasLiveOrPersistedServeOrSshOwnedPtyBinding extends OrcaRuntimeWithReconcileHeadlessMobileSessionBrowserTabs {
+export abstract class OrcaRuntimeWithHasLiveOrPersistedServeOrSshOwnedPtyBinding extends OrcaRuntimeWithReconcileHeadlessMobileSessionBrowserTabs {
+  protected abstract setPairedRendererSessionOwnership(
+    ...args: Parameters<RendererTerminalRescue['setPairedRendererSessionOwnership']>
+  ): ReturnType<RendererTerminalRescue['setPairedRendererSessionOwnership']>
+
+  protected abstract republishMobileSessionTabsSnapshot(
+    ...args: Parameters<StructuredSessionClose['republishMobileSessionTabsSnapshot']>
+  ): ReturnType<StructuredSessionClose['republishMobileSessionTabsSnapshot']>
+
+  protected abstract captureReadyGraphEpoch(
+    ...args: Parameters<SessionGraphAuthority['captureReadyGraphEpoch']>
+  ): ReturnType<SessionGraphAuthority['captureReadyGraphEpoch']>
+
+  protected abstract assertStableReadyGraph(
+    ...args: Parameters<SessionGraphAuthority['assertStableReadyGraph']>
+  ): ReturnType<SessionGraphAuthority['assertStableReadyGraph']>
+
+  protected abstract resolvePtyTabCloseSurfaceAuthority(
+    ...args: Parameters<MobileTerminalSurface['resolvePtyTabCloseSurfaceAuthority']>
+  ): ReturnType<MobileTerminalSurface['resolvePtyTabCloseSurfaceAuthority']>
+
+  protected abstract getMobileSessionTerminalHandle(
+    ...args: Parameters<StructuredSessionClose['getMobileSessionTerminalHandle']>
+  ): ReturnType<StructuredSessionClose['getMobileSessionTerminalHandle']>
+
+  protected abstract closeHeadlessMobileTerminalTab(
+    ...args: Parameters<HeadlessTerminalClose['closeHeadlessMobileTerminalTab']>
+  ): ReturnType<HeadlessTerminalClose['closeHeadlessMobileTerminalTab']>
+
+  protected abstract notifyRendererOfHeadlessTerminalClose(
+    ...args: Parameters<StructuredSessionClose['notifyRendererOfHeadlessTerminalClose']>
+  ): ReturnType<StructuredSessionClose['notifyRendererOfHeadlessTerminalClose']>
+
+  protected abstract isOffscreenMobileSessionBrowserTab(
+    ...args: Parameters<StructuredSessionClose['isOffscreenMobileSessionBrowserTab']>
+  ): ReturnType<StructuredSessionClose['isOffscreenMobileSessionBrowserTab']>
+
+  protected abstract retireRuntimeOwnedBrowserSessionTab(
+    ...args: Parameters<StructuredSessionClose['retireRuntimeOwnedBrowserSessionTab']>
+  ): ReturnType<StructuredSessionClose['retireRuntimeOwnedBrowserSessionTab']>
+
+  protected abstract closeStructuredAgentSessionTab(
+    ...args: Parameters<StructuredSessionClose['closeStructuredAgentSessionTab']>
+  ): ReturnType<StructuredSessionClose['closeStructuredAgentSessionTab']>
+
   // Why: a snapshot tab can keep a serve/SSH-owned ptyId after the runtime
   // terminal died and was de-persisted, so id shape alone must not preserve it
   // against a renderer publication. Require the binding to be backed by a live

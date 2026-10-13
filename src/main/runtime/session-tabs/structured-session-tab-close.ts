@@ -1,7 +1,7 @@
 import type { OrcaRuntimeWithPruneMobileSessionTabGroupLayout as PruneMobileSessionTabGroupLayoutMethods } from '../session-lifecycle/projection/prune-mobile-session-tab-group-layout'
 import type { OrcaRuntimeWithScheduleMobileSessionTabsChanged as ScheduleMobileSessionTabsChangedMethods } from './session-tabs-change-publication'
 import type { RuntimeHeadlessTabGroups as HeadlessTabGroupsMethods } from './headless-tab-group-moves'
-import { OrcaRuntimeWithCloseMobileSessionTab } from '../orca-runtime-close-mobile-session-tab'
+import { OrcaRuntimeWithCloseMobileSessionTab } from '../session-lifecycle/close/close-mobile-session-tab'
 import type {
   RuntimeMobileSessionAgentTab,
   RuntimeMobileSessionBrowserTab,
@@ -19,10 +19,6 @@ import type { StructuredAgentSessionCloseCause } from '../../native-chat/agent-s
 import { retireStructuredAgentSessionTabFrom } from '../structured-agent-session-tab-retirement'
 
 export abstract class OrcaRuntimeWithCloseStructuredAgentSessionTab extends OrcaRuntimeWithCloseMobileSessionTab {
-  protected abstract findPtyForMobileTerminalTab(
-    ...args: Parameters<PruneMobileSessionTabGroupLayoutMethods['findPtyForMobileTerminalTab']>
-  ): ReturnType<PruneMobileSessionTabGroupLayoutMethods['findPtyForMobileTerminalTab']>
-
   protected abstract getLiveBrowserTabsByPageId(
     ...args: Parameters<ScheduleMobileSessionTabsChangedMethods['getLiveBrowserTabsByPageId']>
   ): ReturnType<ScheduleMobileSessionTabsChangedMethods['getLiveBrowserTabsByPageId']>

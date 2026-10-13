@@ -1,29 +1,30 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithRefuseUnattributedMobileSessionTabClose } from './orca-runtime-refuse-unattributed-mobile-session-tab-close'
+import { OrcaRuntimeWithRefuseUnattributedMobileSessionTabClose } from './refuse-unattributed-mobile-session-tab-close'
 import type {
   RuntimeMobileSessionTerminalTab,
   RuntimeSessionTabCloseReason
-} from '../../shared/runtime-types'
-import type { RuntimePtyTabCloseAuthority } from './runtime-terminal-state-records'
+} from '../../../../shared/runtime-types'
+import type { RuntimePtyTabCloseAuthority } from '../../runtime-terminal-state-records'
 import {
   adjudicateAbsentMobileSessionTabClose,
   resolveMobileSessionLifecycleCloseContext,
   type MobileSessionLifecycleCloseHost
-} from './mobile-session-lifecycle-close-adjudication'
-import type { MobileSessionTabCloseOutcome } from './mobile-session-tab-close-outcome'
+} from '../../mobile-session-lifecycle-close-adjudication'
+import type { MobileSessionTabCloseOutcome } from '../../mobile-session-tab-close-outcome'
 import {
   committedMobileSessionTabClose,
   delegatedMobileSessionTabClose,
   refusedMobileSessionTabClose
-} from './mobile-session-tab-close-outcome'
-import { getRuntimeBrowserPageRegistry } from './runtime-browser-page-registry'
-import type { RuntimeCommandSurfaceHost } from './orca-runtime-core'
-import { SESSION_TAB_NOT_FOUND_ERROR } from '../../shared/session-tab-close'
-import { rendererPublicationThrottle } from '../window/renderer-publication-throttle'
-import { structuredAgentSessionTabCloseCause } from './structured-agent-session-tab-close-cause'
-import { retireHeadlessMobileSessionEditorTab } from './mobile-session-editor-projection'
+} from '../../mobile-session-tab-close-outcome'
+import { getRuntimeBrowserPageRegistry } from '../../runtime-browser-page-registry'
+import type { RuntimeEdgeCommandSurface } from '../../runtime-edge-command-controller'
+import { SESSION_TAB_NOT_FOUND_ERROR } from '../../../../shared/session-tab-close'
+import { rendererPublicationThrottle } from '../../../window/renderer-publication-throttle'
+import { structuredAgentSessionTabCloseCause } from '../../structured-agent-session-tab-close-cause'
+import { retireHeadlessMobileSessionEditorTab } from '../../mobile-session-editor-projection'
 
-export class OrcaRuntimeWithCloseMobileSessionTab extends OrcaRuntimeWithRefuseUnattributedMobileSessionTabClose {
+export abstract class OrcaRuntimeWithCloseMobileSessionTab extends OrcaRuntimeWithRefuseUnattributedMobileSessionTabClose {
+  declare browserTabClose: RuntimeEdgeCommandSurface['browserTabClose']
+
   async closeMobileSessionTab(
     worktreeSelector: string,
     tabId: string,
@@ -277,7 +278,7 @@ export class OrcaRuntimeWithCloseMobileSessionTab extends OrcaRuntimeWithRefuseU
         ? getRuntimeBrowserPageRegistry(this).getPage(tab.browserPageId)
         : undefined
       if (clientPage) {
-        await (this as RuntimeCommandSurfaceHost<this>).browserTabClose({
+        await this.browserTabClose({
           worktree: `id:${worktreeId}`,
           page: clientPage.browserPageId
         })

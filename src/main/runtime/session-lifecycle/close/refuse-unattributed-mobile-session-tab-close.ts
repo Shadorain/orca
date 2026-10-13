@@ -1,8 +1,7 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithApplyMobileSessionTabNavigation } from './session-lifecycle/projection/apply-mobile-session-tab-navigation'
-import type { RuntimeMobileSessionTabCloseResult } from '../../shared/runtime-types'
+import { OrcaRuntimeWithApplyMobileSessionTabNavigation } from '../projection/apply-mobile-session-tab-navigation'
+import type { RuntimeMobileSessionTabCloseResult } from '../../../../shared/runtime-types'
 
-export class OrcaRuntimeWithRefuseUnattributedMobileSessionTabClose extends OrcaRuntimeWithApplyMobileSessionTabNavigation {
+export abstract class OrcaRuntimeWithRefuseUnattributedMobileSessionTabClose extends OrcaRuntimeWithApplyMobileSessionTabNavigation {
   async refuseUnattributedMobileSessionTabClose(
     worktreeSelector: string,
     tabId: string
