@@ -1,22 +1,34 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithHasLiveOrPersistedServeOrSshOwnedPtyBinding } from './session-lifecycle/close/has-live-or-persisted-serve-or-ssh-owned-pty-binding'
-import type { RuntimePtyWorktreeRecord } from './runtime-terminal-state-records'
-import { normalizeCompatibleAgentTitleForOwner } from '../../shared/agent-title-owner'
-import { getLatestPtyTitle } from './runtime-worktree-status-projection'
+import type { OrcaRuntimeWithTouchMobileSessionTabsForWorktree as TouchMobileSessionTabsForWorktreeMethods } from './mobile-session-membership'
+import { OrcaRuntimeWithHasLiveOrPersistedServeOrSshOwnedPtyBinding } from '../session-lifecycle/close/has-live-or-persisted-serve-or-ssh-owned-pty-binding'
+import type { RuntimePtyWorktreeRecord } from '../runtime-terminal-state-records'
+import { normalizeCompatibleAgentTitleForOwner } from '../../../shared/agent-title-owner'
+import { getLatestPtyTitle } from '../runtime-worktree-status-projection'
 import type {
   RuntimeMobileSessionTabsSnapshot,
   RuntimeMobileSessionTerminalTab
-} from '../../shared/runtime-types'
+} from '../../../shared/runtime-types'
 import {
   buildMaterializedHeadlessParentLayout,
   getHeadlessMobileSessionGroupId
-} from './mobile-session-layout-projection'
+} from '../mobile-session-layout-projection'
 import {
   mergeMobileSessionSnapshotTabs,
   mergeMobileSessionTabGroups
-} from './mobile-session-tab-merge'
+} from '../mobile-session-tab-merge'
 
-export class OrcaRuntimeWithPublishPtyBackedMobileSessionTerminal extends OrcaRuntimeWithHasLiveOrPersistedServeOrSshOwnedPtyBinding {
+export abstract class OrcaRuntimeWithPublishPtyBackedMobileSessionTerminal extends OrcaRuntimeWithHasLiveOrPersistedServeOrSshOwnedPtyBinding {
+  protected abstract isMobileSessionSurfaceMembershipAllowed(
+    ...args: Parameters<
+      TouchMobileSessionTabsForWorktreeMethods['isMobileSessionSurfaceMembershipAllowed']
+    >
+  ): ReturnType<TouchMobileSessionTabsForWorktreeMethods['isMobileSessionSurfaceMembershipAllowed']>
+
+  abstract touchMobileSessionTabsForWorktree(
+    ...args: Parameters<
+      TouchMobileSessionTabsForWorktreeMethods['touchMobileSessionTabsForWorktree']
+    >
+  ): ReturnType<TouchMobileSessionTabsForWorktreeMethods['touchMobileSessionTabsForWorktree']>
+
   /**
    * Publishes a PTY-backed terminal tab snapshot to the synced mobile session,
    * normalizing Pi-compatible titles based on launch or foreground ownership.

@@ -1,15 +1,19 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithPublishPtyBackedMobileSessionTerminal } from './orca-runtime-publish-pty-backed-mobile-session-terminal'
-import { getRepoIdFromWorktreeId } from '../../shared/worktree/id'
-import { parsePaneKey } from '../../shared/stable-pane-id'
-import { hasHostAuthoritativeTerminalMembership } from '../persistence/terminal-topology/terminal-topology-membership'
+import type { OrcaRuntimeWithGetTerminalInteractiveWait as GetTerminalInteractiveWaitMethods } from '../terminal/wait/terminal-interactive-wait'
+import { OrcaRuntimeWithPublishPtyBackedMobileSessionTerminal } from './pty-backed-session-publication'
+import { getRepoIdFromWorktreeId } from '../../../shared/worktree/id'
+import { parsePaneKey } from '../../../shared/stable-pane-id'
+import { hasHostAuthoritativeTerminalMembership } from '../../persistence/terminal-topology/terminal-topology-membership'
 import type {
   RuntimeMobileSessionTabsSnapshot,
   RuntimeSyncedLeaf
-} from '../../shared/runtime-types'
-import { retireTerminalSurfacesFromSnapshot } from './mobile-session-terminal-retirement'
+} from '../../../shared/runtime-types'
+import { retireTerminalSurfacesFromSnapshot } from '../mobile-session-terminal-retirement'
 
-export class OrcaRuntimeWithTouchMobileSessionTabsForWorktree extends OrcaRuntimeWithPublishPtyBackedMobileSessionTerminal {
+export abstract class OrcaRuntimeWithTouchMobileSessionTabsForWorktree extends OrcaRuntimeWithPublishPtyBackedMobileSessionTerminal {
+  abstract getTerminalWorktreeIdForPaneKey(
+    ...args: Parameters<GetTerminalInteractiveWaitMethods['getTerminalWorktreeIdForPaneKey']>
+  ): ReturnType<GetTerminalInteractiveWaitMethods['getTerminalWorktreeIdForPaneKey']>
+
   /** Bump the snapshot version and emit, coalesced unless `immediate`.
    *  Why the bump: clients gate mirrored snapshots on a strictly increasing
    *  `snapshotVersion`, so a re-emit at the same version is silently dropped. */

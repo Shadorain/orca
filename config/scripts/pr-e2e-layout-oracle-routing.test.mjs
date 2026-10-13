@@ -64,6 +64,8 @@ const STACK_WRITERS = [
   'src/main/runtime/terminal-surface-close.ts',
   'src/main/runtime/terminal/output/terminal-derived-agent-facts.ts',
   'src/main/runtime/terminal/output/terminal-output-generation.ts',
+  'src/main/runtime/session-tabs/mobile-session-membership.ts',
+  'src/main/runtime/session-tabs/pty-backed-session-publication.ts',
   'src/renderer/src/components/terminal/terminal-tab-actions.ts',
   'src/renderer/src/components/tab-bar/web-runtime-tab-move-mirror.ts',
   'src/shared/rpc-contract/workspace-layout-params.ts',
