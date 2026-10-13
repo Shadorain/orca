@@ -6,7 +6,7 @@ const host = vi.hoisted(() => ({
 }))
 vi.mock('@/lib/agent-launch-through-host', () => host)
 const pasteAgentLaunchPromptOnceReady = vi.hoisted(() =>
-  vi.fn(async (_args: { sendGate?: Promise<boolean> }) => ({
+  vi.fn(async (_args: { launchPty?: Promise<string | null> }) => ({
     delivered: true,
     failureNotified: false
   }))
@@ -19,8 +19,8 @@ const { launchNewTabPromptThroughHost, newTabPromptLaunchesThroughHost } =
 const TAB = '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d'
 
 function deferredStart() {
-  let resolve!: (started: boolean) => void
-  const started = new Promise<boolean>((done) => (resolve = done))
+  let resolve!: (startedPtyId: string | null) => void
+  const started = new Promise<string | null>((done) => (resolve = done))
   host.launchAgentThroughHost.mockReturnValue({ tabId: TAB, started })
   return resolve
 }
@@ -41,41 +41,40 @@ beforeEach(() => {
 })
 
 describe('an AI button launched in its own pane', () => {
-  function sendGate(): Promise<boolean> {
-    const gate = pasteAgentLaunchPromptOnceReady.mock.calls.at(-1)?.[0].sendGate
-    if (!gate) {
-      throw new Error('the paste was set up without a send gate')
+  function launchPty(): Promise<string | null> {
+    const pty = pasteAgentLaunchPromptOnceReady.mock.calls.at(-1)?.[0].launchPty
+    if (!pty) {
+      throw new Error("the paste was set up without the launch pane's PTY")
     }
-    return gate
+    return pty
   }
 
-  // Why: readiness is watched from the tab's first output, as main watches it, but the paste must
-  // meet the agent its pane started, never a pane whose launch failed.
-  it("watches for readiness at once but writes only once its pane's spawn started the agent", async () => {
+  // Why: the paste must meet the agent its pane started, never another pane or a failed launch.
+  it("pastes into the PTY its pane's spawn started the agent in", async () => {
     const answer = deferredStart()
     const { tabId, promptDeliveryResult } = launch()
     expect(pasteAgentLaunchPromptOnceReady).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({ tabId, worktreeId: 'wt-1', submit: true })
     )
-    let gateOpen: boolean | undefined
-    void sendGate().then((open) => (gateOpen = open))
+    let startedPty: string | null | undefined
+    void launchPty().then((ptyId) => (startedPty = ptyId))
     await Promise.resolve()
-    expect(gateOpen).toBeUndefined()
+    expect(startedPty).toBeUndefined()
 
-    answer(true)
+    answer('pty-agent')
 
-    await expect(sendGate()).resolves.toBe(true)
+    await expect(launchPty()).resolves.toBe('pty-agent')
     await expect(promptDeliveryResult).resolves.toEqual({ delivered: true, failureNotified: false })
     expect(tabId).toBe(TAB)
   })
 
   it('never pastes for a launch that did not start, whose pane or notice already said why', async () => {
-    deferredStart()(false)
+    deferredStart()(null)
     await expect(launch().promptDeliveryResult).resolves.toEqual({
       delivered: false,
       failureNotified: true
     })
-    await expect(sendGate()).resolves.toBe(false)
+    await expect(launchPty()).resolves.toBeNull()
   })
 })
 

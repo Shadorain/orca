@@ -61,7 +61,7 @@ export function buildWorktreePurgeState(
     // A launch tab that never spawned has no spawn left to answer its prompt's wait.
     for (const tab of s.tabsByWorktree[worktreeId] ?? []) {
       if (tab.agentLaunchPane) {
-        settleAgentLaunchPaneStart(tab.id, tab.agentLaunchPane.leafId, false)
+        settleAgentLaunchPaneStart(tab.id, tab.agentLaunchPane.leafId, null)
       }
     }
     for (const tab of s.unifiedTabsByWorktree[worktreeId] ?? []) {

@@ -20,7 +20,7 @@ export function applyAgentLaunchPaneVerdict(event: AgentLaunchPaneVerdictEvent):
   }
   if (verdict.kind !== 'proceed') {
     // Reported before the pane's spawn returns: its prompt is never pasted.
-    settleAgentLaunchPaneStart(tabId, leafId, false)
+    settleAgentLaunchPaneStart(tabId, leafId, null)
   }
   switch (verdict.kind) {
     case 'proceed':

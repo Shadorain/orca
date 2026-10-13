@@ -68,8 +68,8 @@ export function windowMakesHostLaunchTab(): boolean {
 
 export function launchAgentThroughHost(args: HostAgentLaunchArgs): {
   tabId: string
-  /** Whether the agent started in the tab's pane; false when it could not, or the user closed it. */
-  started: Promise<boolean>
+  /** The tab pane's PTY once its agent started there; null when it could not, or the user closed it. */
+  started: Promise<string | null>
 } {
   const store = useAppStore.getState()
   const tabId = createBrowserUuid()

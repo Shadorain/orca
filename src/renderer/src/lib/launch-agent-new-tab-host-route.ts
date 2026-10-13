@@ -52,7 +52,7 @@ export function launchNewTabPromptThroughHost(
     content: pasteContent,
     submit,
     prompt: args.prompt,
-    sendGate: started,
+    launchPty: started,
     ...(onPromptDelivered ? { onPromptDelivered } : {}),
     ...(onPromptDeliveryUnconfirmed ? { onPromptDeliveryUnconfirmed } : {})
   })

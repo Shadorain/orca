@@ -108,6 +108,7 @@ describe('createIpcPtyTransport', () => {
     const pane = { worktreeId: 'wt', tabId: 'tab-launch', leafId: 'leaf-launch' }
 
     const started = awaitAgentLaunchPaneStart(pane.tabId, pane.leafId)
+    spawn.mockResolvedValueOnce({ id: 'pty-launch' })
     // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the transport forwards the request untouched; main validates it.
     await createIpcPtyTransport({ ...pane, agentLaunch } as never).connect({
       url: '',
@@ -116,12 +117,12 @@ describe('createIpcPtyTransport', () => {
     expect(spawn).toHaveBeenCalledWith(
       expect.objectContaining({ tabId: 'tab-launch', agentLaunch })
     )
-    await expect(started).resolves.toBe(true)
+    await expect(started).resolves.toBe('pty-launch')
 
     spawn.mockRejectedValueOnce(new Error('agent_launch_pane_refused'))
     const refused = awaitAgentLaunchPaneStart(pane.tabId, pane.leafId)
     await createIpcPtyTransport(pane).connect({ url: '', callbacks: { onError: vi.fn() } })
-    await expect(refused).resolves.toBe(false)
+    await expect(refused).resolves.toBeNull()
   })
 
   it('keeps the recovery hint and raw diagnostic from a wrapped spawn error', async () => {

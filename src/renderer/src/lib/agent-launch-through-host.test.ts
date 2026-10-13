@@ -90,8 +90,8 @@ describe('a desktop AI-button launch', () => {
   it("says the agent started once its pane's spawn returns, and not when main says it failed", async () => {
     const started = launch()
     const leafId = launchTab(started.tabId)!.agentLaunchPane!.leafId
-    settleAgentLaunchPaneStart(started.tabId, leafId, true)
-    await expect(started.started).resolves.toBe(true)
+    settleAgentLaunchPaneStart(started.tabId, leafId, 'pty-1')
+    await expect(started.started).resolves.toBe('pty-1')
 
     const failed = launch()
     const failedLeaf = launchTab(failed.tabId)!.agentLaunchPane!.leafId
@@ -101,7 +101,7 @@ describe('a desktop AI-button launch', () => {
       leafId: failedLeaf,
       verdict: { kind: 'not-started', code: 'spawn claude ENOENT' }
     })
-    settleAgentLaunchPaneStart(failed.tabId, failedLeaf, true)
-    await expect(failed.started).resolves.toBe(false)
+    settleAgentLaunchPaneStart(failed.tabId, failedLeaf, 'pty-2')
+    await expect(failed.started).resolves.toBeNull()
   })
 })

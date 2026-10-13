@@ -68,8 +68,8 @@ export async function pasteDraftWhenAgentReady(args: {
   timeoutMs?: number
   onTimeout?: () => void
   onUnconfirmedDelivery?: () => void
-  /** Whether the paste may be written at all; readiness is observed while it is pending. */
-  sendGate?: Promise<boolean>
+  /** The launch pane's PTY once its spawn says the agent started there; null when it didn't. */
+  launchPty?: Promise<string | null>
 }): Promise<boolean> {
   const { tabId, content, agent, submit, forcePaste, timeoutMs, onTimeout, onUnconfirmedDelivery } =
     args
@@ -92,10 +92,10 @@ export async function pasteDraftWhenAgentReady(args: {
     spawnTimeoutMs: PTY_SPAWN_TIMEOUT_MS,
     readinessTimeoutMs,
     readySignal,
-    ...(args.sendGate ? { spawnClockGate: args.sendGate } : {})
+    ...(args.launchPty ? { launchPty: args.launchPty } : {})
   })
-  // Why: a closed gate is the caller's own outcome to report; the bounded wait above just lapses.
-  if (args.sendGate && !(await args.sendGate)) {
+  // Why: a pane that didn't start is the caller's own outcome to report, not a readiness timeout.
+  if (args.launchPty && !(await args.launchPty)) {
     return false
   }
   const readiness = await readinessResult
@@ -246,11 +246,14 @@ function waitForAgentDraftInputReadyOnTab(args: {
   spawnTimeoutMs: number
   readinessTimeoutMs: number
   readySignal: Parameters<typeof waitForAgentDraftInputReady>[2]
-  /** The spawn budget starts once this opens, so a pane that starts late still gets all of it. */
-  spawnClockGate?: Promise<boolean>
+  /** Names the PTY to deliver to; the tab's first is only watched until then. */
+  launchPty?: Promise<string | null>
 }): Promise<{ ptyId: string; ready: boolean } | null> {
   return new Promise((resolve) => {
     let selectedPtyId: string | null = null
+    // Until a launch names its pane's PTY, no watched PTY may be delivered to.
+    let deliverablePtyId: string | null = null
+    const readyByPtyId = new Map<string, boolean>()
     let settled = false
     let spawnTimer: number | null = null
     let unsubscribeStore: (() => void) | null = null
@@ -266,8 +269,14 @@ function waitForAgentDraftInputReadyOnTab(args: {
       unsubscribeStore?.()
       resolve(result)
     }
+    const settleIfDeliverable = (ptyId: string): void => {
+      const ready = readyByPtyId.get(ptyId)
+      if (ready !== undefined && (!args.launchPty || deliverablePtyId === ptyId)) {
+        finish({ ptyId, ready })
+      }
+    }
     const bindPty = (ptyId: string): void => {
-      if (selectedPtyId || settled) {
+      if (selectedPtyId === ptyId || settled) {
         return
       }
       selectedPtyId = ptyId
@@ -278,25 +287,35 @@ function waitForAgentDraftInputReadyOnTab(args: {
       // Why: Zustand subscribers run inside updateTabPtyId. Registering the
       // sidecar here precedes the transport's immediate pre-handler drain.
       void waitForAgentDraftInputReady(ptyId, args.readinessTimeoutMs, args.readySignal).then(
-        (ready) => finish({ ptyId, ready })
+        (ready) => {
+          readyByPtyId.set(ptyId, ready)
+          settleIfDeliverable(ptyId)
+        }
       )
     }
     const bindFromState = (state: ReturnType<typeof useAppStore.getState>): void => {
       const ptyId = state.ptyIdsByTabId[args.tabId]?.[0]
-      if (ptyId) {
+      if (ptyId && !selectedPtyId) {
         bindPty(ptyId)
       }
     }
 
-    const startSpawnClock = (): void => {
-      if (!settled && !selectedPtyId) {
-        spawnTimer = window.setTimeout(() => finish(null), args.spawnTimeoutMs)
-      }
-    }
-    if (args.spawnClockGate) {
-      void args.spawnClockGate.then((open) => (open ? startSpawnClock() : finish(null)))
+    if (args.launchPty) {
+      // A split made while the agent starts can bind its own shell first: the launch pane's PTY wins.
+      void args.launchPty.then((ptyId) => {
+        if (!ptyId) {
+          finish(null)
+          return
+        }
+        deliverablePtyId = ptyId
+        if (readyByPtyId.has(ptyId)) {
+          settleIfDeliverable(ptyId)
+        } else {
+          bindPty(ptyId)
+        }
+      })
     } else {
-      startSpawnClock()
+      spawnTimer = window.setTimeout(() => finish(null), args.spawnTimeoutMs)
     }
     unsubscribeStore = useAppStore.subscribe(bindFromState)
     bindFromState(useAppStore.getState())

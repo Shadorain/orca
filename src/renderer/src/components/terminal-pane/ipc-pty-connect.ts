@@ -85,7 +85,7 @@ export async function connectIpcPty(
     // recorded before we asked for a PTY, so it belongs to that earlier owner, not to us.
     const priorIncarnationFence = currentPreHandlerPtySequence()
     const spawnResult = await spawnIpcPty(transportOptions, options, admittedSessionId)
-    settleAgentLaunchPaneStart(transportOptions.tabId, transportOptions.leafId, true)
+    settleAgentLaunchPaneStart(transportOptions.tabId, transportOptions.leafId, spawnResult.id)
     const retireDisposedFreshSpawn = async (): Promise<void> => {
       if (context.handleExplicitlyClosedConnect?.(spawnResult.id)) {
         return
@@ -156,7 +156,7 @@ export async function connectIpcPty(
     }
     return projectIpcPtyConnectResult(spawnResult)
   } catch (error) {
-    settleAgentLaunchPaneStart(transportOptions.tabId, transportOptions.leafId, false)
+    settleAgentLaunchPaneStart(transportOptions.tabId, transportOptions.leafId, null)
     if (context.isDestroyed()) {
       return
     }

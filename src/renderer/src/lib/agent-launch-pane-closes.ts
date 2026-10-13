@@ -17,7 +17,7 @@ function closeKey(tabId: string, leafId: string): string {
 }
 
 export function noteAgentLaunchPaneClosedByUser(tabId: string, leafId: string): void {
-  settleAgentLaunchPaneStart(tabId, leafId, false)
+  settleAgentLaunchPaneStart(tabId, leafId, null)
   const paneKey = closeKey(tabId, leafId)
   closedPaneKeys.delete(paneKey)
   closedPaneKeys.add(paneKey)

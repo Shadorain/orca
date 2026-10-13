@@ -68,7 +68,7 @@ export function createTerminalTabCloseActions(
               if (closeReason === 'user') {
                 noteAgentLaunchPaneClosedByUser(tabId, closing.agentLaunchPane.leafId)
               } else {
-                settleAgentLaunchPaneStart(tabId, closing.agentLaunchPane.leafId, false)
+                settleAgentLaunchPaneStart(tabId, closing.agentLaunchPane.leafId, null)
               }
             }
             // Why: capture the first-matched tab's snapshot for the Cmd+Shift+T reopen stack (see capturedSnapshot below).

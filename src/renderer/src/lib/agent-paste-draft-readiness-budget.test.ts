@@ -164,17 +164,17 @@ describe('pty-bound agent draft readiness budget', () => {
 
   // An AI button's pane may settle its grid for longer than the spawn budget before it spawns.
   it.each([true, false])(
-    'starts the spawn budget when the pane says whether it started (%s)',
+    'delivers once the pane says whether it started, however late (%s)',
     async (started) => {
       testState.waitForReady.mockResolvedValue(true)
-      let answer!: (started: boolean) => void
+      let answer!: (startedPtyId: string | null) => void
       const promise = pasteDraftWhenAgentReady({
         tabId: 'tab-late',
         content: 'task',
         agent: 'claude',
         submit: true,
         forcePaste: true,
-        sendGate: new Promise<boolean>((resolve) => {
+        launchPty: new Promise<string | null>((resolve) => {
           answer = resolve
         })
       })
@@ -182,7 +182,7 @@ describe('pty-bound agent draft readiness budget', () => {
       await vi.advanceTimersByTimeAsync(13_000)
       testState.ptyIdsByTabId['tab-late'] = ['pty-late']
       testState.listeners.forEach((listener) => listener(storeState()))
-      answer(started)
+      answer(started ? 'pty-late' : null)
       await vi.advanceTimersByTimeAsync(12_000)
 
       await expect(promise).resolves.toBe(started)

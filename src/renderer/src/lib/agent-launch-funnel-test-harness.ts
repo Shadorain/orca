@@ -96,7 +96,7 @@ function createTabInto(store: { tabsByWorktree: Record<string, { id: string }[]>
     store.tabsByWorktree[worktreeId] = [...(store.tabsByWorktree[worktreeId] ?? []), tab]
     const { initialLeafId } = opts
     if (opts.pendingStartup?.agentLaunch && initialLeafId) {
-      queueMicrotask(() => settleAgentLaunchPaneStart(tab.id, initialLeafId, true))
+      queueMicrotask(() => settleAgentLaunchPaneStart(tab.id, initialLeafId, `${tab.id}-pty`))
     }
     return tab
   }
