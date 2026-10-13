@@ -1,29 +1,36 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithPtyForegroundProcessReads } from './client/runtime-client-state'
+import type { AutomationsChangedPayload } from '../../../../shared/runtime-client-events'
+import type { ResolvedWorktree } from '../../runtime-worktree-path-identity'
+import { OrcaRuntimeWithPtyForegroundProcessReads } from '../../client/runtime-client-state'
 import type {
   AutomationOwnerPrecondition,
   AutomationDestination
-} from '../../shared/automation-owner-precondition'
-import type { Automation, AutomationRun } from '../../shared/automations-types'
+} from '../../../../shared/automation-owner-precondition'
+import type { Automation, AutomationRun } from '../../../../shared/automations-types'
 import type {
   RuntimeAutomationCreateInput,
   RuntimeAutomationUpdateInput
-} from './runtime-automation-controller'
+} from '../../runtime-automation-controller'
 import {
   automationChangePublications,
   type AutomationChangeSelector,
   type AutomationListResult
-} from '../../shared/automation-list-scope'
-import { OrchestrationDb } from './orchestration/db'
+} from '../../../../shared/automation-list-scope'
+import { OrchestrationDb } from '../../orchestration/db'
 import { join } from 'node:path'
 import { existsSync } from 'node:fs'
-import { getAppEnvironment } from '../../shared/app-environment'
-import type { LegacyWorkerTerminalRecoveryPlan } from './orchestration/orchestration-legacy-worker-terminal-recovery'
-import type { LegacyWorkerTerminalRecoveryResult } from './runtime-legacy-worker-terminal-recovery-types'
-import { makePaneKey } from '../../shared/stable-pane-id'
-import { runtimeWorktreeIdsEqual } from './runtime-worktree-path-identity'
+import { getAppEnvironment } from '../../../../shared/app-environment'
+import type { LegacyWorkerTerminalRecoveryPlan } from '../../orchestration/orchestration-legacy-worker-terminal-recovery'
+import type { LegacyWorkerTerminalRecoveryResult } from '../../runtime-legacy-worker-terminal-recovery-types'
+import { makePaneKey } from '../../../../shared/stable-pane-id'
+import { runtimeWorktreeIdsEqual } from '../../runtime-worktree-path-identity'
 
-export class OrcaRuntimeWithAutomationOperations extends OrcaRuntimeWithPtyForegroundProcessReads {
+export abstract class OrcaRuntimeWithAutomationOperations extends OrcaRuntimeWithPtyForegroundProcessReads {
+  abstract notifyAutomationsChanged(payload?: AutomationsChangedPayload): void
+  abstract ensureOrchestrationFederationRelay(runId?: string): void
+  protected abstract scheduleRestoredMessageRepoints(): void
+  protected abstract getResolvedWorktreeMap(): Promise<Map<string, ResolvedWorktree>>
+  protected abstract getLeafKey(tabId: string, leafId: string): string
+
   private readAutomationRuns<T>(
     automationId: string | undefined,
     expectedOwner: AutomationOwnerPrecondition | undefined,

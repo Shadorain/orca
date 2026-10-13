@@ -1,28 +1,29 @@
-// @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithAutomationOperations } from './orca-runtime-automation-operations'
+import type { ExecutionHostId } from '../../../../shared/execution-host'
+import type { RuntimePtyWorktreeRecord } from '../../runtime-terminal-state-records'
+import { OrcaRuntimeWithAutomationOperations } from './automation-operations'
 import type {
   RuntimeTerminalOrphanAdoptionRequest,
   RuntimeTerminalOrphanAdoptionResult
-} from '../../shared/runtime-types'
+} from '../../../../shared/runtime-types'
 
-import type { PtyControllerInventory } from './runtime-pty-controller-contract'
+import type { PtyControllerInventory } from '../../runtime-pty-controller-contract'
 import {
   resolveTerminalSessionWorktreeId,
   runtimeWorktreeIdsEqual
-} from './runtime-worktree-path-identity'
-import { makePaneKey } from '../../shared/stable-pane-id'
-import type { WorkspaceSessionState } from '../../shared/workspace-session-state-types'
-import { layoutContainsLeafId } from '../persistence/restoring-sessions/terminal-layout-normalization'
-import type { LegacyWorkerTerminalRecoveryPlan } from './orchestration/orchestration-legacy-worker-terminal-recovery'
-import { retireTerminalSurfacesFromSnapshot } from './mobile-session-terminal-retirement'
+} from '../../runtime-worktree-path-identity'
+import { makePaneKey } from '../../../../shared/stable-pane-id'
+import type { WorkspaceSessionState } from '../../../../shared/workspace-session-state-types'
+import { layoutContainsLeafId } from '../../../persistence/restoring-sessions/terminal-layout-normalization'
+import type { LegacyWorkerTerminalRecoveryPlan } from '../../orchestration/orchestration-legacy-worker-terminal-recovery'
+import { retireTerminalSurfacesFromSnapshot } from '../../mobile-session-terminal-retirement'
 import type {
   LegacyWorkerRecoveryCandidate,
   LegacyWorkerRecoveryInventory,
   TerminalWorkspaceLaunchScope
-} from './runtime-legacy-worker-terminal-recovery-types'
-import { getLatestPtyTitle } from './runtime-worktree-status-projection'
-import type { AutomationService } from '../automations/service'
-import type { ArtifactCloudService } from '../artifacts/artifact-cloud-service'
+} from '../../runtime-legacy-worker-terminal-recovery-types'
+import { getLatestPtyTitle } from '../../runtime-worktree-status-projection'
+import type { AutomationService } from '../../../automations/service'
+import type { ArtifactCloudService } from '../../../artifacts/artifact-cloud-service'
 import type {
   ArtifactCloudOperation,
   ArtifactCloudOptions,
@@ -32,9 +33,17 @@ import type {
   ArtifactPublishResult,
   ArtifactPublishedLink,
   ArtifactWriteRequest
-} from '../../shared/artifacts'
+} from '../../../../shared/artifacts'
 
 export abstract class OrcaRuntimeWithHasExactPersistedTerminalSurfaceIdentity extends OrcaRuntimeWithAutomationOperations {
+  protected abstract getOwnWorkspaceSessionForWorktree(
+    worktreeId: string
+  ): WorkspaceSessionState | null
+  protected abstract rebuildLeafPtyIndex(): void
+  protected abstract getWorkspaceSessionHostIdForWorktree(worktreeId: string): ExecutionHostId
+  protected abstract getTerminalTopologyRevision(worktreeId: string): number
+  protected abstract getPtyDisplayRecord(pty: RuntimePtyWorktreeRecord): RuntimePtyWorktreeRecord
+
   abstract notifyMobileSessionTabsChanged(worktreeId?: string): void
 
   protected abstract adoptTerminalOrphansFromInventoryUnderMutation(
