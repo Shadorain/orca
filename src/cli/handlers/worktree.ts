@@ -44,6 +44,7 @@ import { getReviewTargetLinkFlags } from './worktree-review-link-flags'
 import { withSetupDecisionRecovery } from './worktree-setup-decision-recovery'
 import { assertGitLabLinkFlagProjectsMatch } from './worktree-gitlab-link-context'
 import { assertReferenceWritesSupported, getCreateReferences } from '../reference-input'
+import { readWorktreeStartupCommand } from './worktree-create-command'
 
 function getPresentStringFlag(
   flags: Map<string, string | boolean>,
@@ -162,6 +163,7 @@ export const WORKTREE_HANDLERS: Record<string, CommandHandler> = {
     printResult(result, json, formatWorktreeShow)
   },
   'worktree create': async ({ flags, client, cwd, json, rawArgs }) => {
+    const startupCommand = readWorktreeStartupCommand(flags)
     const linkedItems = getCreateReferences(flags)
     assertWorktreeParentFlagsCompatible(flags)
     assertWorkspaceTargetFlagsCompatible(flags)
@@ -214,6 +216,7 @@ export const WORKTREE_HANDLERS: Record<string, CommandHandler> = {
       displayName: name,
       displayNameKind: 'user',
       baseBranch: getOptionalStringFlag(flags, 'base-branch'),
+      ...(startupCommand !== undefined ? { startupCommand } : {}),
       ...reviewLinks,
       ...linearIssueLink,
       ...(linkedItems ? { linkedItems } : {}),

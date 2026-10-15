@@ -55,6 +55,30 @@ describe('orca cli worktree awareness', () => {
     spawnMock
   })
 
+  it.each([
+    ['--command'],
+    ['--command', '   '],
+    ['--command', 'omp', '--agent', 'omp'],
+    ['--command', 'omp', '--prompt', 'task'],
+    ['--command', 'omp', '--model', 'model']
+  ])('rejects invalid or ambiguous startup command flags: %j', async (...flags) => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const priorExitCode = process.exitCode
+    try {
+      await main(
+        ['worktree', 'create', '--repo', 'id:repo-1', '--name', 'child', '--json', ...flags],
+        '/tmp/repo'
+      )
+      expect(callMock).not.toHaveBeenCalled()
+      expect(JSON.parse(String(logSpy.mock.calls[0]?.[0]))).toMatchObject({
+        ok: false,
+        error: { code: 'invalid_argument' }
+      })
+    } finally {
+      process.exitCode = priorExitCode
+    }
+  })
+
   it('opts into setup and activation when worktree.create runs hooks', async () => {
     queueFixtures(
       callMock,
