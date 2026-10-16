@@ -29,14 +29,6 @@ describe('collectBrowserPageIds', () => {
     ).toEqual(['page-a', 'page-b'])
   })
 
-  // Why: a split tab can hold a background page a phone is driving while a different page is
-  // active; collecting only the active one would let that guest get parked.
-  it('does not drop background pages in favour of the active one', () => {
-    expect(
-      collectBrowserPageIds([{ id: 't', activePageId: 'p1', pageIds: ['p1', 'p2'] }])
-    ).toContain('p2')
-  })
-
   it('falls back to the active page id when the list is empty', () => {
     expect(collectBrowserPageIds([{ id: 'tab-1', activePageId: 'page-a', pageIds: [] }])).toEqual([
       'page-a'

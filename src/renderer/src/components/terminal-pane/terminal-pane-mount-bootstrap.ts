@@ -1,4 +1,4 @@
-import type { PaneManager } from '@/lib/pane-manager/pane-manager'
+import type { BootstrapSplitManager } from './terminal-pane-bootstrap-split-record'
 import type { PtyConnectionDeps } from './pty-connection-types'
 import type {
   TerminalPaneSetupSplit,
@@ -7,7 +7,7 @@ import type {
 import { splitPaneWithOneShotStartup } from './terminal-pane-lifecycle-primitives'
 
 export function runTerminalPaneBootstrapSplits(args: {
-  manager: PaneManager
+  manager: BootstrapSplitManager
   ptyDeps: PtyConnectionDeps
   setupSplit: TerminalPaneSetupSplit | null | undefined
   issueCommandSplit: TerminalPaneIssueCommandSplit | null | undefined

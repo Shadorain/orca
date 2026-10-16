@@ -169,3 +169,16 @@ export function resolveTuiAgentLaunchEnv(
   }
   return getTuiAgentDefaultEnv(agent)
 }
+
+/**
+ * The args and env a resume relaunches with: only the recipe its original Orca launch recorded.
+ * Why not settings defaults: an unrecorded launch (`claude` typed by hand) ran with none, and the
+ * defaults carry the permission bypass, so filling the gap would widen the resumed session.
+ */
+export function resolveResumeLaunchRecipe(
+  launchConfig: { agentArgs: string; agentEnv: Record<string, string> } | undefined
+): { agentArgs: string; agentEnv: Record<string, string> } {
+  return launchConfig
+    ? { agentArgs: launchConfig.agentArgs, agentEnv: launchConfig.agentEnv }
+    : { agentArgs: '', agentEnv: {} }
+}

@@ -16,6 +16,7 @@ import {
   db,
   finishWorker,
   host,
+  observationClock,
   openChat,
   ptyPointer,
   queuedCardTexts,
@@ -50,7 +51,7 @@ async function runningUserTurn(chat: FakeConnection): Promise<() => Promise<void
 async function idleEdgesSettled(): Promise<void> {
   for (let edge = 0; edge < 3; edge += 1) {
     runtime.onStructuredSessionStatusForMail({ sessionId: COORDINATOR, status: 'idle' })
-    await new Promise((resolve) => setTimeout(resolve, 100))
+    await observationClock.observe(100)
   }
 }
 
@@ -68,6 +69,7 @@ async function secondTask(): Promise<string> {
 
 describe("a busy chat's orchestration pointer waits in its queue", () => {
   it('queues the pointer as a card, with who it is from, and sends it once when the turn ends', async () => {
+    observationClock.start()
     const chat = await openChat(COORDINATOR)
     const { runId, taskId } = await coordinatorRunAndTask()
     const endTurn = await runningUserTurn(chat)
@@ -115,6 +117,7 @@ describe("a busy chat's orchestration pointer waits in its queue", () => {
   })
 
   it('queues a second card for mail that arrives while the first waits, each counting its own mail', async () => {
+    observationClock.start()
     const chat = await openChat(COORDINATOR)
     const { runId, taskId } = await coordinatorRunAndTask()
     const second = await secondTask()

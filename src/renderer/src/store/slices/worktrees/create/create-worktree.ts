@@ -9,6 +9,10 @@ import type { WorktreeSlice } from '../../worktree-helpers'
 import type { WorktreeSliceGet, WorktreeSliceSet } from '../listing/worktree-slice-types'
 import type { CreateWorktreeResult } from '../../../../../../shared/worktree/create-types'
 import {
+  pickClientWorktreeCreateSettings,
+  type ClientWorktreeCreateSettings
+} from './client-worktree-create-settings'
+import {
   CLIENT_WORKTREE_CREATE_MAX_ATTEMPTS,
   getClientWorktreeCreateCandidate,
   getGeneratedWorktreeCreateRetryCandidate,
@@ -50,7 +54,8 @@ type CreateAttemptOutcome = {
 async function runCreateAttempt(
   request: WorktreeCreateRequest,
   attempt: WorktreeCreateAttempt,
-  target: RuntimeTarget
+  target: RuntimeTarget,
+  clientCreateSettings: ClientWorktreeCreateSettings = {}
 ): Promise<CreateAttemptOutcome> {
   const provisionedRoot = request.options?.provisionedRoot
   const create = async (
@@ -76,7 +81,11 @@ async function runCreateAttempt(
         : await callRuntimeRpc<CreateWorktreeResult>(
             target,
             'worktree.create',
-            buildRuntimeWorktreeCreateParams(request, { ...attempt, parentWorkspace }),
+            {
+              ...buildRuntimeWorktreeCreateParams(request, { ...attempt, parentWorkspace }),
+              // Why: the host's own store defaults would otherwise override the user's choices.
+              ...clientCreateSettings
+            },
             { timeoutMs: 10 * 60_000 }
           )
   try {
@@ -169,19 +178,6 @@ export function createCreateWorktree(
       options
     }
     try {
-      // Why outside the retry loop: a branch-name conflict retry must not re-warn about the same dropped pick.
-      const parent = resolveWorktreeCreateParent(get(), repoId, options?.parentWorktreeId)
-      let warnedParentDropped = false
-      const warnParentDroppedOnce = (): void => {
-        if (warnedParentDropped) {
-          return
-        }
-        warnedParentDropped = true
-        notifyWorktreeParentDropped(get(), parent)
-      }
-      if (parent.staleBeforeCreate) {
-        warnParentDroppedOnce()
-      }
       // Why: manual sort is user-authored order; stamp new workspaces at the top rather than relying on sortOrder fallback.
       const manualOrder = get().sortBy === 'manual' ? Date.now() : undefined
       if (isUnresolvedOwnerHostId(options?.executionHostId)) {
@@ -200,6 +196,19 @@ export function createCreateWorktree(
         requestedHostId: options?.executionHostId,
         resolveOwnHostId: () => repoHostId(get(), repoId)
       })
+      // Why outside the retry loop: a branch-name conflict retry must not re-warn about the same dropped pick.
+      const parent = resolveWorktreeCreateParent(get(), options?.parentWorktreeId, creationHostId)
+      let warnedParentDropped = false
+      const warnParentDroppedOnce = (): void => {
+        if (warnedParentDropped) {
+          return
+        }
+        warnedParentDropped = true
+        notifyWorktreeParentDropped(get(), parent)
+      }
+      if (parent.staleBeforeCreate) {
+        warnParentDroppedOnce()
+      }
       if (
         target.kind === 'environment' &&
         (options?.linkedWorkItem?.provider === 'jira' ||
@@ -233,7 +242,8 @@ export function createCreateWorktree(
               parentWorkspace: parent.parentWorkspace,
               manualOrder
             },
-            target
+            target,
+            pickClientWorktreeCreateSettings(get().settings)
           )
           if (lostRequestedParent(outcome, parent, target)) {
             warnParentDroppedOnce()

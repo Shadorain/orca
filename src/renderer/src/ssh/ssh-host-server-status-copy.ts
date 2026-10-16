@@ -8,6 +8,8 @@ import type {
 } from '../../../shared/ssh-types'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
+import { launchSessionEndedLine } from './ssh-host-launch-session-copy'
+import { bridgedTerminalsLine } from './ssh-host-bridged-terminals-copy'
 
 export type SshHostServerStatusLine = {
   text: string
@@ -34,6 +36,9 @@ export function sshHostServerStatusLine(
       detail: status.serving.detail
     }
   }
+  if (status?.kind === 'managed' && status.launchSessionEnded) {
+    return launchSessionEndedLine()
+  }
   if (status?.kind === 'managed' && status.update) {
     return managedUpdateLine(status.update)
   }
@@ -48,7 +53,10 @@ export function sshHostServerStatusLine(
     return { tone: 'muted', text: settingUpLabel(status.phase) }
   }
   if (status?.kind === 'relay') {
-    return unservedLine(status)
+    // An unverifiable bridged terminal keeps the unverifiable line: nothing proves it still answers.
+    return status.bridged && status.reason === 'relay_terminals_live'
+      ? bridgedTerminalsLine(status.detail)
+      : unservedLine(status)
   }
   if (target.managedServerUnavailable) {
     return unavailableLine(target.managedServerUnavailable.reason)
@@ -168,6 +176,16 @@ function retryLine(): SshHostServerStatusLine {
     text: translate(
       'auto.components.settings.sshHostServer.setupRetry',
       'Orca couldn’t start its server on this host. Try connecting again.'
+    )
+  }
+}
+
+function heldMoveLine(): SshHostServerStatusLine {
+  return {
+    tone: 'warning',
+    text: translate(
+      'auto.components.settings.sshHostServer.moveHeld',
+      'Orca paused moving this host’s projects to its managed server because it couldn’t confirm the server’s copy. Nothing is lost: the host keeps its projects and stays locked until the move finishes. Connect again to resume. If the server can’t come back, stop or forget it in Settings > Managed servers.'
     )
   }
 }
@@ -299,7 +317,7 @@ function unservedLine(
       }
     case 'deferred':
     case 'failed':
-      return { ...retryLine(), ...withDetail(status.detail) }
+      return { ...(status.held ? heldMoveLine() : retryLine()), ...withDetail(status.detail) }
   }
 }
 

@@ -20,7 +20,7 @@ import type {
   AiVaultSessionTitlesResult
 } from '../../shared/ai-vault-session-title'
 import type {
-  AiVaultPrepareSessionResumeArgs,
+  AiVaultPrepareSessionResumeRequest,
   AiVaultPrepareSessionResumeResult
 } from '../../shared/ai-vault-resume-preparation'
 import type { ExecutionHostId, ExecutionHostScope } from '../../shared/execution-host'
@@ -52,7 +52,7 @@ export type AiVaultApi = {
   resolveSessionTitles: (args: AiVaultSessionTitlesArgs) => Promise<AiVaultSessionTitlesResult>
   cancelListSessions: (args: { requestToken: string }) => Promise<void>
   prepareSessionResume: (
-    args: AiVaultPrepareSessionResumeArgs
+    args: AiVaultPrepareSessionResumeRequest
   ) => Promise<AiVaultPrepareSessionResumeResult>
   /** Lists the Task subagent transcripts of one session, on demand. */
   listSubagentSessions: (args: AiVaultSubagentListArgs) => Promise<AiVaultSubagentListResult>

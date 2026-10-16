@@ -4,6 +4,10 @@ import { OrcaRuntimeWithStopExplicitlyClosedTabPtys } from '../../session-tabs/e
 import type { TerminalPaneSplitSource } from '../../../../shared/feature-education-telemetry'
 import type { RuntimeTerminalSplit } from '../../../../shared/runtime-types'
 import { randomUUID } from 'node:crypto'
+import type { LayoutApplyReply } from '../../../../shared/workspace-layout/workspace-layout-command-types'
+import { ORCA_LAYOUT_OWNER_IS_MAIN } from '../../../../shared/layout-owner-switch'
+import type { WindowLayoutCommand } from '../../runtime-layout-apply'
+import { splitWindowLeafThroughLayoutOwner } from './terminal-split-layout-owner'
 import type { Worktree } from '../../../../shared/worktree/types'
 
 export abstract class OrcaRuntimeWithSplitTerminal extends OrcaRuntimeWithStopExplicitlyClosedTabPtys {
@@ -12,6 +16,8 @@ export abstract class OrcaRuntimeWithSplitTerminal extends OrcaRuntimeWithStopEx
     opts?: TerminalSplitOptions,
     createdWorktree?: Worktree
   ): Promise<RuntimeTerminalSplit>
+
+  abstract applyLayoutCommand(command: WindowLayoutCommand): Promise<LayoutApplyReply>
 
   protected abstract waitForLeafInTab(
     tabId: string,
@@ -42,6 +48,31 @@ export abstract class OrcaRuntimeWithSplitTerminal extends OrcaRuntimeWithStopEx
     this.assertGraphReady()
     const { leaf } = this.getLiveLeafForHandle(handle)
     const direction = opts.direction ?? 'horizontal'
+    // Switch point: main writes the split first; the window then mounts main's pane.
+    if (ORCA_LAYOUT_OWNER_IS_MAIN) {
+      const split = await splitWindowLeafThroughLayoutOwner(leaf, direction, {
+        apply: (command) => this.applyLayoutCommand(command),
+        mintLeafId: randomUUID,
+        mount: (newLeafId) => {
+          this.notifier?.splitTerminal(leaf.tabId, leaf.paneRuntimeId, {
+            direction,
+            command: opts.command,
+            worktreeId: leaf.worktreeId,
+            sourceLeafId: leaf.leafId,
+            telemetrySource: opts.telemetrySource,
+            newLeafId
+          })
+          return this.waitForLeafInTab(leaf.tabId, newLeafId)
+        },
+        isMounted: (newLeafId) => this.leaves.has(this.getLeafKey(leaf.tabId, newLeafId))
+      })
+      return {
+        handle: split.handle,
+        tabId: leaf.tabId,
+        paneRuntimeId: leaf.paneRuntimeId,
+        leafId: split.leafId
+      }
+    }
 
     const newLeafId = randomUUID()
 

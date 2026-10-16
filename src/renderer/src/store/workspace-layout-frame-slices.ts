@@ -14,7 +14,10 @@ import type {
   LayoutContentFacts
 } from '../../../shared/workspace-layout/workspace-layout-beside'
 import { workspaceLayoutModelFromPublished } from '../../../shared/workspace-layout/workspace-layout-from-published'
-import type { PublishedWorkspaceLayout } from '../../../shared/workspace-layout/workspace-layout-published'
+import type {
+  PublishedTab,
+  PublishedWorkspaceLayout
+} from '../../../shared/workspace-layout/workspace-layout-published'
 import { saveWorkspaceLayout } from '../../../shared/workspace-layout/workspace-layout-save'
 import type { WorkspaceSessionState } from '../../../shared/workspace-session-state-types'
 import { projectHydratedBrowserSession } from './slices/browser/browser-hydration-state'
@@ -63,6 +66,14 @@ const NOTHING_CARRIED: CarriedSessionFields = {
 }
 
 /** A terminal's title is the live title of the pane this view focuses, when main reports one. */
+export function shownLiveTitle(
+  tab: PublishedTab,
+  focusedLeafId: string | null | undefined
+): string | undefined {
+  const panes = tab.terminal?.panes ?? []
+  return (panes.find((pane) => pane.leafId === focusedLeafId) ?? panes[0])?.liveTitle
+}
+
 function withLiveTitles(
   layouts: WorkspaceLayoutCache,
   facts: LayoutContentFacts,
@@ -70,9 +81,7 @@ function withLiveTitles(
 ): LayoutContentFacts {
   const terminalRows = { ...facts.terminalRows }
   for (const tab of Object.values(layouts).flatMap((layout) => layout.tabs)) {
-    const panes = tab.terminal?.panes ?? []
-    const focused = view.panes[tab.entityId]?.activeLeafId
-    const liveTitle = (panes.find((pane) => pane.leafId === focused) ?? panes[0])?.liveTitle
+    const liveTitle = shownLiveTitle(tab, view.panes[tab.entityId]?.activeLeafId)
     if (liveTitle !== undefined) {
       terminalRows[tab.entityId] = { ...terminalRows[tab.entityId], title: liveTitle }
     }

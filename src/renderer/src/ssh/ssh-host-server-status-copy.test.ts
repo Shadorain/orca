@@ -50,6 +50,17 @@ describe('SSH host server status line', () => {
     })
   })
 
+  it('warns when the SSH session that started a macOS host’s server ended', () => {
+    expect(
+      sshHostServerStatusLine(plain, {
+        managedServer: { kind: 'managed', environmentId: 'e', launchSessionEnded: true }
+      })
+    ).toEqual({
+      tone: 'warning',
+      text: 'Terminals on this Mac may have lost local network access because the SSH session that started the managed server ended. Restart the managed server to restore it.'
+    })
+  })
+
   it('shows a managed server being updated, and why it kept its version', () => {
     expect(
       sshHostServerStatusLine(plain, { managedServer: { kind: 'setting-up', phase: 'updating' } })
@@ -142,6 +153,27 @@ describe('SSH host server status line', () => {
     }
   })
 
+  it('names the relay terminals that keep a bridged host unmoved, and how to clear them', () => {
+    const line = sshHostServerStatusLine(plain, {
+      managedServer: {
+        kind: 'relay',
+        reason: 'relay_terminals_live',
+        terminals: 1,
+        bridged: true,
+        detail: 'Terminals an older version of Orca started in /root/repo are still running…'
+      }
+    })
+    expect(line).toMatchObject({ tone: 'warning' })
+    expect(line?.text).toContain('They keep working here')
+    expect(line?.text).toContain('Close them or end them on the host, then reconnect')
+    expect(line?.detail).toContain('/root/repo')
+    const unverifiable = sshHostServerStatusLine(plain, {
+      managedServer: { kind: 'relay', reason: 'relay_terminals_unverifiable', bridged: true }
+    })
+    expect(unverifiable?.text).toContain('couldn’t confirm')
+    expect(unverifiable?.text).not.toContain('They keep working here')
+  })
+
   it('asks for a reconnect while an older Orca’s terminals still run, counting them', () => {
     const live = (terminals?: number) =>
       sshHostServerStatusLine(plain, {
@@ -171,6 +203,24 @@ describe('SSH host server status line', () => {
       text: expect.stringContaining('Try connecting again'),
       detail
     })
+  })
+
+  it('says a move that stopped short is paused and kept, not a plain try-again', () => {
+    const detail = 'Could not connect to the remote Orca runtime.'
+    const state = {
+      managedServer: {
+        kind: 'relay' as const,
+        reason: 'failed' as const,
+        detail,
+        held: true as const
+      }
+    }
+    expect(sshHostServerStatusLine(plain, state)).toMatchObject({
+      tone: 'warning',
+      text: expect.stringContaining('Nothing is lost'),
+      detail
+    })
+    expect(sshConnectFailureText(state, 'raw')).toContain('Settings > Managed servers')
   })
 
   it('puts an unserved host’s translated reason in the connect toast', () => {

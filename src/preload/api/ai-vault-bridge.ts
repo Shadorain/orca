@@ -12,7 +12,7 @@ import type {
   AiVaultSubagentListArgs
 } from '../../shared/ai-vault-types'
 import type { AiVaultSessionTitlesArgs } from '../../shared/ai-vault-session-title'
-import type { AiVaultPrepareSessionResumeArgs } from '../../shared/ai-vault-resume-preparation'
+import type { AiVaultPrepareSessionResumeRequest } from '../../shared/ai-vault-resume-preparation'
 import type { PreloadApi } from '../api-types'
 import {
   AI_VAULT_SCAN_PROGRESS_CHANNEL,
@@ -49,7 +49,7 @@ export const aiVaultApi = {
     ipcRenderer.invoke('aiVault:resolveSessionTitles', args),
   cancelListSessions: (args: { requestToken: string }): Promise<void> =>
     ipcRenderer.invoke('aiVault:cancelListSessions', args),
-  prepareSessionResume: (args: AiVaultPrepareSessionResumeArgs) =>
+  prepareSessionResume: (args: AiVaultPrepareSessionResumeRequest) =>
     ipcRenderer.invoke('aiVault:prepareSessionResume', args),
   listSubagentSessions: (args: AiVaultSubagentListArgs) =>
     ipcRenderer.invoke('aiVault:listSubagentSessions', args),
