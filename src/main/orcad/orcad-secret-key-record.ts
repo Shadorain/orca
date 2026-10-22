@@ -20,17 +20,26 @@ import {
 } from '../../shared/secure-file'
 import { restrictWindowsFile } from '../../shared/secure-path-windows-acl'
 import { ORCAD_MASTER_KEY_BYTES } from './orcad-secret-sealing'
+import { hasErrorCode, isProcessAlive } from '../daemon/daemon-process-inspection'
+import { errorMessage } from '../../shared/error-message'
 
+// `os-keyring`: written only by older builds; read to migrate it (see orcad-legacy-keyring-key.ts).
 export type StoredKeyState =
   | { version: 1; backend: 'os-keyring'; account: string; check: string }
-  | { version: 1; backend: 'host-file'; key: string; hostBound: boolean; check: string }
+  | {
+      version: 1
+      backend: 'host-file'
+      key: string
+      hostBound: boolean
+      check: string
+    }
 
-export type RecordRead =
+type RecordRead =
   | { kind: 'absent' }
   | { kind: 'record'; stored: StoredKeyState }
   | { kind: 'unreadable'; reason: string }
 
-export function parseStoredState(raw: string): StoredKeyState | null {
+function parseStoredState(raw: string): StoredKeyState | null {
   let parsed: unknown
   try {
     parsed = JSON.parse(raw)
@@ -45,7 +54,12 @@ export function parseStoredState(raw: string): StoredKeyState | null {
     return null
   }
   if (record.backend === 'os-keyring' && typeof record.account === 'string') {
-    return { version: 1, backend: 'os-keyring', account: record.account, check: record.check }
+    return {
+      version: 1,
+      backend: 'os-keyring',
+      account: record.account,
+      check: record.check
+    }
   }
   if (
     record.backend === 'host-file' &&
@@ -84,19 +98,12 @@ export function orcadSecretStateFileName(machineId: string | null): string {
   return `orcad-secret-store-${machineTag(machineId)}.json`
 }
 
-export function keyringAccount(keyDir: string, machineId: string | null): string {
-  const digest = createHash('sha256')
-    .update(`${resolve(keyDir)}\0${machineTag(machineId)}`)
-    .digest('hex')
-  return `home-${digest.slice(0, 16)}`
-}
-
 function isInside(root: string, path: string): boolean {
   const fromRoot = relative(root, path)
   return !fromRoot.startsWith('..') && !isAbsolute(fromRoot)
 }
 
-/** A throwaway key directory (tests, smoke runs) must not leave an item in the user's keyring. */
+/** A throwaway key directory (tests, smoke runs) must not take over the user's real credential home. */
 export function isTemporaryKeyDir(keyDir: string): boolean {
   const roots = [tmpdir(), '/tmp', '/var/tmp'].flatMap((root) => {
     try {
@@ -114,26 +121,28 @@ export function isTemporaryKeyDir(keyDir: string): boolean {
   return roots.some((root) => isInside(root, target) || isInside(root, resolve(keyDir)))
 }
 
-function errorCode(error: unknown): unknown {
-  return error instanceof Error && 'code' in error ? error.code : undefined
-}
-
 export function readStoredRecord(statePath: string): RecordRead {
   let raw: string
   try {
     raw = readFileSync(statePath, 'utf8')
   } catch (error) {
     // Why only ENOENT: EACCES on an existing record must never be mistaken for "no key yet".
-    if (errorCode(error) === 'ENOENT') {
+    if (hasErrorCode(error, 'ENOENT')) {
       return { kind: 'absent' }
     }
-    return { kind: 'unreadable', reason: `its key record could not be read (${String(error)})` }
+    return {
+      kind: 'unreadable',
+      reason: `its key record could not be read (${String(error)})`
+    }
   }
   const stored = parseStoredState(raw)
   // Why not regenerate: the record may hold the only copy of the key.
   return stored
     ? { kind: 'record', stored }
-    : { kind: 'unreadable', reason: `its key record ${statePath} is not valid` }
+    : {
+        kind: 'unreadable',
+        reason: `its key record ${statePath} is not valid`
+      }
 }
 
 /** Creates the record only if none exists, already restricted; otherwise says why not. */
@@ -147,7 +156,7 @@ export function publishRecordExclusively(path: string, record: StoredKeyState): 
     try {
       linkSync(staging, path)
     } catch (error) {
-      if (errorCode(error) === 'EEXIST') {
+      if (hasErrorCode(error, 'EEXIST')) {
         return 'exists'
       }
       throw error
@@ -155,40 +164,38 @@ export function publishRecordExclusively(path: string, record: StoredKeyState): 
     bestEffortFsyncDirectorySync(dirname(path))
     return 'published'
   } catch (error) {
-    return `its key record ${path} could not be written (${error instanceof Error ? error.message : String(error)})`
+    return `its key record ${path} could not be written (${errorMessage(error)})`
   } finally {
     rmSync(staging, { force: true })
   }
 }
 
-/** Replaces the record only while it still holds `expectedCheck`'s key; otherwise says why not. */
-export function replaceRecord(path: string, record: StoredKeyState, expectedCheck: string): string {
+/** Replaces the record only while it is still `expected`; otherwise says why not. */
+export function replaceRecord(
+  path: string,
+  record: StoredKeyState,
+  expected: StoredKeyState
+): string {
   const staging = `${path}.${process.pid}.${randomBytes(4).toString('hex')}.staging`
   try {
     if (!writeSecureFile(staging, JSON.stringify(record), { durable: true })) {
       return `its key record ${path} could not be restricted to this user`
     }
     const current = readStoredRecord(path)
-    if (current.kind !== 'record' || current.stored.check !== expectedCheck) {
-      return 'its key record changed while it was being moved'
+    if (
+      current.kind !== 'record' ||
+      current.stored.backend !== expected.backend ||
+      current.stored.check !== expected.check
+    ) {
+      return 'changed'
     }
     renameSync(staging, path)
     bestEffortFsyncDirectorySync(dirname(path))
     return 'replaced'
   } catch (error) {
-    return `its key record ${path} could not be written (${error instanceof Error ? error.message : String(error)})`
+    return `its key record ${path} could not be written (${errorMessage(error)})`
   } finally {
     rmSync(staging, { force: true })
-  }
-}
-
-function isLiveProcess(pid: number): boolean {
-  try {
-    process.kill(pid, 0)
-    return true
-  } catch (error) {
-    // EPERM: alive, owned by someone else.
-    return errorCode(error) === 'EPERM'
   }
 }
 
@@ -211,7 +218,7 @@ export function sweepStaleRecordStaging(statePath: string): void {
     const pid = name.startsWith(prefix)
       ? /^(\d+)\.[0-9a-f]{8}\.staging$/.exec(name.slice(prefix.length))?.[1]
       : undefined
-    if (!pid || Number(pid) === process.pid || isLiveProcess(Number(pid))) {
+    if (!pid || Number(pid) === process.pid || isProcessAlive(Number(pid))) {
       continue
     }
     const path = join(dir, name)
@@ -223,16 +230,6 @@ export function sweepStaleRecordStaging(statePath: string): void {
     } catch {
       // Gone already, or not ours to remove.
     }
-  }
-}
-
-export function withdrawRecord(path: string, check: string): void {
-  try {
-    if (parseStoredState(readFileSync(path, 'utf8'))?.check === check) {
-      rmSync(path, { force: true })
-    }
-  } catch {
-    // Left in place, the next start reports the missing keyring item instead of losing data.
   }
 }
 

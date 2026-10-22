@@ -4,9 +4,11 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { z } from 'zod'
 import type * as RunProcessModule from '@orca/process-host'
 import type * as FsPromisesModule from 'node:fs/promises'
 import type { RuntimeBrowserCommandHost } from '../runtime/browser/browser-command-contracts'
+import { RuntimeBrowserPageRegistry } from '../runtime/runtime-browser-page-registry'
 
 const { spawnProcessMock, lockedRemovalPaths } = vi.hoisted(() => ({
   spawnProcessMock:
@@ -451,6 +453,27 @@ describe('ElectronServeBrowserProcess command routing', () => {
     })
   })
 
+  it('scopes a folder workspace through the browser-workspace resolver', async () => {
+    // The git-only selector cannot name a folder workspace; only the browser resolver can.
+    const folderHost: RuntimeBrowserCommandHost = {
+      ...host,
+      resolveWorktreeSelector: async () => {
+        throw new Error('selector_not_found')
+      },
+      resolveBrowserWorkspace: async () => ({ id: 'folder:docs' })
+    }
+    const commands = (await startProvider()).createCommands(folderHost)
+
+    const created = z
+      .object({ browserPageId: z.string() })
+      .parse(await commands.browserTabCreate({ worktree: 'id:folder:docs' }))
+    await commands.browserGoto({ worktree: 'id:folder:docs', url: 'https://example.test/' })
+
+    const request = (await browserRequests()).at(-1)
+    expect(request?.method).toBe('browser.goto')
+    expect(request?.params.page).toBe(created.browserPageId)
+  })
+
   // Why this matters: the runtime advertises browser.tabCreate.known-id.v1
   // unconditionally, so a web client will send a provisional id for a page that does
   // not exist yet. Requiring it first made every such create throw.
@@ -474,7 +497,11 @@ it('forwards tab commands through startup to the Electron sidecar', async () => 
   const startup = startOrcadBrowserProvider({ userDataPath: harnessRoot })
   await startup.ready
   try {
-    const commands = createRuntimeBrowserCommands(host)
+    // The runtime that composes the provider owns a page registry, which startup consults.
+    const commands = createRuntimeBrowserCommands({
+      ...host,
+      getRuntimeBrowserPageRegistry: () => new RuntimeBrowserPageRegistry()
+    })
     await commands.browserTabCreate({ worktree: 'wt-a' })
     await commands.browserTabList({ worktree: 'wt-a' })
     expect((await browserRequests()).map((request) => request.method)).toEqual([

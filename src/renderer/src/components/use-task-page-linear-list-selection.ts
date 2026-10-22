@@ -1,4 +1,4 @@
-import type { TaskPageGitLabLoadingModel } from './use-task-page-gitlab-loading'
+import type { TaskPageProviderMetadataModel } from './use-task-page-provider-metadata'
 import { useState, useMemo, useEffect } from 'react'
 import { LINEAR_ISSUE_LIST_MAX } from '../../../shared/linear/issue-read-limits'
 import { findTaskPageLinearIssue } from '@/components/task-page-cache-selectors'
@@ -12,14 +12,10 @@ import {
   storedLinearTeamSelection
 } from '@/components/task-page-linear-team-selection'
 import { useTaskPageLinearFilterSelection } from './use-task-page-linear-filter-selection'
-import {
-  keychainLockedCredentialMessage,
-  useCredentialHostName
-} from './settings/keychain-credential-notice'
 export type TaskPageLinearListSelectionPreludeModel = ReturnType<
   typeof useTaskPageLinearListSelectionPrelude
 >
-export function useTaskPageLinearListSelectionPrelude(model: TaskPageGitLabLoadingModel) {
+export function useTaskPageLinearListSelectionPrelude(model: TaskPageProviderMetadataModel) {
   const {
     settings,
     linearStatus,
@@ -74,15 +70,8 @@ export function useTaskPageLinearListSelectionPrelude(model: TaskPageGitLabLoadi
       : selectedLinearCustomView?.model === 'issue'
         ? linearCustomViewContentsLoading
         : linearLoading
-  const { linearStatusContextKey } = model
-  const credentialHost = useCredentialHostName(
-    linearStatusContextKey,
-    linearStatus.credentialErrorReason === 'keychain_locked'
-  )
   const activeLinearIssueError =
-    (linearStatus.credentialErrorReason === 'keychain_locked'
-      ? keychainLockedCredentialMessage('Linear', credentialHost)
-      : linearStatus.credentialError) ??
+    linearStatus.credentialError ??
     (selectedLinearProject && linearProjectTab === 'issues'
       ? linearProjectIssuesError
       : selectedLinearCustomView?.model === 'issue'
@@ -252,7 +241,7 @@ export function useTaskPageLinearListSelectionPrelude(model: TaskPageGitLabLoadi
   nextModel.linearTeamOptions = linearTeamOptions
   return nextModel
 }
-export function useTaskPageLinearListSelection(model: TaskPageGitLabLoadingModel) {
+export function useTaskPageLinearListSelection(model: TaskPageProviderMetadataModel) {
   const preludeModel = useTaskPageLinearListSelectionPrelude(model)
   return useTaskPageLinearFilterSelection(preludeModel)
 }

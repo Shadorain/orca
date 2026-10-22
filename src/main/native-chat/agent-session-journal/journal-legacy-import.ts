@@ -10,6 +10,11 @@
 // never be spliced into a sequence space that a structured session is also
 // writing; a later structured resume rolls the epoch again and rebuilds.
 
+import {
+  adoptedTranscriptSourceObserver,
+  validateAdoptedOpenCodeSource,
+  type AdoptedTranscriptSource
+} from './adopted-transcript-source'
 import { createReadStream } from 'node:fs'
 import type { AgentType } from '../../../shared/agent-status-types'
 import type {
@@ -31,18 +36,22 @@ import { readOpenCodeNativeChatTranscriptFull } from '../transcript-opencode'
 import { boundSubagentEntryId } from '../subagent-entry-id-bounds'
 import { createLegacyIdentityTracker } from './journal-legacy-identity'
 import { createPiTranscriptCollector } from './journal-pi-active-branch'
+import { createNewestItemWindow } from './journal-newest-item-window'
 import type { JournalReplacementItem } from './journal-epoch-replacement'
 import {
   boundInlineText,
   boundToolInput,
-  DEFAULT_JOURNAL_PAYLOAD_LIMITS,
   type JournalPayloadLimits
 } from './journal-payload-bounds'
 import type { AgentSessionJournal } from './journal-store'
 
+/** Import preserves the bounded history window; the transcript remains the complete source. */
+export const LEGACY_IMPORT_BLOCK_LIMITS: JournalPayloadLimits = { inlineHeadBytes: 16 * 1024 }
+
 export type LegacyImportOptions = ResolveSessionFileOptions & {
   /** Resolve directly to this file, skipping path discovery. */
   filePath?: string
+  source?: AdoptedTranscriptSource
   limits?: JournalPayloadLimits
   decodedMessageIdentities?: true
 }
@@ -64,6 +73,10 @@ export type LegacyImportResult =
       /** False when the transcript held no messages and the epoch was left as it stood. */
       replaced: boolean
     }
+  | { ok: false; error: string }
+
+type PreparedLegacyImport =
+  | { ok: true; items: JournalReplacementItem[]; sourceEmpty: boolean }
   | { ok: false; error: string }
 
 export async function importLegacyTranscriptIntoJournal(input: {
@@ -90,9 +103,9 @@ export async function prepareLegacyTranscriptImport(input: {
   agent: AgentType
   sessionId: string
   options?: LegacyImportOptions
-}): Promise<{ ok: true; items: JournalReplacementItem[] } | { ok: false; error: string }> {
+}): Promise<PreparedLegacyImport> {
   const options = input.options ?? {}
-  const limits = options.limits ?? DEFAULT_JOURNAL_PAYLOAD_LIMITS
+  const limits = options.limits ?? LEGACY_IMPORT_BLOCK_LIMITS
   // OMP is a Pi fork that kept Pi's session format, so OMP's decoder reads Pi's sessions too.
   const transcriptAgent =
     input.agent === 'pi' ? 'omp' : resolveNativeChatTranscriptAgent(input.agent)
@@ -109,17 +122,16 @@ export async function prepareLegacyTranscriptImport(input: {
   }
 
   try {
-    return {
-      ok: true,
-      items: await decodeReplacementItems({
-        filePath,
-        transcriptAgent,
-        agent: input.agent,
-        sessionId: input.sessionId,
-        decodedMessageIdentities: options.decodedMessageIdentities,
-        limits
-      })
-    }
+    const { items, consumedBytes } = await decodeReplacementItems({
+      filePath,
+      transcriptAgent,
+      agent: input.agent,
+      sessionId: input.sessionId,
+      source: options.source,
+      decodedMessageIdentities: options.decodedMessageIdentities,
+      limits
+    })
+    return { ok: true, items, sourceEmpty: consumedBytes === 0 }
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) }
   }
@@ -132,8 +144,18 @@ async function prepareOpenCodeImport(input: {
   sessionId: string
   options?: LegacyImportOptions
   limits: JournalPayloadLimits
-}): Promise<{ ok: true; items: JournalReplacementItem[] } | { ok: false; error: string }> {
+}): Promise<PreparedLegacyImport> {
   const dbPath = input.options?.filePath
+  if (input.options?.source) {
+    if (!dbPath) {
+      return { ok: false, error: 'The conversation database is unavailable.' }
+    }
+    try {
+      await validateAdoptedOpenCodeSource(dbPath, input.options.source)
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : String(error) }
+    }
+  }
   const read = await readOpenCodeNativeChatTranscriptFull(
     input.sessionId,
     dbPath ? { resolveDbPath: async () => dbPath } : {}
@@ -147,7 +169,8 @@ async function prepareOpenCodeImport(input: {
     sessionId: input.sessionId,
     recordId: message.id
   }))
-  return { ok: true, items: replacementItems(read.messages, identities, input.limits) }
+  const items = replacementItems(read.messages, identities, input.limits)
+  return { ok: true, items, sourceEmpty: read.sourceEmpty === true }
 }
 
 function replacementItems(
@@ -195,8 +218,17 @@ async function decodeReplacementItems(input: {
   agent: AgentType
   sessionId: string
   decodedMessageIdentities?: true
+  source?: AdoptedTranscriptSource
   limits: JournalPayloadLimits
-}): Promise<JournalReplacementItem[]> {
+}): Promise<{ items: JournalReplacementItem[]; consumedBytes: number }> {
+  const source = input.source
+    ? adoptedTranscriptSourceObserver({
+        agent: input.agent,
+        filePath: input.filePath,
+        source: input.source,
+        maxSourceBytes: MAX_LEGACY_IMPORT_RECORD_BYTES
+      })
+    : null
   const tracker = createLegacyIdentityTracker({
     transcriptAgent: input.transcriptAgent,
     agent: input.agent,
@@ -212,11 +244,12 @@ async function decodeReplacementItems(input: {
       : null
   let lineIndex = 0
   try {
-    await decodeTranscriptStream(
+    const { consumedBytes } = await decodeTranscriptStream(
       createReadStream(input.filePath),
       input.filePath,
       0,
       (line, fallbackId) => {
+        source?.observe(line)
         const currentLineIndex = lineIndex
         lineIndex += 1
         if (pi) {
@@ -244,40 +277,15 @@ async function decodeReplacementItems(input: {
       true,
       MAX_LEGACY_IMPORT_RECORD_BYTES
     )
+    if (consumedBytes > 0) {
+      await source?.validate()
+    }
     if (pi) {
       await pi.project(retained.push)
     }
-    return retained.items()
+    return { items: retained.items(), consumedBytes }
   } finally {
     pi?.close()
-  }
-}
-
-/** The newest complete items that fit `maxBytes`; the latest item is always kept. */
-function createNewestItemWindow(maxBytes: number): {
-  push(item: JournalReplacementItem): void
-  items(): JournalReplacementItem[]
-} {
-  let entries: ({ item: JournalReplacementItem; bytes: number } | undefined)[] = []
-  let head = 0
-  let bytes = 0
-  return {
-    push(item) {
-      const itemBytes = Buffer.byteLength(JSON.stringify(item), 'utf8')
-      entries.push({ item, bytes: itemBytes })
-      bytes += itemBytes
-      while (bytes > maxBytes && head < entries.length - 1) {
-        bytes -= entries[head]?.bytes ?? 0
-        entries[head] = undefined
-        head += 1
-      }
-      // Drop evicted entries in batches so a long source stays linear.
-      if (head > 1024 && head * 2 > entries.length) {
-        entries = entries.slice(head)
-        head = 0
-      }
-    },
-    items: () => entries.slice(head).flatMap((entry) => (entry ? [entry.item] : []))
   }
 }
 

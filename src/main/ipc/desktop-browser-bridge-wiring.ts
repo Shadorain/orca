@@ -5,6 +5,7 @@
 import { randomUUID } from 'node:crypto'
 import { webContents, type BrowserWindow } from 'electron'
 import {
+  DESKTOP_BROWSER_BRIDGE_CANCEL_CAPABILITY,
   DESKTOP_BROWSER_BRIDGE_RUNTIME_CAPABILITY,
   isDesktopBrowserBridgeMethod
 } from '../../shared/desktop-browser-bridge-protocol'
@@ -16,6 +17,7 @@ import {
   getPreferredPairedRuntimeConnection
 } from '../../shared/runtime-environments'
 import { getManagedOrcadFenceEnvironmentId } from '../../shared/managed-orcad-ssh-owner'
+import { isRemoteCliControlAllowed } from '../../shared/ssh-remote-cli-control'
 import { browserManager } from '../browser/browser-manager'
 import {
   DesktopBrowserBridgeManager,
@@ -29,14 +31,14 @@ import { rendererResolveRemoteCliWorkspace } from '../browser/desktop-browser-br
 import type { OrcaRuntimeService } from '../runtime/orca-runtime'
 import { RpcDispatcher } from '../runtime/rpc/dispatcher'
 import { ALL_RPC_METHODS } from '../runtime/rpc/methods'
-import { ensureOrcadManagedTunnel } from '../ssh/orcad-managed-tunnel'
-import { getSshTargetRegistryStore } from '../ssh/ssh-target-registry'
-import type { SshConnectionManager } from '../ssh/ssh-connection-manager'
-import { getRuntimeEnvironmentStatus } from './runtime-environment-status-probe'
-import { isRuntimeEnvironmentManuallyDisconnected } from './runtime-environment-connectivity-handlers'
+import { ensureOrcadManagedTunnel } from '../managed-server/lifecycle/orcad-managed-tunnel'
+import { getSshTargetRegistryStore } from '../ssh/targets/ssh-target-registry'
+import type { SshConnectionManager } from '../ssh/connection/ssh-connection-manager'
+import { getRuntimeEnvironmentStatus } from './runtime-environments/runtime-environment-status-probe'
+import { isRuntimeEnvironmentManuallyDisconnected } from './runtime-environments/runtime-environment-connectivity-handlers'
 import { setDesktopBrowserBridgeControl } from './desktop-browser-bridge-reconcile'
 import { markRemoteCliDrivenWorkspace } from '../browser/desktop-browser-bridge/remote-cli-driven-workspaces'
-import { persistedStore } from './ssh-ipc-context'
+import { persistedStore } from './ssh/ssh-ipc-context'
 import { localSshBrowserTargetIdForSession } from '../browser/local-ssh-browser-partitions'
 
 const ATTACH_TIMEOUT_MS = 15_000
@@ -55,19 +57,19 @@ export function listDesktopBrowserBridgeCandidates(
 ): DesktopBrowserBridgeCandidate[] {
   const candidates: DesktopBrowserBridgeCandidate[] = []
   for (const target of getSshTargetRegistryStore()?.listTargets() ?? []) {
-    // Why strict true: the setting is opt-in, and an absent value is off.
-    if (target.allowRemoteCliControl !== true) {
+    if (!isRemoteCliControlAllowed(target)) {
       continue
     }
     if (connections?.getState(target.id)?.status !== 'connected') {
       continue
     }
-    // Why: an unrouted host's pages egress from this desktop, so it must not stay attached at all.
-    if (!isSshTargetBrowsingRouted(target.id)) {
-      continue
-    }
+    // Why first: with the switch on by default, every plain host reaches here; only managed ones qualify.
     const environmentId = getManagedOrcadFenceEnvironmentId(target)
     if (!environmentId || isRuntimeEnvironmentManuallyDisconnected(environmentId)) {
+      continue
+    }
+    // Why: an unrouted host's pages egress from this desktop, so it must not stay attached at all.
+    if (!isSshTargetBrowsingRouted(target.id)) {
       continue
     }
     try {
@@ -134,12 +136,13 @@ export function installDesktopBrowserBridge(options: {
         {
           clientCapabilities: [
             ...ELECTRON_REMOTE_RUNTIME_CLIENT_CAPABILITIES,
-            DESKTOP_BROWSER_BRIDGE_RUNTIME_CAPABILITY
+            DESKTOP_BROWSER_BRIDGE_RUNTIME_CAPABILITY,
+            DESKTOP_BROWSER_BRIDGE_CANCEL_CAPABILITY
           ]
         }
       )
     },
-    execute: (candidate, request, signal) =>
+    execute: (candidate, request, signal, hostRevoked) =>
       executeDesktopBrowserBridgeRequest(
         request,
         {
@@ -168,7 +171,8 @@ export function installDesktopBrowserBridge(options: {
             getDispatcher().dispatch({ id: randomUUID(), authToken: '', method, params }),
           audit: (entry) => log(`audit ${JSON.stringify(entry)}`)
         },
-        signal
+        signal,
+        hostRevoked
       ),
     log
   })
