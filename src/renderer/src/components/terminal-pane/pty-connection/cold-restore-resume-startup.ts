@@ -91,10 +91,6 @@ export function bindBuildColdRestoreAgentResumeStartup(session: ConnectPanePtySe
       providerSession,
       cmdOverrides: state.settings?.agentCmdOverrides ?? {},
       ...resolveResumeLaunchRecipe(launchConfig),
-      ...(launchConfig?.agentCommand ? { agentCommand: launchConfig.agentCommand } : {}),
-      ...(launchConfig?.ompResumeFilePath
-        ? { ompResumeFilePath: launchConfig.ompResumeFilePath }
-        : {}),
       platform: resumeTarget.platform,
       shell: resumeTarget.shell
     })

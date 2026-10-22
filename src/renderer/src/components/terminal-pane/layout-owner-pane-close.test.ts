@@ -1,6 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest'
 import { preparePendingSplitClose } from './pending-split-close-test-fixture'
 import type { sendLayoutCommandToOwner } from '@/runtime/layout-owner-command'
+import { LOCAL_LAYOUT_APPLY_ORIGIN } from '@/runtime/server-layout-apply-routes'
 
 const mocks = vi.hoisted(() => ({
   layoutOwnerIsMain: false,
@@ -43,32 +44,72 @@ it('a window-owned build closes the pane at once and reports it to main', async 
   expect(p.transports.has(1)).toBe(false)
 })
 
-it('a layout-owner build removes the pane only once main has closed it', async () => {
+it('a layout-owner build removes the pane only once main’s frame drops it', async () => {
   mocks.layoutOwnerIsMain = true
   const p = await preparePendingSplitClose()
+  const intents = await import('@/runtime/layout-owner-pane-intents')
+  ;(await import('@/runtime/layout-frame-position')).noteLayoutFramePosition(1)
 
   p.actions.executeClosePane(1)
 
   expect(mocks.sendLayoutCommandToOwner).toHaveBeenCalledWith(
     'workspace',
     { type: 'closePane', tabId: 'tab-parent', leafId: LEAF },
-    { apply: expect.any(Function), asToday: expect.any(Function), refused: expect.any(Function) }
+    {
+      apply: expect.any(Function),
+      asToday: expect.any(Function),
+      refused: expect.any(Function)
+    }
   )
+  mocks.sendLayoutCommandToOwner.mock.calls[0]?.[2].apply({}, LOCAL_LAYOUT_APPLY_ORIGIN)
   expect(p.transports.has(1)).toBe(true)
 
-  mocks.sendLayoutCommandToOwner.mock.calls[0]?.[2].apply({})
+  // The frame without the pane finds the window's close and runs it.
+  expect(intents.takePaneCloseIntent('tab-parent', LEAF)).toBe('user')
+  p.actions.closePaneLocally(1, LEAF)
 
   expect(p.transports.has(1)).toBe(false)
   expect(mocks.commitTerminalSurfaceClose).not.toHaveBeenCalled()
 })
 
-it('a layout-owner build closes as today when a paired server holds the tab', async () => {
+it('a layout-owner build closes the pane itself when main closed it and no frame is coming', async () => {
+  mocks.layoutOwnerIsMain = true
+  const p = await preparePendingSplitClose()
+  ;(await import('@/runtime/layout-frame-position')).endLayoutFramePositions()
+
+  p.actions.executeClosePane(1)
+  mocks.sendLayoutCommandToOwner.mock.calls[0]?.[2].apply({}, LOCAL_LAYOUT_APPLY_ORIGIN)
+
+  expect(p.transports.has(1)).toBe(false)
+  expect(mocks.commitTerminalSurfaceClose).not.toHaveBeenCalled()
+})
+
+it('a layout-owner build closes the pane itself when main holds no such pane, so no frame drops it', async () => {
+  mocks.layoutOwnerIsMain = true
+  const p = await preparePendingSplitClose()
+  ;(await import('@/runtime/layout-frame-position')).noteLayoutFramePosition(1)
+
+  p.actions.executeClosePane(1)
+  mocks.sendLayoutCommandToOwner.mock.calls[0]?.[2].apply(
+    { alreadyClosed: true },
+    LOCAL_LAYOUT_APPLY_ORIGIN
+  )
+
+  const intents = await import('@/runtime/layout-owner-pane-intents')
+  expect(intents.takePaneCloseIntent('tab-parent', LEAF)).toBeNull()
+  expect(p.transports.has(1)).toBe(false)
+  expect(mocks.commitTerminalSurfaceClose).not.toHaveBeenCalled()
+})
+
+it('a layout-owner build closes as today, forgetting its close, when main lacks the pane', async () => {
   mocks.layoutOwnerIsMain = true
   const p = await preparePendingSplitClose()
 
   p.actions.executeClosePane(1)
   mocks.sendLayoutCommandToOwner.mock.calls[0]?.[2].asToday()
 
+  const intents = await import('@/runtime/layout-owner-pane-intents')
+  expect(intents.takePaneCloseIntent('tab-parent', LEAF)).toBeNull()
   expect(mocks.commitTerminalSurfaceClose).toHaveBeenCalledOnce()
   expect(p.transports.has(1)).toBe(false)
 })
@@ -80,24 +121,12 @@ it('a layout-owner build closes the tab when main refuses a second close as the 
   p.actions.executeClosePane(2)
   const [first, second] = mocks.sendLayoutCommandToOwner.mock.calls.map(([, , on]) => on)
 
-  first?.apply({})
+  // Main took pane 1; its frame is still on the way when main refuses pane 2 as its last.
+  ;(await import('@/runtime/layout-frame-position')).noteLayoutFramePosition(1)
+  first?.apply({}, LOCAL_LAYOUT_APPLY_ORIGIN)
   second?.refused?.('last_pane')
 
   expect(p.controller.onCloseTab).toHaveBeenCalledOnce()
-})
-
-it('a layout-owner build closes the tab when main’s answer finds the pane alone', async () => {
-  mocks.layoutOwnerIsMain = true
-  const p = await preparePendingSplitClose()
-  p.actions.executeClosePane(1)
-  p.actions.executeClosePane(2)
-  const [first, second] = mocks.sendLayoutCommandToOwner.mock.calls.map(([, , on]) => on)
-
-  first?.apply({})
-  second?.apply({})
-
-  expect(p.controller.onCloseTab).toHaveBeenCalledOnce()
-  expect(p.controller.managerRef.current?.getPanes()).toHaveLength(1)
 })
 
 it('a layout-owner build leaves an unmounted tab alone when main refuses its last pane', async () => {

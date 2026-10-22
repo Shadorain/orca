@@ -1,5 +1,11 @@
 import type { PaneManager } from '@/lib/pane-manager/pane-manager'
-import { CLOSE_TERMINAL_PANE_EVENT, type CloseTerminalPaneDetail } from '@/constants/terminal'
+import {
+  CLOSE_TERMINAL_PANE_EVENT,
+  SET_TERMINAL_PANE_TITLE_EVENT,
+  type CloseTerminalPaneDetail,
+  type SetTerminalPaneTitleDetail
+} from '@/constants/terminal'
+import { resolveLeafIdForManager } from '@/lib/pane-manager/pane-key-resolution'
 import { consumePendingWebRuntimeSplitMirrorTelemetry } from '@/runtime/web-runtime-terminal-actions'
 import { scheduleRuntimeGraphSync } from '@/runtime/sync-runtime-graph'
 import { closeTerminalTab } from '../terminal/terminal-tab-actions'
@@ -15,8 +21,6 @@ import {
   resolveTerminalPaneSplitSourceId
 } from './terminal-pane-split-request-routing'
 import type { PtyConnectionDeps } from './pty-connection-types'
-import { recordDrawnPaneSplit } from './terminal-pane-bootstrap-split-record'
-import { ORCA_LAYOUT_OWNER_IS_MAIN } from '../../../../shared/layout-owner-switch'
 
 export function installTerminalPaneMountEvents(args: {
   manager: PaneManager
@@ -25,6 +29,7 @@ export function installTerminalPaneMountEvents(args: {
     worktreeId: string
     isActive: boolean
     managerRef: React.RefObject<PaneManager | null>
+    showPaneTitle: (paneId: number, title: string | null) => void
     persistLayoutSnapshot: () => void
     syncCanExpandState: () => void
     queueResizeAll: (focusActive: boolean) => void
@@ -49,12 +54,6 @@ export function installTerminalPaneMountEvents(args: {
       if (sourcePaneId < 0) {
         return
       }
-      const recordMainSplitMounted = (leafId: string | undefined): void => {
-        const sourceLeafId = mgr.getLeafId(sourcePaneId)
-        if (leafId && leafId === detail.newLeafId && sourceLeafId) {
-          recordDrawnPaneSplit(deps.worktreeId, deps.tabId, sourceLeafId, detail.direction, leafId)
-        }
-      }
       const splitOptions = {
         ...(detail.newLeafId ? { leafId: detail.newLeafId } : {}),
         ...(detail.ptyId ? { ptyId: detail.ptyId } : {})
@@ -63,19 +62,12 @@ export function installTerminalPaneMountEvents(args: {
         const createdPane = splitPaneWithOneShotStartup(ptyDeps, { command: detail.command }, () =>
           mgr.splitPane(sourcePaneId, detail.direction, splitOptions)
         )
-        // Switch point: main may have taken back a pane the window mounted late; record it again.
-        if (ORCA_LAYOUT_OWNER_IS_MAIN) {
-          recordMainSplitMounted(createdPane?.leafId)
-        }
         recordRuntimeCreatedTerminalPaneSplit(createdPane, {
           source: detail.telemetrySource ?? 'command',
           direction: detail.direction
         })
       } else {
         const createdPane = mgr.splitPane(sourcePaneId, detail.direction, splitOptions)
-        if (ORCA_LAYOUT_OWNER_IS_MAIN) {
-          recordMainSplitMounted(createdPane?.leafId)
-        }
         const telemetrySuppressed = createdPane
           ? consumePendingWebRuntimeSplitMirrorTelemetry(detail.sourcePtyId, detail.direction)
           : false
@@ -125,8 +117,24 @@ export function installTerminalPaneMountEvents(args: {
     deps.persistLayoutSnapshot()
   }
 
+  const onSetPaneTitle = (event: Event): void => {
+    if (!(event instanceof CustomEvent)) {
+      return
+    }
+    const detail: SetTerminalPaneTitleDetail | null = event.detail
+    if (!detail || detail.tabId !== deps.tabId) {
+      return
+    }
+    const resolution = resolveLeafIdForManager(deps.tabId, detail.leafId, deps.managerRef.current)
+    if (resolution.status === 'resolved') {
+      deps.showPaneTitle(resolution.numericPaneId, detail.title)
+    }
+  }
+
+  window.addEventListener(SET_TERMINAL_PANE_TITLE_EVENT, onSetPaneTitle)
   window.addEventListener(CLOSE_TERMINAL_PANE_EVENT, onCliClosePane)
   return () => {
+    window.removeEventListener(SET_TERMINAL_PANE_TITLE_EVENT, onSetPaneTitle)
     unregisterTerminalPaneSplitRequestHandler()
     window.removeEventListener(CLOSE_TERMINAL_PANE_EVENT, onCliClosePane)
   }

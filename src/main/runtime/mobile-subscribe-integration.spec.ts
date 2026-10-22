@@ -689,8 +689,8 @@ describe('mobile subscribe integration', () => {
       expect(ptySizes.get('pty-1')).toEqual({ cols: 45, rows: 20 })
     })
 
-    it('reclaimTerminalForDesktop with active subscriber resets mode so next subscribe re-fits', async () => {
-      // Why: reclaim must reset mode to 'auto', else the next subscribe stays in passive watch and never re-fits to phone dims. See docs/mobile-fit-hold.md.
+    it('reclaimTerminalForDesktop with active subscriber keeps desktop mode until the phone acts', async () => {
+      // Why (#28487): the phone re-subscribes on its own after a reconnect or resume, so a re-subscribe must stay passive; typing re-fits.
       const { runtime, ptySizes } = createRuntime()
       await runtime.handleMobileSubscribe('pty-1', 'client-a', { cols: 45, rows: 20 })
       expect(ptySizes.get('pty-1')).toEqual({ cols: 45, rows: 20 })
@@ -699,12 +699,17 @@ describe('mobile subscribe integration', () => {
       const ok = await runtime.reclaimTerminalForDesktop('pty-1')
       expect(ok).toBe(true)
       expect(ptySizes.get('pty-1')).toEqual({ cols: 150, rows: 40 })
-      // Mode reset so a re-subscribe takes the auto path.
-      expect(runtime.getMobileDisplayMode('pty-1')).toBe('auto')
+      expect(runtime.getMobileDisplayMode('pty-1')).toBe('desktop')
 
-      // Mobile re-subscribes (e.g. tab switch). Must re-fit to phone dims.
+      // Mobile re-subscribes (reconnect, resume). Stays at desktop dims.
       await runtime.handleMobileSubscribe('pty-1', 'client-a', { cols: 45, rows: 20 })
+      expect(ptySizes.get('pty-1')).toEqual({ cols: 150, rows: 40 })
+      expect(runtime.getDriver('pty-1').kind).not.toBe('mobile')
+
+      // The user types on the phone. Re-fits to phone dims.
+      await runtime.mobileTookFloor('pty-1', 'client-a')
       expect(ptySizes.get('pty-1')).toEqual({ cols: 45, rows: 20 })
+      expect(runtime.getMobileDisplayMode('pty-1')).toBe('auto')
     })
 
     it('reclaim with WS disconnect between cycles — held branch restores correctly each time', async () => {
@@ -713,8 +718,9 @@ describe('mobile subscribe integration', () => {
       const { runtime, ptySizes } = createRuntime()
 
       for (let i = 0; i < 3; i++) {
-        // Phone subscribes, fits to phone dims.
+        // Phone subscribes and types (after a take-back the subscribe alone is passive), fits to phone dims.
         await runtime.handleMobileSubscribe('pty-1', 'client-a', { cols: 45, rows: 20 })
+        await runtime.mobileTookFloor('pty-1', 'client-a')
         expect(ptySizes.get('pty-1'), `iter ${i}: phone-fit`).toEqual({ cols: 45, rows: 20 })
 
         // WS disconnect under indefinite hold: PTY stays phone-fit, override persists, subscriber removed.
@@ -744,8 +750,9 @@ describe('mobile subscribe integration', () => {
       const { runtime, ptySizes } = createRuntime()
 
       for (let i = 0; i < 3; i++) {
-        // Phone takes the floor (or first subscribe).
+        // Phone subscribes and types (after a take-back the subscribe alone is passive).
         await runtime.handleMobileSubscribe('pty-1', 'client-a', { cols: 45, rows: 20 })
+        await runtime.mobileTookFloor('pty-1', 'client-a')
         expect(ptySizes.get('pty-1'), `iter ${i}: phone-fit`).toEqual({ cols: 45, rows: 20 })
 
         // Desktop reclaims.
