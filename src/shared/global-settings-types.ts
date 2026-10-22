@@ -1,6 +1,7 @@
 import type { NativeChatGlobalSettings } from './native-chat-appearance-settings'
 import type { WorktreeDeletionPreferences as DeletePrefs } from './worktree-deletion-preferences'
 import type { EditorGlobalSettings } from './editor-global-settings'
+import type { MiniMaxEndpoint } from './minimax-endpoint'
 import type { ExecutionHostId } from './execution-host'
 import type { OrcaWorkspaceLayout } from './orca-workspace-layout'
 import type { GitHubProjectSettings } from './github/project-types'
