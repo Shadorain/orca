@@ -4,7 +4,6 @@ import type { TabSplitTarget } from '../slices/tabs/tabs-slice-contract'
 import type { TerminalLayoutSnapshot, TerminalTab } from '../../../../shared/terminal-tab-types'
 import type { TuiAgent } from '../../../../shared/tui-agent'
 import type { WorkspaceSessionState } from '../../../../shared/workspace-session-state-types'
-import type { SetupSplitDirection } from '../../../../shared/worktree/launch-types'
 import type {
   AgentProviderSessionMetadata,
   SleepingAgentLaunchConfig
@@ -24,6 +23,7 @@ import type {
   TerminalTabRetirementPlan
 } from '../slices/terminal-tab-retirement'
 import type {
+  AccountRestartAgent,
   AutomaticAgentResumeClaim,
   CodexRestartNotice,
   HydrateWorkspaceSessionOptions
@@ -125,7 +125,7 @@ export type TerminalActions = {
       recordInteraction?: boolean
     }
   ) => void
-  setTabColor: (tabId: string, color: string | null) => void
+  setTabColor: (tabId: string, color: string | null, opts?: { recordInteraction?: boolean }) => void
   /** What the tab keeps about the launch that laid out one of its panes; undefined clears it.
    *  `remount` remounts the tab's panes, so one whose spawn was refused spawns again. */
   setTabAgentLaunchPane: (
@@ -150,6 +150,7 @@ export type TerminalActions = {
       sleepingPaneKeys?: string[]
       expectedRuntimePtyIds?: string[]
       backendOwnsPtyTeardown?: boolean
+      onAdmitted?: () => void
     }
   ) => Promise<void>
   /** Captures resumable pane evidence and publishes suppression before exact physical teardown. */
@@ -166,8 +167,9 @@ export type TerminalActions = {
   suppressPtyExit: (ptyId: string) => void
   consumeSuppressedPtyExit: (ptyId: string) => boolean
   isPtyShutdownPending: (ptyId: string) => boolean
-  queueCodexPaneRestarts: (ptyIds: string[]) => void
-  consumePendingCodexPaneRestart: (ptyId: string) => boolean
+  /** Codex also marks its restart notices answered. */
+  queuePaneAccountRestarts: (ptyIds: string[], agent: AccountRestartAgent) => void
+  consumePendingPaneAccountRestart: (ptyId: string) => AccountRestartAgent | null
   markCodexRestartNotices: (
     notices: (Pick<CodexRestartNotice, 'previousAccountLabel' | 'nextAccountLabel'> &
       Partial<Pick<CodexRestartNotice, 'previousAccountId' | 'nextAccountId'>> & {
@@ -237,19 +239,6 @@ export type TerminalActions = {
     }
     showSessionRestoredBanner?: boolean
     telemetry?: AgentStartedTelemetry
-  } | null
-  queueTabSetupSplit: (
-    tabId: string,
-    startup: {
-      command: string
-      env?: Record<string, string>
-      direction: SetupSplitDirection
-    }
-  ) => void
-  consumeTabSetupSplit: (tabId: string) => {
-    command: string
-    env?: Record<string, string>
-    direction: SetupSplitDirection
   } | null
   queueTabIssueCommandSplit: (
     tabId: string,

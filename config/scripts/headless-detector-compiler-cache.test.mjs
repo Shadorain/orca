@@ -84,6 +84,10 @@ it('activates the compiler and workspace-policy parser and preserves import grap
       join(root, 'config', 'scripts', `${name}.mjs`)
     )
   }
+  cpSync(
+    new URL('../dark-build-switches.cjs', import.meta.url),
+    join(root, 'config', 'dark-build-switches.cjs')
+  )
   mkdirSync(join(root, 'src', 'shared'), { recursive: true })
   cpSync(
     new URL('../../src/shared/orcad-artifacts.ts', import.meta.url),

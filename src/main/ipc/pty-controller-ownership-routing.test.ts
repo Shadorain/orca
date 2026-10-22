@@ -186,6 +186,18 @@ describe('registerPtyHandlers', () => {
       0
     )
   })
+  it('seeds the title of a session adopted by subscriber-driven attach', async () => {
+    const daemonPtyId = 'repo-1::/tmp/wt@@title-handoff'
+    const localProvider = createAgentClaimProvider({})
+    localProvider.attach.mockResolvedValueOnce({ lastTitle: '⠋ Claude' })
+    setLocalPtyProvider(localProvider as never)
+    const seedTerminalRestoreTail = vi.fn()
+    const controller = registerAgentClaimController({ seedTerminalRestoreTail })
+
+    await expect(controller.attach(daemonPtyId)).resolves.toBe(true)
+
+    expect(seedTerminalRestoreTail).toHaveBeenCalledWith(daemonPtyId, { lastTitle: '⠋ Claude' })
+  })
   it('does not dispatch a runtime PTY spawn after its client disconnects', async () => {
     const provider = createAgentClaimProvider({})
     setLocalPtyProvider(provider as never)
@@ -245,7 +257,8 @@ describe('registerPtyHandlers', () => {
     expect(runtime.registerPreAllocatedHandleForPty).not.toHaveBeenCalled()
     expect(runtime.cancelPendingPtyRegistration).toHaveBeenCalledWith(
       'different-requested-id',
-      'incarnation-canonical-exited'
+      'incarnation-canonical-exited',
+      undefined
     )
   })
 })

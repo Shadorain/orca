@@ -14,7 +14,6 @@ import { errorMessage } from './session-scanner-values'
 import { throwIfAiVaultScanCancelled } from './ai-vault-scan-cancellation'
 import {
   noteAiVaultScanFileFound,
-  noteAiVaultScanProgress,
   noteAiVaultScanWorkChanged,
   openAiVaultScanSource
 } from './ai-vault-scan-progress'
@@ -45,9 +44,12 @@ export async function discoverFiles(args: {
   filePredicate?: (path: string) => boolean
   contentDependencyPath?: (path: string) => string | undefined | Promise<string | undefined>
   directoryPredicate?: (name: string, depth: number) => boolean
+  // A scoped scan walks every file this agent has, not only the newest `limit`.
+  keepScopeFiles?: boolean
   signal?: AbortSignal
 }): Promise<SessionFileDiscovery> {
   const files = new SessionNewestFiles(args.limit)
+  const scopeFiles: FileWithMtime[] | undefined = args.keepScopeFiles ? [] : undefined
   let refusedSidecar = false
   let paths: string[] = []
   let pending: Promise<SessionFileObservation[]> | null = null
@@ -76,11 +78,18 @@ export async function discoverFiles(args: {
       }
       try {
         const modifiedAt = new Date(observation.file.mtimeMs)
-        if (Number.isNaN(modifiedAt.getTime()) || files.wouldRetain(observation.file.mtimeMs)) {
-          files.add({
+        if (
+          Number.isNaN(modifiedAt.getTime()) ||
+          files.wouldRetain(observation.file.mtimeMs) ||
+          scopeFiles
+        ) {
+          const left = files.add({
             ...observation.file,
             modifiedAt: modifiedAt.toISOString()
           })
+          if (left) {
+            scopeFiles?.push(left)
+          }
         }
       } catch (err) {
         recordSessionScanIssue(args.issues, {
@@ -90,7 +99,6 @@ export async function discoverFiles(args: {
         })
       }
     }
-    noteAiVaultScanProgress(args.signal)
     noteAiVaultScanWorkChanged(args.signal)
   }
 
@@ -188,7 +196,7 @@ export async function discoverFiles(args: {
   } finally {
     source.close()
   }
-  return { agent: args.agent, rootDir: args.rootDir, files: files.newest() }
+  return { agent: args.agent, rootDir: args.rootDir, files: files.newest(), scopeFiles }
 }
 
 async function observeSessionFile(
@@ -260,6 +268,7 @@ export type SessionFileWalkOptions = {
   // Return false to skip descending into a directory; depth 0 is a child of
   // rootDir, so pruned subtrees are never stat'd or parsed.
   directoryPredicate?: (name: string, depth: number) => boolean
+  strictErrors?: boolean
   readDirectory?: (dirPath: string) => Promise<Dirent[]>
   signal?: AbortSignal
 }
@@ -297,12 +306,14 @@ export async function forEachSessionFile(
     options.signal?.throwIfAborted()
     // Why: a gate refusal means the scan could not run, not that the tree is
     // empty — swallowing it would misreport a stalled distro as "no transcript".
-    if (error instanceof WslTranscriptFsError) {
+    if (
+      error instanceof WslTranscriptFsError ||
+      (options.strictErrors && !isMissingSidecarError(error))
+    ) {
       throw error
     }
     return
   }
-  noteAiVaultScanProgress(options.signal)
 
   for (const entry of entries) {
     options.signal?.throwIfAborted()
