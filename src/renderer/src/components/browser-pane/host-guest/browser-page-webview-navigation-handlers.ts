@@ -54,10 +54,7 @@ export type BrowserPageWebviewNavigationHandlers = {
   handleAnnotationViewportMessage: (event: { message?: string }) => void
 }
 
-/**
- * A new document starting to load in the page itself. Not did-start-loading, which also fires for
- * iframe loads; and this covers navigations the page starts (links, forms, redirects, history).
- */
+/** Observe main-document starts, including page-initiated navigation; did-start-loading also includes iframe loads. */
 export function isPageDocumentNavigationStart(event: {
   isMainFrame: boolean
   isInPlace: boolean
@@ -90,8 +87,7 @@ export function createBrowserPageWebviewNavigationHandlers({
     }
     const browserStartedUrl = redactKagiSessionToken(event.url)
     const startedUrl = normalizeBrowserNavigationUrl(browserStartedUrl) ?? browserStartedUrl
-    // Why getURL() and not lastKnownWebviewUrlRef: Orca-driven navigations point that ref at the
-    // destination before assigning src, so it can't identify the document being left.
+    // Read the departing URL from the guest; Orca sets lastKnownWebviewUrlRef to the destination before assigning src.
     let committedUrl: string | null = null
     try {
       committedUrl = webview.getURL() || null
@@ -105,12 +101,12 @@ export function createBrowserPageWebviewNavigationHandlers({
   }
 
   const handleDidStartNavigation = (event: Electron.DidStartNavigationEvent): void => {
-    if (event.isMainFrame && event.url) {
-      invalidateBrowserAnnotationDocumentRef.current()
-    }
     if (!isPageDocumentNavigationStart(event) || !event.url) {
       return
     }
+    // Same-URL reloads replace the document too; in-place updates are judged once they commit.
+    invalidateBrowserAnnotationDocumentRef.current()
+    setBrowserOverlayViewport({ scrollX: 0, scrollY: 0, version: 0 })
     onUpdatePageStateRef.current(browserTabId, { loading: true })
     const pendingRecoveryNavigation = recoveryNavigationValidationRef.current
     const browserStartedUrl = redactKagiSessionToken(event.url)
@@ -118,9 +114,7 @@ export function createBrowserPageWebviewNavigationHandlers({
     if (pendingRecoveryNavigation?.targetUrl === startedUrl) {
       pendingRecoveryNavigation.started = true
     }
-    // Why here and not on did-start-loading: Chromium re-announces a favicon only when the icon URL
-    // list changes, so clearing on every load strands same-origin navigations with no icon and no
-    // event that would ever restore one.
+    // Clear only across origins; same-site loads may never reannounce an unchanged favicon list.
     clearFaviconIfOriginChanges(event)
   }
 
@@ -143,7 +137,8 @@ export function createBrowserPageWebviewNavigationHandlers({
     const browserModelUrl = redactKagiSessionToken(currentUrl)
     const normalizedBrowserModelUrl =
       normalizeBrowserNavigationUrl(browserModelUrl) ?? browserModelUrl
-    if (lastKnownWebviewUrlRef.current !== normalizedBrowserModelUrl) {
+    // In-place route changes swap content, but fragment-only updates (scroll spies, anchors) keep the layout.
+    if (lastKnownWebviewUrlRef.current?.split('#')[0] !== normalizedBrowserModelUrl.split('#')[0]) {
       invalidateBrowserAnnotationDocumentRef.current()
     }
     lastKnownWebviewUrlRef.current = normalizedBrowserModelUrl

@@ -1,19 +1,21 @@
 import { describe, expect, it } from 'vitest'
 import {
   applyMentionSuggestion,
-  applyPickerSuggestion,
-  applySlashSuggestion,
-  buildNativeChatPickerItems,
-  classifyNativeChatSend,
   deriveComposerAutocomplete,
   editReplacesTriggerToken,
+  isSkillPickerTriggered
+} from './native-chat-composer-state'
+import { applyPickerSuggestion } from '../../../../shared/native-chat/input/native-chat-picker-triggers'
+import {
+  applySlashSuggestion,
+  classifyNativeChatSend,
   filterSlashCommands,
-  isSkillPickerTriggered,
   isSlashCommandDraft,
   slashCommandDispatchText,
+  sessionSlashCommandSuggestions,
   type SlashCommandSuggestion
-} from './native-chat-composer-state'
-import { sessionSlashCommandSuggestions } from '../../../../shared/native-chat-slash-commands'
+} from '../../../../shared/native-chat/input/native-chat-slash-commands'
+import { buildNativeChatPickerItems } from '../../../../shared/native-chat/input/native-chat-picker-items'
 import type { DiscoveredSkill } from '../../../../shared/skills'
 import { getNativeChatAgentProfile } from '../../../../shared/native-chat-agent-profiles'
 import { pickedSkillsInText } from '../../../../shared/structured-agent-session-send-mutation'
@@ -449,11 +451,23 @@ describe('native skill and command picker', () => {
       '/',
       [{ name: 'dataviz' }, { name: 'ref-oss' }]
     )
-    // The scanned-but-unreported skill is gone; the reported-but-unscanned one is
-    // offered without a scope, and sorts after the one the scan located.
+    // Keep only reported skills; unscanned reports sort after located skills without inventing scope.
     expect(items.map((item) => item.name)).toEqual(['ref-oss', 'dataviz'])
     expect(items[0]).toMatchObject({ kind: 'skill', description: 'On disk' })
     expect(items[1]).toMatchObject({ kind: 'skill', description: null, sources: [] })
+  })
+
+  it('keeps the first reported description for duplicate unlocated skill names', () => {
+    const items = buildNativeChatPickerItems([], [], '', '/', [
+      { name: 'missing' },
+      { name: 'missing', description: 'Later description' },
+      { name: 'present', description: 'First description' },
+      { name: 'present', description: 'Later description' }
+    ])
+    expect(items).toMatchObject([
+      { name: 'missing', description: null },
+      { name: 'present', description: 'First description' }
+    ])
   })
 
   it('keeps the disk scan only when a session report is absent', () => {

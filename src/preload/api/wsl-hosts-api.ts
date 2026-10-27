@@ -1,7 +1,4 @@
-/**
- * WSL distros as hosts; desktop-only and Windows-only (or the e2e fake) behind the internal gate,
- * else undefined.
- */
+// Available only on Windows desktops or e2e fakes with the internal gate enabled.
 import { ipcRenderer } from 'electron'
 import {
   WSL_HOST_STATUS_CHANNEL,
@@ -25,6 +22,8 @@ export type WslHostsPreloadApi = {
   onStatusChanged: (callback: (status: WslHostStatus) => void) => () => void
   /** The WSL hosts an open project or terminal needs; only these may boot a stopped distro. */
   setVisibleWork: (args: { environmentIds: string[] }) => Promise<void>
+  /** The user switched to a workspace on this host; may boot its distro (E9). */
+  focusHost: (args: { environmentId: string | null }) => Promise<void>
 }
 
 const wslHostsApi: WslHostsPreloadApi = {
@@ -40,7 +39,8 @@ const wslHostsApi: WslHostsPreloadApi = {
     ipcRenderer.on(WSL_HOST_STATUS_CHANNEL, listener)
     return () => ipcRenderer.removeListener(WSL_HOST_STATUS_CHANNEL, listener)
   },
-  setVisibleWork: (args) => ipcRenderer.invoke('wslHosts:setVisibleWork', args)
+  setVisibleWork: (args) => ipcRenderer.invoke('wslHosts:setVisibleWork', args),
+  focusHost: (args) => ipcRenderer.invoke('wslHosts:focusHost', args)
 }
 
 /** Undefined hides every WSL host surface in the renderer; main refuses the calls regardless. */
