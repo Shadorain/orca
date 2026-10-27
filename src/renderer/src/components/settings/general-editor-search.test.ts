@@ -1,18 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { getGeneralEditorSearchEntries, getGeneralPaneSearchEntries } from './general-search'
+
+import { getGeneralEditorSearchEntries } from './general-editor-search'
 import { matchesSettingsSearch } from './settings-search'
 
-describe('collapse unchanged settings search', () => {
-  it.each(['collapse unchanged', 'collapse', 'hide unchanged', 'fold', 'diff'])(
-    'keeps the setting reachable through both search gates for "%s"',
-    (query) => {
-      const editorEntries = getGeneralEditorSearchEntries()
-      const entry = editorEntries.find((item) => item.title === 'Collapse Unchanged Regions')
+describe('getGeneralEditorSearchEntries', () => {
+  it('keeps the editor keybindings entry searchable by vim and keybindings', () => {
+    const entries = getGeneralEditorSearchEntries()
 
-      expect(entry).toBeDefined()
-      expect(matchesSettingsSearch(query, entry!)).toBe(true)
-      expect(matchesSettingsSearch(query, editorEntries)).toBe(true)
-      expect(matchesSettingsSearch(query, getGeneralPaneSearchEntries())).toBe(true)
-    }
-  )
+    expect(matchesSettingsSearch('vim', entries)).toBe(true)
+    expect(matchesSettingsSearch('keybindings', entries)).toBe(true)
+  })
 })
