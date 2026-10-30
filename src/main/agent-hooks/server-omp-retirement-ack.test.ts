@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { AgentHookServer } from './server'
-import { buildBody, GOOD_PANE, PANE, postHookEvent } from './server.test-fixtures'
+import { GOOD_PANE, PANE } from './server.test-fixtures'
 
 vi.mock('../telemetry/client', () => ({ track: vi.fn() }))
 vi.mock('../telemetry/cohort-classifier', () => ({ getCohortAtEmit: vi.fn() }))
@@ -96,95 +96,4 @@ it.each([false, true])('keeps repeated detached retirement coherent (closed=%s)'
   } finally {
     server.stop()
   }
-})
-
-describe('non-OMP retirement acknowledgement', () => {
-  it.each(['claude', 'codex'] as const)(
-    'acknowledges a fresh remote %s hook, not replay',
-    (source) => {
-      const server = new AgentHookServer()
-      const listener = vi.fn()
-      server.setListener(listener)
-      const event = {
-        paneKey: PANE,
-        source,
-        hookEventName: 'UserPromptSubmit',
-        launchToken: 'replacement-token',
-        payload: { agentType: source, state: 'working', prompt: 'replacement turn' }
-      }
-      try {
-        server.retirePaneAuthority(PANE, ID)
-        server.ingestRemote({ ...event, isReplay: true }, 'ssh-connection')
-        expect(listener).not.toHaveBeenCalled()
-        expect(server.getStatusSnapshot()).toEqual([])
-        server.ingestRemote(event, 'ssh-connection')
-        expect(listener.mock.calls[0][0]).toMatchObject({
-          paneKey: PANE,
-          authorityRestartId: ID,
-          payload: { agentType: source }
-        })
-        server.ingestRemote(event, 'ssh-connection')
-        expect(listener.mock.calls[1][0]).not.toHaveProperty('authorityRestartId')
-        expect(server.getStatusSnapshot()[0]).not.toHaveProperty('authorityRestartId')
-      } finally {
-        server.stop()
-      }
-    }
-  )
-
-  it.each(['claude', 'codex'] as const)(
-    'does not acknowledge a %s hook from the retired session',
-    (source) => {
-      const server = new AgentHookServer()
-      const listener = vi.fn()
-      server.setListener(listener)
-      const prior = {
-        paneKey: PANE,
-        source,
-        hookEventName: 'UserPromptSubmit',
-        launchToken: 'retired-token',
-        payload: { agentType: source, state: 'working', prompt: 'old turn' }
-      }
-      try {
-        server.ingestRemote(prior, 'ssh-connection')
-        server.retirePaneAuthority(PANE, ID)
-        listener.mockClear()
-        server.ingestRemote(prior, 'ssh-connection')
-        expect(listener.mock.calls[0][0]).not.toHaveProperty('authorityRestartId')
-        server.retirePaneAuthority(PANE, ID)
-        server.ingestRemote({ ...prior, launchToken: undefined }, 'ssh-connection')
-        expect(listener.mock.calls.at(-1)?.[0]).not.toHaveProperty('authorityRestartId')
-      } finally {
-        server.stop()
-      }
-    }
-  )
-
-  it.each(['claude', 'codex'] as const)(
-    'acknowledges a fresh local %s hook once',
-    async (source) => {
-      const server = new AgentHookServer()
-      const listener = vi.fn()
-      server.setListener(listener)
-      await server.start({ env: 'production' })
-      try {
-        server.retirePaneAuthority(PANE, ID)
-        const body = buildBody(
-          { hook_event_name: 'UserPromptSubmit', prompt: 'replacement turn' },
-          { launchToken: 'replacement-token' }
-        )
-        expect((await postHookEvent(server, body, `/hook/${source}`)).status).toBe(204)
-        expect(listener.mock.calls[0][0]).toMatchObject({
-          paneKey: PANE,
-          authorityRestartId: ID,
-          payload: { agentType: source }
-        })
-        expect((await postHookEvent(server, body, `/hook/${source}`)).status).toBe(204)
-        expect(listener.mock.calls[1][0]).not.toHaveProperty('authorityRestartId')
-        expect(server.getStatusSnapshot()[0]).not.toHaveProperty('authorityRestartId')
-      } finally {
-        server.stop()
-      }
-    }
-  )
 })

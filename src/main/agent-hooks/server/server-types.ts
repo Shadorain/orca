@@ -131,8 +131,6 @@ export type RetiredPaneFence = {
   aliases: readonly RetiredPaneAlias[]
   closed?: true
   retirementIdsByPaneKey: Record<string, string>
-  /** Launch token of the session this fence retired; a matching later hook is not a replacement. */
-  retiredLaunchTokenHash?: string
 }
 
 export type LastStatusFile = {

@@ -150,32 +150,6 @@ export abstract class AgentHookServerStatusDisposition extends AgentHookServerSt
     return tabId !== undefined && this.closedAgentStatusTabIds.has(tabId)
   }
 
-
-  /**
-   * A retired pane's one-time restart id proves a replacement session. OMP's process
-   * boundary and a foreground argv read are that proof; other hooks must carry a launch
-   * token that is not the retired session's.
-   */
-  protected replacementOwnsRetiredRestart(
-    paneKey: string,
-    event?: { source?: string; launchToken?: string; processNewTurn?: boolean }
-  ): boolean {
-    if (event?.source === 'omp' || event?.processNewTurn === true) {
-      return true
-    }
-    const token = event?.launchToken?.trim()
-    if (!token) {
-      return false
-    }
-    const hash = createHash('sha256').update(token).digest('hex')
-    const ownerPaneKey = this.resolvePaneKeyAlias(paneKey)
-    const retired =
-      this.retiredPaneFencesByKey.get(ownerPaneKey)?.retiredLaunchTokenHash ??
-      this.retiredPaneFencesByKey.get(paneKey)?.retiredLaunchTokenHash
-    return retired === undefined || hash !== retired
-  }
-
-
   protected takeRetiredPaneRestartId(paneKey: string): string | undefined {
     const fence = this.retiredPaneFencesByKey.get(paneKey)
     const id = fence?.retirementIdsByPaneKey[paneKey]
@@ -188,8 +162,7 @@ export abstract class AgentHookServerStatusDisposition extends AgentHookServerSt
   protected recordRetiredPaneFence(
     paneKeys: ReadonlySet<string>,
     aliases: readonly RetiredPaneAlias[],
-    retirementId?: string,
-    retiredLaunchTokenHash?: string
+    retirementId?: string
   ): void {
     const closed = [...paneKeys].some(
       (key) =>
@@ -206,7 +179,6 @@ export abstract class AgentHookServerStatusDisposition extends AgentHookServerSt
       paneKeys: [...paneKeys],
       aliases,
       retirementIdsByPaneKey,
-      ...(retiredLaunchTokenHash ? { retiredLaunchTokenHash } : {}),
       ...(closed ? { closed: true as const } : {})
     }
     for (const key of paneKeys) {

@@ -142,18 +142,18 @@ describe('buildWorktreeAgentRows', () => {
 
   it('keeps the launched owner over a free-text title name for unknown rows', () => {
     const rows = buildWorktreeAgentRows({
-      tabs: [makeTab('tab-1', { launchAgent: 'omp', title: '⠋ Codex' })],
+      tabs: [makeTab('tab-1', { launchAgent: 'omp', title: '⠋ Review Codex behavior' })],
       entries: [
         makeEntry(PANE_KEY_1, 1000, {
           agentType: undefined,
-          terminalTitle: '⠋ Codex'
+          terminalTitle: '⠋ Review Codex behavior'
         })
       ],
       retained: [],
       now: 2000
     })
 
-    // Why: `⠋ Codex` is a free-text name mention, not anchored identity (#24854).
+    // Why: a Codex mention in task text is not identity (#24854). A bare agent title is.
     expect(rows[0].agentType).toBe('omp')
   })
 

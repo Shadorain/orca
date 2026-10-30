@@ -211,8 +211,7 @@ export abstract class AgentHookServerState {
   protected abstract recordRetiredPaneFence(
     paneKeys: ReadonlySet<string>,
     aliases: readonly RetiredPaneAlias[],
-    retirementId?: string,
-    retiredLaunchTokenHash?: string
+    retirementId?: string
   ): void
   protected abstract markPaneClosedForAgentStatus(paneKey: string): void
   protected abstract attachStatusTiming(

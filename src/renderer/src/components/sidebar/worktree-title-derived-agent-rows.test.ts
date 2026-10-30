@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { applyAgentRowLineage } from '@/components/dashboard/agent-row-lineage'
 import type { TerminalLayoutSnapshot, TerminalTab } from '../../../../shared/terminal-tab-types'
 import type { TuiAgent } from '../../../../shared/tui-agent'
-import type { TitleDerivedPaneForeground } from './title-derived-pane-agent-identity'
+import {
+  resolveTitleDerivedAgentType,
+  type TitleDerivedPaneForeground
+} from './title-derived-pane-agent-identity'
 import { makePaneKey } from '../../../../shared/stable-pane-id'
 import { buildWorktreeAgentRows } from './worktree-agent-rows'
 import { createTerminalTitleTracker } from '../../../../shared/terminal-output-side-effects'
@@ -417,22 +420,6 @@ describe('buildTitleDerivedAgentRows', () => {
     })
 
     expect(rows.map((row) => [row.agentType, row.state])).toEqual([['codex', 'working']])
-  })
-
-  it('does not let a free-text agent name take the pane from its owner (#24854)', () => {
-    const rows = buildWorktreeAgentRows({
-      tabs: [makeTab('tab-1', { launchAgent: 'omp' })],
-      entries: [],
-      retained: [],
-      runtimePaneTitlesByTabId: {
-        'tab-1': { 1: '⠋ Review Codex behavior' }
-      },
-      ptyIdsByTabId: { 'tab-1': ['pty-mention'] },
-      terminalLayoutsByTabId: { 'tab-1': makeSingleLayout(LEAF_ID_1) },
-      now: 2000
-    })
-
-    expect(rows.map((row) => [row.agentType, row.state])).toEqual([['omp', 'working']])
   })
 
   it('produces no row for a spinner-only title when the tab has no launch identity', () => {
@@ -875,5 +862,29 @@ describe('split-pane runtime title attribution', () => {
       [makePaneKey('tab-1', LEAF_ID_2), 'codex', 'idle'],
       [makePaneKey('tab-1', LEAF_ID_3), 'gemini', 'working']
     ])
+  })
+})
+
+describe('owner identity with foreign task names', () => {
+  it('preserves the unknown-label fallback for an admitted identity', () => {
+    expect(resolveTitleDerivedAgentType('MiMo Code', 'MiMo Code')).toBe('unknown')
+  })
+
+  it.each([
+    '⠋ Fix the codex plugin launcher',
+    '⠋ fix the grok launcher',
+    '⠋ port the gemini status parser',
+    '⠋ fix the mimo launcher'
+  ])('keeps the existing Claude row for %j', (title) => {
+    const rows = buildWorktreeAgentRows({
+      tabs: [makeTab('tab-1', { launchAgent: 'claude' })],
+      entries: [],
+      retained: [],
+      runtimePaneTitlesByTabId: { 'tab-1': { 1: title } },
+      ptyIdsByTabId: { 'tab-1': ['pty-claude'] },
+      terminalLayoutsByTabId: { 'tab-1': makeSingleLayout(LEAF_ID_1) },
+      now: 2000
+    })
+    expect(rows.map((row) => [row.agentType, row.entry.prompt])).toEqual([['claude', 'Claude']])
   })
 })

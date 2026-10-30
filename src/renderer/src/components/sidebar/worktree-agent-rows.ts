@@ -190,23 +190,6 @@ export function buildWorktreeAgentRows(args: {
   }
 
   const ptyIdsByTabId = args.ptyIdsByTabId ?? {}
-  const pushTabLiveRow = (entry: AgentStatusEntry, tab: TerminalTab, hasLivePty: boolean): void => {
-    const isFresh = isExplicitAgentStatusFresh(entry, args.now, AGENT_STATUS_STALE_AFTER_MS)
-    const shouldDecay =
-      !isFresh &&
-      (entry.state === 'working' || entry.state === 'blocked' || entry.state === 'waiting')
-    rows.push({
-      paneKey: entry.paneKey,
-      entry,
-      tab,
-      agentType: resolveRowAgentType(entry, tab),
-      rowSource: 'live',
-      state: shouldDecay ? resolveDecayedAgentRowState(entry, hasLivePty) : entry.state,
-      startedAt: effectiveWorktreeAgentRowStartedAt(entry)
-    })
-    rows.push(...buildSubagentChildRows({ parentEntry: entry, tab, parentIsFresh: isFresh }))
-    seenPaneKeys.add(entry.paneKey)
-  }
   // Why: a different live process invalidates a finished snapshot even when
   // its shell/default title cannot produce a replacement row.
   for (const tab of args.tabs) {
@@ -219,7 +202,24 @@ export function buildWorktreeAgentRows(args: {
         supersededPaneKeys.add(rowEntry.paneKey)
         continue
       }
-      pushTabLiveRow(rowEntry, tab, hasLivePty)
+      const isFresh = isExplicitAgentStatusFresh(rowEntry, args.now, AGENT_STATUS_STALE_AFTER_MS)
+      const shouldDecay =
+        !isFresh &&
+        (rowEntry.state === 'working' ||
+          rowEntry.state === 'blocked' ||
+          rowEntry.state === 'waiting')
+      const startedAt = effectiveWorktreeAgentRowStartedAt(rowEntry)
+      rows.push({
+        paneKey: rowEntry.paneKey,
+        entry: rowEntry,
+        tab,
+        agentType: resolveRowAgentType(rowEntry, tab),
+        rowSource: 'live',
+        state: shouldDecay ? resolveDecayedAgentRowState(rowEntry, hasLivePty) : rowEntry.state,
+        startedAt
+      })
+      rows.push(...buildSubagentChildRows({ parentEntry: rowEntry, tab, parentIsFresh: isFresh }))
+      seenPaneKeys.add(rowEntry.paneKey)
     }
   }
 
