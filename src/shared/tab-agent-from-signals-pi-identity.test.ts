@@ -334,9 +334,18 @@ describe('resolveTabAgentFromSignals — identity vs liveness', () => {
     expect(afterObserved).toBe('codex')
   })
 
-  it('does not let a bare-name title reclaim a pane from its completed hook (#24854)', () => {
-    // '⠋ Codex' is a free-text name, not an anchored identity claim; on a local
-    // pane the process read is what proves the reused agent actually started.
+  it('does not let a task-text mention reclaim a pane from its completed hook (#24854)', () => {
+    // A Codex mention in task text is not an identity claim. A title that is only the agent name is.
+    expect(
+      resolveTabAgentFromSignals({
+        hasObservedAgentSignal: true,
+        isRemote: false,
+        title: '⠋ Review Codex behavior',
+        hookAgent: null,
+        focusedCompletedHookAgent: 'claude',
+        launchAgent: undefined
+      })
+    ).toBe('claude')
     expect(
       resolveTabAgentFromSignals({
         hasObservedAgentSignal: true,
@@ -346,6 +355,6 @@ describe('resolveTabAgentFromSignals — identity vs liveness', () => {
         focusedCompletedHookAgent: 'claude',
         launchAgent: undefined
       })
-    ).toBe('claude')
+    ).toBe('codex')
   })
 })

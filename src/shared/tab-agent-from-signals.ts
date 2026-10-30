@@ -1,9 +1,5 @@
 import { titleShowsNoAgent } from './agent-detection'
-import { titlePresentsAgentIdentity } from './agent-title-identity-claim'
-import {
-  isClaudeIdentityFrameTitle,
-  resolveExplicitTerminalTitleAgentType
-} from './terminal-title-agent-type'
+import { resolveExplicitTerminalTitleAgentType } from './terminal-title-agent-type'
 import {
   resolveCompatibleAgentTypeForOwner,
   shareCompatibleTitleIdentityGroup
@@ -113,9 +109,6 @@ export function resolveTabAgentFromSignals(args: {
   const explicitTitleAgent = resolveSignalAgentForLaunchOwner(rawTitleAgent, owner, ownerIsLaunch)
   const priorIdentity = idleFocusedIdentity ?? launchAgent
   const nativeOpenCodeTitle = explicitTitleAgent === 'opencode' && isOpenCodeNativeTitle(args.title)
-  // A task mentioning claude cannot take another agent’s pane; only titles presenting Claude establish identity (#8940).
-  const titleClaimsIdentity =
-    explicitTitleAgent !== 'claude' || isClaudeIdentityFrameTitle(args.title)
   // Why: native OpenCode titles can reclaim stale launch intent before any observed hook signal.
   // Raw title group, not the fallback-rewritten agent: inferred Pi owners would otherwise treat an OMP wrapper title as a different identity.
   // A free-text name is a mention and must not reclaim a pane from its prior identity (#24854).
@@ -124,8 +117,7 @@ export function resolveTabAgentFromSignals(args: {
     explicitTitleAgent !== null &&
     explicitTitleAgent !== priorIdentity &&
     !shareCompatibleTitleIdentityGroup(rawTitleAgent, priorIdentity) &&
-    titleClaimsIdentity &&
-    titlePresentsAgentIdentity(args.title, explicitTitleAgent) &&
+
     (args.hasObservedAgentSignal || hasCompletedHook || nativeOpenCodeTitle)
   // Why: native OpenCode titles lack a provider generation and cannot displace durable ownership.
   const titleAgent =

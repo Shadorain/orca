@@ -1,14 +1,10 @@
 import { titleShowsNoAgent } from '../../../../shared/agent-detection'
 import type { AgentType } from '../../../../shared/agent-status-types'
-import { titlePresentsAgentIdentity } from '../../../../shared/agent-title-identity-claim'
-import {
-  resolveCompatibleAgentTypeForOwner,
-  shareCompatibleTitleIdentityGroup
-} from '../../../../shared/agent-title-owner'
-import { isClaudeIdentityFrameTitle } from '../../../../shared/terminal-title-agent-type'
+import { resolveCompatibleAgentTypeForOwner } from '../../../../shared/agent-title-owner'
+import { resolveExplicitTerminalTitleAgentType } from '../../../../shared/terminal-title-agent-type'
 import type { PaneForegroundAgentEntry } from '@/store/slices/pane-foreground-agent'
 
-const TITLE_AGENT_LABEL_TO_TYPE: Record<string, AgentType> = {
+export const TITLE_AGENT_LABEL_TO_TYPE: Record<string, AgentType> = {
   'Claude Code': 'claude',
   OpenClaude: 'openclaude',
   Codex: 'codex',
@@ -28,34 +24,16 @@ const TITLE_AGENT_LABEL_TO_TYPE: Record<string, AgentType> = {
   OMP: 'omp'
 }
 
-const CLAUDE_AGENT_TOKEN_RE = /(?<![\w./\\-])claude(?![\w./\\-])/i
-
 export function resolveTitleDerivedAgentType(
   title: string,
-  label: string,
-  ownerAgentType?: AgentType | null
+  _label: string,
+  _ownerAgentType?: AgentType | null
 ): AgentType | null {
-  const agentType = TITLE_AGENT_LABEL_TO_TYPE[label] ?? 'unknown'
-  const owner = ownerAgentType && ownerAgentType !== 'unknown' ? ownerAgentType : null
-  if (agentType !== 'claude') {
-    // Why: a different-family name in task text (#24854) must not take a pane from its owner.
-    const mentionOnly =
-      owner !== null &&
-      agentType !== 'unknown' &&
-      !shareCompatibleTitleIdentityGroup(owner, agentType) &&
-      !titlePresentsAgentIdentity(title, agentType)
-    return mentionOnly ? null : agentType
-  }
-  // A generic spinner cannot identify Claude; the title must name it explicitly.
-  if (!CLAUDE_AGENT_TOKEN_RE.test(title)) {
-    return null
-  }
-  // Why: a "claude" word inside another agent's task text is a mention, not identity.
-  // Only a title that PRESENTS Claude may take a pane away from its known owner (#8940).
-  if (owner && owner !== 'claude' && !isClaudeIdentityFrameTitle(title)) {
-    return null
-  }
-  return agentType
+  const admittedAgent = resolveExplicitTerminalTitleAgentType(title)
+  return admittedAgent
+    ? (Object.values(TITLE_AGENT_LABEL_TO_TYPE).find((agent) => agent === admittedAgent) ??
+        'unknown')
+    : null
 }
 
 /** The pane's foreground-process read as the tracker publishes it; routing fields are omitted. */

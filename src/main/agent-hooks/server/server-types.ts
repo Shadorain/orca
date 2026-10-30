@@ -9,6 +9,13 @@ import type {
 import type { AgentStatusObservation } from '../../../shared/agent-status-observation'
 import type { AgentKind } from '../../../shared/telemetry-events'
 import type { LegacyPaneKeyAliasEntry } from '../../../shared/persisted-state-types'
+import type { CodexRemoteRosterAuthority } from '../../../shared/agent-hook-listener/providers/codex-state'
+
+/** Ingest-only fields, stripped before the row is stored. */
+export type IncomingAgentHookEvent = AgentHookEventPayload & {
+  authorityRestartId?: string
+  codexRosterAuthority?: CodexRemoteRosterAuthority
+}
 
 export type EnrichedAgentHookEventPayload = AgentHookEventPayload & {
   /** Live acknowledgement of the matching renderer retirement; never cached. */
@@ -35,6 +42,7 @@ export type EnrichedAgentHookEventPayload = AgentHookEventPayload & {
 export type PersistedAgentHookEventPayload = Omit<
   EnrichedAgentHookEventPayload,
   | 'authorityRestartId'
+  | 'statusAdmissionSession'
   | 'launchToken'
   | 'hostTurnRevision'
   | 'promptInteractionKey'
@@ -123,6 +131,8 @@ export type RetiredPaneFence = {
   aliases: readonly RetiredPaneAlias[]
   closed?: true
   retirementIdsByPaneKey: Record<string, string>
+  /** Launch token of the session this fence retired; a matching later hook is not a replacement. */
+  retiredLaunchTokenHash?: string
 }
 
 export type LastStatusFile = {

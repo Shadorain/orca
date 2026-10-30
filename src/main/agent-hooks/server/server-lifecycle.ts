@@ -158,10 +158,11 @@ export abstract class AgentHookServerLifecycle extends AgentHookServerStatusHook
             })
           : 'suppress'
         if (normalized.event && statusDisposition !== 'suppress') {
-          const restartedAuthority =
-            statusDisposition === 'restart'
-              ? this.restoreRetiredStatusRestart(normalized.event.paneKey)
-              : undefined
+          const restartedAuthority = this.restartedReplacementAuthority(
+            normalized.event.paneKey,
+            statusDisposition,
+            { source, launchToken: normalized.event.launchToken }
+          )
           const event =
             statusDisposition === 'restart'
               ? {

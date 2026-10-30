@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto'
+
 import { clearPaneCacheState } from '../../../shared/agent-hook-listener/listener-state'
 import { parsePaneKey } from '../../../shared/stable-pane-id'
 import { AgentHookServerAuthorityAliases } from './server-authority-aliases'
@@ -34,10 +36,20 @@ export abstract class AgentHookServerAuthorityFences extends AgentHookServerAuth
         aliasChanged = true
       }
     }
+    const retiredToken =
+      this.restartedStatusLaunchTokenHashByPaneKey.get(ownerPaneKey)?.hash ??
+      this.hydratedLaunchTokenHashByPaneKey.get(ownerPaneKey)
+    const retiredRow = this.state.lastStatusByPaneKey.get(ownerPaneKey)
+    const retiredLaunchTokenHash =
+      retiredToken ??
+      (retiredRow?.launchToken?.trim()
+        ? createHash('sha256').update(retiredRow.launchToken.trim()).digest('hex')
+        : undefined)
     this.recordRetiredPaneFence(
       paneKeys,
       retiredAliases,
-      this.isClosedAgentStatusTabForPaneKey(ownerPaneKey) ? undefined : retirementId
+      this.isClosedAgentStatusTabForPaneKey(ownerPaneKey) ? undefined : retirementId,
+      retiredLaunchTokenHash
     )
     const authorityChanged = this.revokeHydratedAuthorityForPaneKeys(paneKeys)
     const retiredRows = [...paneKeys].flatMap((key) => {
@@ -125,6 +137,17 @@ export abstract class AgentHookServerAuthorityFences extends AgentHookServerAuth
     }
     return restored
   }
+
+  protected restartedReplacementAuthority(
+    paneKey: string,
+    disposition: 'accept' | 'restart' | 'suppress',
+    event?: { source?: string; launchToken?: string; processNewTurn?: boolean }
+  ): { paneKey: string; authorityRestartId?: string } | undefined {
+    return disposition === 'restart' && this.replacementOwnsRetiredRestart(paneKey, event)
+      ? this.restoreRetiredStatusRestart(paneKey)
+      : undefined
+  }
+
 
   protected restoreRetiredStatusRestart(paneKey: string): {
     paneKey: string

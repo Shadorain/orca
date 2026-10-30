@@ -24,7 +24,7 @@ Claude's `CLAUDE.md` and Codex's `AGENTS.md` (at repo root or nested) are left a
 
 When a terminal is reused for a different agent, Orca removes the previous agent's completed status once a local process read confirms the replacement. An accepted agent command at a shell also clears incompatible stale status on a single-pane tab. Old status snapshots cannot restore that retired session; fresh hooks from the replacement can report normally. Without replacement evidence, Orca keeps the previous completed status.
 
-Fresh replacement hooks can resume status reporting without detaching or reconnecting the terminal, for both local and SSH sessions.
+Fresh replacement hooks resume status reporting without detaching or reconnecting, for both local and SSH sessions, when the hook carries a launch token that is not the retired session's. A delayed hook from the retired session does not.
 
 ## Surviving a restart
 
