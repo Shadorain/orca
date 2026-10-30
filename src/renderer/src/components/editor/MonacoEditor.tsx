@@ -4,9 +4,7 @@ import type { editor, IRange } from 'monaco-editor'
 import type { MarkdownDocument } from '../../../../shared/filesystem-entry-types'
 import { useAppStore } from '@/store'
 import '@/lib/monaco-setup'
-import { resolveEditorKeybindings } from '../../../../shared/editor-keybindings'
-import { shouldAttachEditorVim } from './monaco-vim-mode'
-import { useMonacoVimAttachment } from './use-monaco-vim-attachment'
+import { EditorVimStatusRow } from './use-monaco-vim-attachment'
 import { computeEditorFontSize, resolveEditorFontFamily } from '@/lib/editor-font-zoom'
 
 import { useContextualCopySetup } from './useContextualCopySetup'
@@ -114,12 +112,6 @@ export default function MonacoEditor({
   )
   const editorFontFamily = resolveEditorFontFamily(settings)
   const editorWordWrap = settings?.editorWordWrap
-  const vimEnabled = shouldAttachEditorVim({
-    preset: resolveEditorKeybindings(settings?.editorKeybindings),
-    readOnly,
-    autoHeight
-  })
-  const [vimStatusNode, setVimStatusNode] = useState<HTMLElement | null>(null)
   const modelOwnerKey = useAppStore((state) => {
     const file = state.openFiles?.find((entry) => entry.id === fileId)
     return file
@@ -278,18 +270,6 @@ export default function MonacoEditor({
     fileId,
     viewStateId
   ])
-  useMonacoVimAttachment({
-    editor: mountedEditor,
-    enabled: vimEnabled,
-    statusNode: vimStatusNode,
-    onWrite: () => {
-      const editor = editorRef.current
-      if (!editor) {
-        return
-      }
-      propsRef.current.onSave(editor.getValue())
-    }
-  })
 
   const editorSurface = (
     <>
@@ -382,14 +362,19 @@ export default function MonacoEditor({
       <div ref={editorContainerRef} className="relative min-h-0 flex-1">
         {editorSurface}
       </div>
-      {vimEnabled ? (
-        <div
-          ref={setVimStatusNode}
-          data-vim-status
-          aria-live="polite"
-          className="min-h-6 shrink-0 border-t border-border bg-editor-surface px-2 text-xs text-muted-foreground"
-        />
-      ) : null}
+      <EditorVimStatusRow
+        editor={mountedEditor}
+        preset={settings?.editorKeybindings}
+        readOnly={readOnly}
+        autoHeight={autoHeight}
+        onWrite={() => {
+          const editor = editorRef.current
+          if (!editor) {
+            return
+          }
+          propsRef.current.onSave(editor.getValue())
+        }}
+      />
     </div>
   )
 }
