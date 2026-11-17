@@ -162,6 +162,10 @@ export type AgentSessionRecord = {
   /** The name Orca gave this conversation, so a later acquisition need not name it again. */
   conversationName?: string
   launchArgs?: AgentSessionLaunchArgs
+  /** Caller-supplied environment for the provider child, persisted so a restart
+   *  relaunches with the same mission keys. The account pin stays in `accountHome`
+   *  and is never duplicated here. */
+  callerEnv?: AgentSessionLaunchEnv
   lease: AgentSessionLease
   createdAt: number
   updatedAt: number
@@ -368,6 +372,7 @@ export function isPersistedAgentSessionRecord(
     (record.conversationName === undefined ||
       isAgentSessionConversationName(record.conversationName)) &&
     (record.launchArgs === undefined || isAgentSessionLaunchArgs(record.launchArgs)) &&
+    (record.callerEnv === undefined || isAgentSessionLaunchEnv(record.callerEnv)) &&
     !Object.hasOwn(record, 'launchEnv') &&
     isPersistedAgentSessionLease(record.lease) &&
     record.lease.sessionId === record.sessionId &&

@@ -11,7 +11,7 @@ export function acpAgentName(agent: string): string {
 export const ACP_HANDLE_TRANSPORT = 'acp'
 
 /** Session options an ACP agent takes: its model, and the model's reasoning effort. */
-const ACP_OPTION_KEYS: ReadonlySet<string> = new Set(['model', 'effort'])
+const ACP_OPTION_KEYS: ReadonlySet<string> = new Set(['model', 'effort', 'mode'])
 
 export function isAcpStructuredOptionKey(key: string): boolean {
   return ACP_OPTION_KEYS.has(key)

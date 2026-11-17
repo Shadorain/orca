@@ -100,6 +100,13 @@ export type AgentLaunchIntent = {
   sessionId?: string
   /** Account routing env for a terminal agent (`agent.launch`'s `accountEnv`). Not a route input. */
   accountEnv?: Readonly<Record<string, string>>
+  /** Caller-supplied environment for the provider child. Persisted on the session
+   *  record so a restart relaunches with the same keys. Not a route input. */
+  env?: Readonly<Record<string, string>>
+  /** Refuses rather than downgrading to a terminal when structured creation fails. */
+  strict?: true
+  /** OMP startup argv persisted on the session record and restored on restart. */
+  launchArgs?: readonly string[]
 }
 
 /**
@@ -209,6 +216,17 @@ export type AgentLaunchResult = {
   /** Absent when no window placed the tab: an older host, no requested placement, or a host with no
    *  window owning the layout. */
   placement?: AgentLaunchPlacementReceipt
+  /** Present on a structured launch. The board persists this instead of listing afterwards. */
+  session?: {
+    sessionId: string
+    executionHostId: string
+    worktreeId: string
+    worktreePath: string
+    incarnation: number
+    liveness: 'alive' | 'starting' | 'exited'
+    agent: string
+    wslDistro: null
+  }
 }
 
 export type AgentLaunchMode = 'structured' | 'terminal'
@@ -217,6 +235,7 @@ export type AgentLaunchMode = 'structured' | 'terminal'
  *  other member is a reason the preference could not be applied to this launch. */
 export type AgentLaunchModeReason =
   | 'user_default'
+  | 'explicit_structured'
   | 'remote_execution_host'
   | 'reused_terminal'
   | 'agent_without_structured_session'
@@ -260,7 +279,39 @@ export function isAgentLaunchResult(value: unknown): value is AgentLaunchResult 
     isAgentLaunchModeReceipt(result.receipt) &&
     (result.warning === undefined || typeof result.warning === 'string') &&
     (result.prompt === undefined || isAgentLaunchPromptReceipt(result.prompt)) &&
-    (result.placement === undefined || isAgentLaunchPlacementReceipt(result.placement))
+    (result.placement === undefined || isAgentLaunchPlacementReceipt(result.placement)) &&
+    (result.session === undefined ||
+      (isAgentLaunchSession(result.session) &&
+        result.outcome.kind === 'structured' &&
+        result.session.sessionId === result.outcome.sessionId &&
+        result.session.worktreeId === result.worktreeId))
+  )
+}
+
+function isAgentLaunchSession(value: unknown): value is NonNullable<AgentLaunchResult['session']> {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: every identity field is checked below before the value is accepted.
+  const session = value as Partial<NonNullable<AgentLaunchResult['session']>>
+  return (
+    typeof session.sessionId === 'string' &&
+    session.sessionId.length > 0 &&
+    typeof session.executionHostId === 'string' &&
+    session.executionHostId.length > 0 &&
+    typeof session.worktreeId === 'string' &&
+    session.worktreeId.length > 0 &&
+    typeof session.worktreePath === 'string' &&
+    session.worktreePath.length > 0 &&
+    typeof session.incarnation === 'number' &&
+    Number.isSafeInteger(session.incarnation) &&
+    session.incarnation >= 0 &&
+    (session.liveness === 'alive' ||
+      session.liveness === 'starting' ||
+      session.liveness === 'exited') &&
+    typeof session.agent === 'string' &&
+    session.agent.length > 0 &&
+    session.wslDistro === null
   )
 }
 

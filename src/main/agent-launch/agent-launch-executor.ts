@@ -67,6 +67,7 @@ import {
   AgentLaunchStructuredSessionRefusedError,
   type AgentLaunchStructuredSurface
 } from './agent-launch-surface-factories'
+import { isBoardMissionEnv } from '../../shared/omp-mission-lifecycle'
 import type {
   AgentLaunchExecution,
   AgentLaunchPublishedSurface,
@@ -83,6 +84,7 @@ export async function executeAgentLaunch(
     assertOpenCodeModelLaunchPreferencesAbsent(intent.agent, intent.sessionOptions)
   }
   const vocabulary = execution.vocabulary ?? DEFAULT_LAUNCH_VOCABULARY
+  const requireStructured = intent.strict === true || isBoardMissionEnv(intent.env)
   const preflight =
     execution.decidedMode ??
     decideAgentLaunchMode({
@@ -97,9 +99,13 @@ export async function executeAgentLaunch(
         ...(execution.callerRendersStructured === false ? { callerRendersStructured: false } : {})
       },
       settings: readAgentLaunchModeSettings(runtime),
+      ...(requireStructured ? { requireStructured: true } : {}),
       ...(execution.terminalOnly ? { terminalOnly: true } : {}),
       vocabulary
     })
+  if (requireStructured && preflight.mode !== 'structured') {
+    throw new Error(`Structured launch required: ${preflight.reason}`)
+  }
   // The create's startup terminal is this launch's only surface, and the create delivers the text.
   if (execution.promptPolicy === 'legacy-host') {
     assertLegacyHostTarget(execution)
@@ -166,6 +172,9 @@ export async function executeAgentLaunch(
           intent.agent,
           vocabulary
         )
+  if (requireStructured && settled.mode !== 'structured') {
+    throw new Error(`Structured launch required: ${settled.reason}`)
+  }
 
   execution.onStage?.('surface_create')
   let created: CreatedSurface
@@ -180,6 +189,9 @@ export async function executeAgentLaunch(
       !(error instanceof AgentLaunchStructuredSessionRefusedError) ||
       !isDefinitiveAgentSessionCreateRefusal(error.code)
     ) {
+      throw error
+    }
+    if (intent.strict || isBoardMissionEnv(intent.env)) {
       throw error
     }
     settled = downgradeAgentLaunchModeForStructuredRefusal(settled, vocabulary)
@@ -300,8 +312,11 @@ async function createSurface(
       worktreeId: workspace.worktreeId,
       agent: intent.agent,
       ...(intent.sessionOptions ? { options: intent.sessionOptions } : {}),
+      ...(intent.env ? { env: intent.env } : {}),
+      ...(intent.strict || isBoardMissionEnv(intent.env) ? { startProvider: true } : {}),
       ...(intent.sessionId ? { sessionId: intent.sessionId } : {}),
-      ...(reservedTabId ? { tabId: reservedTabId } : {})
+      ...(reservedTabId ? { tabId: reservedTabId } : {}),
+      ...(intent.launchArgs ? { launchArgs: intent.launchArgs } : {})
     })
     return {
       outcome: {

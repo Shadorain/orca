@@ -9,8 +9,8 @@
  * error. So `worktree.create` keeps that meaning verbatim, forever, and everything that has to
  * choose a surface comes here instead, behind a negotiated capability.
  *
- * A caller therefore never asks for a mode, and must read `outcome.kind` rather than assume one:
- * the receipt always says which surface ran and why, so a downgrade is never silent.
+ * Ordinary callers follow the user's surface preference; strict callers require structured chat.
+ * Every caller must read `outcome.kind` and the receipt rather than assume which surface ran.
  *
  * A launch is also the one call whose retry is most expensive to get wrong — a lost reply means the
  * caller cannot tell "never ran" from "ran, answer lost" — so a caller may name the operation with
@@ -19,10 +19,15 @@
  * harmless, and does nothing to reunite a caller with a surface a dead attempt left behind.
  */
 
+import {
+  callerRendersLaunchedChat,
+  withStructuredLaunchSession
+} from './agent-launch-structured-session'
 import { AGENT_LAUNCH_RUNTIME_CAPABILITY } from '../../../../shared/agent-launch-runtime-capability'
 import { AgentLaunchTabClosedError } from '../../../../shared/agent-launch-tab-closed'
 import { computeAgentLaunchFingerprint } from '../../../../shared/agent-launch-operation'
 import type { AgentLaunchIntent, AgentLaunchResult } from '../../../../shared/agent-launch-intent'
+import { isBoardMissionEnv } from '../../../../shared/omp-mission-lifecycle'
 import { agentSessionOperationKey } from '../../../../shared/agent-session-operation-ledger'
 import {
   WorktreeCreateCollisionError,
@@ -59,7 +64,6 @@ import {
 } from './agent-launch-caller-selection'
 import { agentLaunchWorkspaceFactory } from './agent-launch-worktree-creation'
 import { assertAgentLaunchTargetAuthorized } from './agent-launch-target-authorization'
-import { clientRendersStructuredAgent } from './structured-agent-session-policy'
 import { resolveUnlaunchedIntent } from './agent-launch-intent-resolution'
 import {
   publishEarlyTab,
@@ -81,23 +85,6 @@ export function supportsAgentLaunch(
   return (
     context.clientKind === undefined ||
     context.clientCapabilities?.includes(AGENT_LAUNCH_RUNTIME_CAPABILITY) === true
-  )
-}
-
-/**
- * `agent.launch.v2` was defined when Claude and Codex were the only chats, so it vouches for those
- * two. Any other agent's chat needs the client to say it reads it, by the rule tabs and restart
- * offers use; a client that does not gets that agent as a terminal.
- */
-function callerRendersLaunchedChat(
-  context: Pick<RpcContext, 'clientKind' | 'clientCapabilities'>,
-  agent: string
-): boolean {
-  return (
-    context.clientKind === undefined ||
-    agent === 'claude' ||
-    agent === 'codex' ||
-    clientRendersStructuredAgent(context.clientCapabilities, agent)
   )
 }
 
@@ -141,7 +128,12 @@ async function runAgentLaunch(
       }
     }
   })
-  return withPlacement(result, view)
+  return withPlacement(
+    intent.strict || isBoardMissionEnv(intent.env)
+      ? await withStructuredLaunchSession(result, intent, context)
+      : result,
+    view
+  )
 }
 
 /**

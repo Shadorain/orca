@@ -6,6 +6,13 @@
 // inventory may expose only a metadata placeholder for an incapable mobile client.
 
 import {
+  isStructuredSessionIdentity,
+  assertSessionIdentityMatch,
+  partitionStructuredSessionIdentities,
+  structuredSessionIdentity,
+  type StructuredSessionIdentity
+} from '../../structured-session-identity'
+import {
   projectBackgroundTaskEvent,
   projectBackgroundTaskHistory
 } from './structured-agent-session-background-task-capability'
@@ -45,6 +52,7 @@ import { STRUCTURED_AGENT_SESSION_THREAD_GOAL_METHODS } from './structured-agent
 import { STRUCTURED_AGENT_SESSION_CONVERSATION_OUTLINE_METHODS } from './structured-agent-session-conversation-outline'
 import { STRUCTURED_AGENT_SESSION_OPTIONS_READ_METHODS } from './structured-agent-session-options-read'
 import {
+  AgentsParams,
   AttachParams,
   CancelParams,
   ConversationCommandParams,
@@ -132,13 +140,47 @@ export const STRUCTURED_AGENT_SESSION_METHODS = [
     params: OptionsParams,
     handler: async (params, ctx) => {
       const host = requireStructuredCleanupHost(ctx)
+      let identity: StructuredSessionIdentity | null = null
+      if (
+        params.executionHostId !== undefined ||
+        params.worktreeId !== undefined ||
+        params.incarnation !== undefined
+      ) {
+        const record = host.deps.store.getRecord(params.sessionId)
+        const registered = await ctx.runtime.listRegisteredWorkspacePaths()
+        const candidate = record
+          ? structuredSessionIdentity(record, registered, host.sessionLiveness(params.sessionId))
+          : null
+        if (!candidate || !isStructuredSessionIdentity(candidate)) {
+          throw new Error('worktree_path_unresolved')
+        }
+        assertSessionIdentityMatch(candidate, params)
+        identity = candidate
+      }
       // Terminal-disposal closes use this RPC without the session-tabs retirement RPC.
       if (typeof host.setSessionTabVisibility === 'function') {
         await host.setSessionTabVisibility(params.sessionId, false)
       }
       // Clients call this only when the user closes this chat's tab or cancels its launch.
       await host.close(params.sessionId, 'user-close')
-      return { ok: true as const }
+      return { ok: true as const, ...identity }
+    }
+  }),
+  defineMethod({
+    name: 'agentSession.list',
+    permission: 'workspace',
+    params: AgentsParams,
+    handler: async (_params, ctx) => {
+      const host = await requireInstalledHost(ctx)
+      const registered = await ctx.runtime.listRegisteredWorkspacePaths()
+      return {
+        ok: true as const,
+        ...partitionStructuredSessionIdentities(
+          host.deps.store.listRecords(),
+          registered,
+          host.sessionLiveness
+        )
+      }
     }
   }),
   ...STRUCTURED_AGENT_SESSION_PROMPT_RESPONSE_METHODS,

@@ -48,6 +48,11 @@ export type AgentLaunchFingerprintInput = {
   /** In: a retry that minted another session is a different request, since replaying would answer
    *  with a conversation this caller did not mint. */
   sessionId?: string
+  /** In: the child's environment decides what it runs, so a retry that changed it
+   *  must conflict rather than replay the first answer. */
+  env?: Readonly<Record<string, string>>
+  strict?: true
+  launchArgs?: readonly string[]
   /**
    * `launchSource` is deliberately absent, and this is the reasoned exclusion rather than an
    * oversight: it is telemetry, so two launches differing only in which button produced them do the
@@ -75,7 +80,10 @@ export function computeAgentLaunchFingerprint(input: AgentLaunchFingerprintInput
     cwd: input.cwd,
     // Absent keys are dropped by the canonical form, so every digest without one is unchanged.
     paneKey: input.paneKey,
-    sessionId: input.sessionId
+    sessionId: input.sessionId,
+    env: input.env,
+    strict: input.strict,
+    launchArgs: input.launchArgs
   })
 }
 

@@ -32,6 +32,7 @@ import { providerExecutableMissing } from '../../provider-process/provider-execu
 import { argumentProblemOf } from '../structured-agent-arguments-error'
 import { codexInstallationProblemOf } from '../../codex/codex-cli-installation-error'
 import { providerDiagnosticOf } from '../../../shared/agent-session-failure'
+import { OMP_MISSION_ACP_REQUIRED } from '../../../shared/omp-mission-lifecycle'
 
 /** Who a failed acquisition's sentence names, and whether it was the session's first start. */
 export type FailedAcquisitionWording = {
@@ -46,6 +47,16 @@ function failedAcquisitionWireRefusal(
   wording: FailedAcquisitionWording,
   error: unknown
 ): AgentSessionWireRefusal {
+  if (
+    error instanceof AgentSessionAcquisitionRefusal &&
+    error.message === OMP_MISSION_ACP_REQUIRED
+  ) {
+    return refuse(
+      'agent_session_operation_invalid',
+      { reason: 'providerStartFailed' },
+      OMP_MISSION_ACP_REQUIRED
+    )
+  }
   const code = 'agent_session_operation_invalid'
   const refusal = details ? refuse(code, details, code) : refuseUnclassified(code, code)
   const { reason } = structuredAgentSessionStartFailure(

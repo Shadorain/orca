@@ -41,6 +41,10 @@ orca status --json
 
 Use `--json` when another tool will parse the result. Human-readable output is for quick terminal checks.
 
+A board mission launch passes `--target-kind structured-session`, repeated `--env` (`OMP_HOLOTABLE_CHILD=1` or a nonempty `OMP_MISSION_AUTOSTART`), and optional `--config`, `--append-system-prompt`, `--session-dir`, and `--mode`. Orca starts the ACP child and reads `initialize`. A board mission proceeds only when `agentCapabilities._meta["omp.missionLifecycle"]` is `1`. An older OMP is refused with `requires OMP native mission ACP APIs` before `session/new`, with no terminal fallback. Ordinary Chat without those env keys still opens an older OMP. `orca session list`, `focus`, and `close` require host capability `agent.mission-lifecycle.v1` and return `executionHostId`, `worktreeId`, and `incarnation`; focus and close fail closed when the caller names a different host, checkout, or fence.
+
+`--strict` and board mission launches require structured Chat even when the user's default is a terminal. They do not change that preference. Unsupported placement or failed Chat creation is an error, never a terminal fallback.
+
 ## Selectors
 
 Most commands accept selectors instead of requiring long IDs:

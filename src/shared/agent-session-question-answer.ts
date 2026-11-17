@@ -26,7 +26,15 @@ export type AgentSessionPromptResponse =
 export function agentSessionPromptQuestions(
   body: Pick<
     AgentJournalQuestionItem,
-    'question' | 'options' | 'questions' | 'freeTextQuestionId' | 'freeTextInput'
+    | 'question'
+    | 'questionId'
+    | 'options'
+    | 'questions'
+    | 'freeTextQuestionId'
+    | 'freeTextInput'
+    | 'multiSelect'
+    | 'initialOptionIds'
+    | 'allowEmptySelection'
   >
 ): AgentJournalQuestion[] {
   if (body.questions) {
@@ -34,10 +42,12 @@ export function agentSessionPromptQuestions(
   }
   return [
     {
-      id: body.freeTextQuestionId ?? SINGLE_QUESTION_ID,
+      id: body.questionId ?? body.freeTextQuestionId ?? SINGLE_QUESTION_ID,
       question: body.question,
       options: body.options,
-      multiSelect: false,
+      multiSelect: body.multiSelect ?? false,
+      ...(body.initialOptionIds ? { initialOptionIds: body.initialOptionIds } : {}),
+      ...(body.allowEmptySelection ? { allowEmptySelection: true } : {}),
       ...(body.freeTextQuestionId ? { freeTextQuestionId: body.freeTextQuestionId } : {}),
       ...(body.freeTextInput ? { freeTextInput: body.freeTextInput } : {})
     }
@@ -191,6 +201,9 @@ export function isValidAgentSessionQuestionAnswers(
       return false
     }
     const answerCount = answer.optionIds.length + (hasOther ? 1 : 0)
-    return answerCount > 0 && (question.multiSelect || answerCount === 1)
+    return (
+      (answerCount > 0 || question.allowEmptySelection === true) &&
+      (question.multiSelect || answerCount === 1)
+    )
   })
 }

@@ -60,7 +60,10 @@ export type AgentSessionReserveRequest = {
   launchArgs?: AgentSessionLaunchArgs
   /** Current launch input validated here but never written to the durable record. */
   launchEnv?: AgentSessionLaunchEnv
-  /** Initial provider options persisted before the first process is acquired. */
+  /** Caller-supplied environment persisted on the record so a restart relaunches
+   *  with the same mission keys. Distinct from `launchEnv`, which holds the
+   *  resolved overlay and is never stored. */
+  callerEnv?: AgentSessionLaunchEnv
   options?: Readonly<Record<string, string>>
   /** The tab id a create reserved for this conversation, taken when its tab is published. An id
    *  another session's tab holds is refused here, before anything is spawned. */
@@ -146,6 +149,9 @@ export function admitPendingAgentSessionReservationReplay(
 export function validateAgentSessionReservationInput(request: AgentSessionReserveRequest): void {
   if (request.launchEnv && !isAgentSessionLaunchEnv(request.launchEnv)) {
     throw new Error('agent_session_launch_env_invalid')
+  }
+  if (request.callerEnv && !isAgentSessionLaunchEnv(request.callerEnv)) {
+    throw new Error('agent_session_caller_env_invalid')
   }
   if (request.launchArgs && !isAgentSessionLaunchArgs(request.launchArgs)) {
     throw new Error('agent_session_launch_args_invalid')

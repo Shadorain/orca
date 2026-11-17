@@ -64,6 +64,29 @@ describe('fields the launch fingerprint covers', () => {
       computeAgentLaunchFingerprint(BASE)
     )
   })
+
+  it('refuses replaying a different native startup contract', () => {
+    for (const changed of [
+      { strict: true as const },
+      { launchArgs: ['--config', '/another/overlay.yml'] },
+      { env: { OMP_MISSION_AUTOSTART: 'another mission' } }
+    ]) {
+      expect(computeAgentLaunchFingerprint({ ...BASE, ...changed })).not.toBe(
+        computeAgentLaunchFingerprint(BASE)
+      )
+    }
+    expect(
+      computeAgentLaunchFingerprint({
+        ...BASE,
+        launchArgs: ['--config', '/one.yml', '--config', '/two.yml']
+      })
+    ).not.toBe(
+      computeAgentLaunchFingerprint({
+        ...BASE,
+        launchArgs: ['--config', '/two.yml', '--config', '/one.yml']
+      })
+    )
+  })
 })
 
 describe('fields the launch fingerprint deliberately ignores', () => {

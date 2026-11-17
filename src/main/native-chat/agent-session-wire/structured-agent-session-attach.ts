@@ -63,10 +63,11 @@ export type AgentSessionAttachParams = {
   runtimeKind: 'native'
   /** Host-resolved defaults for a create-by-intent; remote attach schemas do not accept them. */
   options?: Readonly<Record<string, string>>
-  /** The tab id a create reserves for this chat, taken when its tab is published. Never on the
-   *  attach fingerprint: which tab shows the chat is not which conversation it attaches to. */
-  surfaceTabId?: string
+  /** Caller-supplied environment for the provider child, persisted on the record
+   *  so a restart relaunches with the same mission keys. */
+  callerEnv?: Readonly<Record<string, string>>
   launchArgs?: string[]
+  surfaceTabId?: string
   /** Omitted only for create-by-intent; the adapter proves the durable handle. In the wire's
    *  form, because the attach fingerprint covers it as the client sent it. */
   providerHandle?: AgentSessionWireProviderHandle
@@ -323,6 +324,7 @@ export function reserveRequestFor(input: {
       : {}),
     ...(authority.launchArgs ? { launchArgs: authority.launchArgs } : {}),
     ...(authority.launchEnv ? { launchEnv: authority.launchEnv } : {}),
+    ...(params.callerEnv ? { callerEnv: params.callerEnv } : {}),
     ...(authority.launchDirectory ? { launchDirectory: authority.launchDirectory } : {}),
     ...(params.adopt
       ? {

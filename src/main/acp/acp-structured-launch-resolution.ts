@@ -79,6 +79,8 @@ export type AcpLaunchInvocationDeps = {
   resolveEnvironment: () => Promise<Record<string, string>>
   /** The user's per-agent environment overlay from settings. */
   resolveLaunchEnv?: (agent: string) => Record<string, string>
+  /** Caller-supplied environment from the session record, merged before the account pin. */
+  callerEnv?: Readonly<Record<string, string>>
   /** The user's per-agent Command setting, re-read per acquisition; none runs the stock binary. */
   resolveCommandSettings?: () => StructuredAgentCommandSettings
 } & Pick<AcpStructuredLaunchPartDeps, 'resolveCommand' | 'homePath' | 'inheritedEnv'>
@@ -153,7 +155,8 @@ export async function resolveAcpLaunchInvocation(
   const base = await deps.resolveEnvironment()
   const env: Record<string, string> = spec.account.environment(accountHome, {
     ...base,
-    ...deps.resolveLaunchEnv?.(spec.agent)
+    ...deps.resolveLaunchEnv?.(spec.agent),
+    ...deps.callerEnv
   })
   const envToDelete = spec.scrubEnvironment?.(env, deps.inheritedEnv ?? process.env) ?? []
   Object.assign(env, spec.env)
@@ -178,6 +181,7 @@ export function acpStructuredLaunchPart(
       {
         resolveEnvironment: basis.baseEnvironment,
         resolveLaunchEnv: () => basis.launchEnv(),
+        ...(record.callerEnv ? { callerEnv: record.callerEnv } : {}),
         resolveCommandSettings: basis.commandSettings,
         ...(deps.resolveCommand ? { resolveCommand: deps.resolveCommand } : {}),
         ...(deps.homePath ? { homePath: deps.homePath } : {}),
@@ -214,7 +218,10 @@ export function acpStructuredLaunchPart(
       launch: {
         spec,
         command,
-        args: spec.args({ fullAccess, pluginDir: skill?.pluginDir ?? null }),
+        args: [
+          ...spec.args({ fullAccess, pluginDir: skill?.pluginDir ?? null }),
+          ...(record.launchArgs ?? [])
+        ],
         fullAccess,
         resume: head
           ? {

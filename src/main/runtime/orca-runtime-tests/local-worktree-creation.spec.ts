@@ -73,6 +73,9 @@ describe('OrcaRuntimeService', () => {
     const createTerminal = vi
       .spyOn(runtime, 'createTerminal')
       .mockImplementation(async (selector) => {
+        if (!selector) {
+          throw new Error('Expected a worktree selector for the startup terminal')
+        }
         expect(metaById[selector.slice('id:'.length)]).toMatchObject({ isPinned: true })
         return {
           handle: 'term_folder_startup',

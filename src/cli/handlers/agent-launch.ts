@@ -9,8 +9,8 @@ import {
 import { getRequiredStringFlag } from '../flags'
 import { printResult } from '../format'
 import { RuntimeClientError } from '../runtime-client'
-import { getRequiredWorktreeSelector } from '../selectors'
 import { resolveCurrentAgentWorkspaceSelector } from '../agent-workspace-selector'
+import { projectAgentLaunchResult, resolveAgentLaunchWorktree } from '../agent-host-routing'
 
 export const AGENT_LAUNCH_HANDLERS: Record<string, CommandHandler> = {
   'agent launch': async ({ flags, client, cwd, json, rawArgs }) => {
@@ -25,9 +25,15 @@ export const AGENT_LAUNCH_HANDLERS: Record<string, CommandHandler> = {
     }
     const selector = flags.get('worktree')
     const current = selector === undefined || selector === 'active' || selector === 'current'
-    const worktree = current
-      ? await resolveCurrentAgentWorkspaceSelector(cwd, client)
-      : await getRequiredWorktreeSelector(flags, 'worktree', cwd, client)
+    const worktreeFlags = new Map(flags)
+    if (current) {
+      worktreeFlags.set('worktree', await resolveCurrentAgentWorkspaceSelector(cwd, client))
+    }
+    const { selector: worktree, host } = await resolveAgentLaunchWorktree(
+      worktreeFlags,
+      cwd,
+      client
+    )
     const capabilities = await getAgentLaunchCapabilities(client)
     if (!capabilities) {
       if (launch.operationId) {
@@ -51,6 +57,10 @@ export const AGENT_LAUNCH_HANDLERS: Record<string, CommandHandler> = {
       capabilities,
       rawArgs
     )
-    printResult(result, json, formatAgentLaunch)
+    printResult(
+      { ...result, result: projectAgentLaunchResult(result.result, host) },
+      json,
+      formatAgentLaunch
+    )
   }
 }

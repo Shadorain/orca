@@ -194,6 +194,8 @@ export type AgentJournalQuestion = {
   header?: string
   multiSelect: boolean
   options: AgentJournalPromptOption[]
+  initialOptionIds?: string[]
+  allowEmptySelection?: boolean
   /** Present when the provider accepts an answer outside the offered options. */
   freeTextQuestionId?: string
   freeTextInput?: AgentJournalFreeTextInput
@@ -241,7 +243,11 @@ export type AgentJournalApprovalItem = {
 export type AgentJournalQuestionItem = {
   kind: 'question'
   question: string
+  questionId?: string
   options: AgentJournalPromptOption[]
+  multiSelect?: boolean
+  initialOptionIds?: string[]
+  allowEmptySelection?: boolean
   questions?: AgentJournalQuestion[]
   /** Present when the provider accepts an answer outside the offered options. */
   freeTextQuestionId?: string

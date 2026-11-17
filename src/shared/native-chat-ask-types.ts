@@ -7,6 +7,8 @@ export type AskQuestion = {
   header?: string
   multiSelect: boolean
   options: AskOption[]
+  initialOptionIndices?: number[]
+  allowEmptySelection?: boolean
 }
 export type AskPrompt = { questions: AskQuestion[] }
 

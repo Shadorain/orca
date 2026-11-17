@@ -17,13 +17,12 @@ import * as reveal from './structured-agent-session-reveal'
 import { structuredAgentSessionOwnerStatus } from './structured-agent-session-owner-status'
 import { StructuredAgentSessionHostRuntimeState } from './structured-agent-session-host-runtime-state'
 import { structuredAgentSessionEntryDelegates } from './structured-agent-session-create'
-import type { StructuredAgentSessionLifetimeContext } from './structured-agent-session-host-lifetime'
 import * as agentStart from './structured-agent-session-agent-start'
 import {
   createStructuredAgentSessionConversationLifetime,
   type StructuredAgentSessionConversationLifetime
 } from './structured-agent-session-conversation-lifetime'
-import type { StructuredAgentSessionAttachContext } from './structured-agent-session-attach-context'
+import * as hostLifecycle from './structured-agent-session-host-lifecycle'
 import * as sessionTabs from './structured-agent-session-host-tabs'
 import {
   structuredAgentSessionMutationDelegates,
@@ -176,37 +175,41 @@ export class StructuredAgentSessionHost {
   private now = (): number => this.deps.now?.() ?? Date.now()
 
   hasSession = (sessionId: string): boolean => this.sessions.has(sessionId)
-  hasLoadedProviders = (): boolean =>
-    [...this.sessions.values()].some(({ child }) => child !== null)
+  /** Alive only after the child has proven start. A held session with no child is exited. */
+  sessionLiveness = (sessionId: string): 'alive' | 'starting' | 'exited' =>
+    hostLifecycle.structuredAgentSessionHostSessionLiveness(this.sessions, sessionId)
+  /** Spawns the provider child for a launch that has no chat view and no prompt. A record alone
+   *  cannot load a mission extension. */
+  startProviderChild = (sessionId: string) =>
+    this.serialize(sessionId, () =>
+      agentStart.ensureStructuredAgentSessionAgent(this.attachContext(), sessionId)
+    )
+  hasLoadedProviders = (): boolean => hostLifecycle.hasLoadedProviders(this.sessions)
   sessionAgent = (sessionId: string) => this.deps.store.getRecord(sessionId)?.provider ?? null
 
   handleAdapterEvent = (event: Parameters<StructuredAgentSessionEventRecovery['handle']>[0]) =>
     this.eventRecovery.handle(event)
 
-  // Inferred, so the attach context's spread keeps `publishStatus` required.
-  private lifetimeContext() {
-    return {
-      deps: this.deps,
-      runtimeState: this.runtimeState,
-      sessions: this.sessions,
-      now: () => this.now(),
-      publishStatus: this.clientDelivery.publishStatus,
-      wakeDelivery: (sessionId: string) => this.conversationDelivery.loop.wake(sessionId),
-      endExitedChild: this.eventRecovery.endExitedChildUnderSerialize
-    } satisfies StructuredAgentSessionLifetimeContext
-  }
+  private lifetimeContext = () =>
+    hostLifecycle.structuredAgentSessionHostLifetimeContext(
+      this.deps,
+      this.runtimeState,
+      this.sessions,
+      () => this.now(),
+      this.clientDelivery.publishStatus,
+      (sessionId) => this.conversationDelivery.loop.wake(sessionId),
+      this.eventRecovery.endExitedChildUnderSerialize
+    )
 
-  /** The host's half of attaching, named so it cannot grow dependencies unnoticed. */
-  private attachContext(): StructuredAgentSessionAttachContext {
-    return {
-      ...this.lifetimeContext(),
-      subscribers: this.subscribers,
-      tasks: this.tasks,
-      reconcileLeases: (sessionId) => this.reconcileLeases(sessionId),
-      serialize: (sessionId, task) => this.serialize(sessionId, task),
-      openConversation: this.conversationDelivery.open
-    }
-  }
+  private attachContext = () =>
+    hostLifecycle.structuredAgentSessionHostAttachContext(
+      this.lifetimeContext(),
+      this.subscribers,
+      this.tasks,
+      (sessionId) => this.reconcileLeases(sessionId),
+      (sessionId, task) => this.serialize(sessionId, task),
+      this.conversationDelivery.open
+    )
   /** Releases a session's resources without ending the conversation; see the lifetime's close.
    *  `user-close` makes a turn it cuts short the user's cancellation; an `evict` leaves it news. */
   close: StructuredAgentSessionConversationLifetime['close'] = (sessionId, cause) =>

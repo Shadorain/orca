@@ -11,6 +11,7 @@ import type {
   AgentSessionQueuePause,
   AgentSessionQueuePublicationFields
 } from './agent-session-queued-message-wire'
+import type { AgentSessionOptionsCurrent } from './agent-session-options-current'
 
 export * from './agent-session-wire-refusals'
 export * from './agent-session-queued-message-wire'
@@ -498,22 +499,5 @@ export type AgentSessionOptionsResult = {
   models: AgentSessionModelOption[]
   /** Session/account/transport support. Absent means unknown, never unsupported. */
   fastModeSupport?: AgentSessionFastModeSupport
-  current: {
-    model?: string
-    effort?: string
-    /** Canonical preference for the next turn. Explicit false is meaningful. */
-    fastMode?: boolean
-    /** Next-turn service tier id where the model lists `serviceTiers`; `default` is standard. */
-    serviceTier?: string
-    /** The permission mode a start runs now; absent from a host or agent with no picker. */
-    permissionMode?: string
-    /** Provider-reported effective routing, distinct from the next-turn preference. */
-    fastModeState?: AgentSessionFastModeState
-    /**
-     * Option ids whose value the provider reported back, not merely accepted.
-     * Optional: a host that predates it sends nothing and the client keeps
-     * treating the value as unconfirmed, which is what it was before.
-     */
-    confirmed?: readonly string[]
-  }
+  current: AgentSessionOptionsCurrent
 }

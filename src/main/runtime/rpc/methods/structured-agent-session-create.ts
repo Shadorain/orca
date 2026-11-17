@@ -73,9 +73,12 @@ export async function prepareStructuredAgentSessionCreateForWorktree(args: {
   resumeFrom?: StructuredAgentSessionResumeSource
   /** Explicit picks override seed keys at rest; acquired in-process launches replace the seed. */
   options?: Readonly<Record<string, string>>
+  /** Caller-supplied environment persisted on the record for restart survival. */
+  callerEnv?: Readonly<Record<string, string>>
   /** The tab id the caller reserved for this chat, taken when its tab is published; absent, the tab
    *  gets the id clients derive. Beside `options`, after the fingerprint, likewise. */
   tabId?: string
+  launchArgs?: readonly string[]
   firstMessage?: StructuredAgentSessionFirstMessage
   atRest?: boolean
 }): Promise<PreparedStructuredAgentSessionCreate> {
@@ -139,6 +142,8 @@ export async function prepareStructuredAgentSessionCreateForWorktree(args: {
           }
         : {}),
       ...(args.tabId ? { surfaceTabId: args.tabId } : {}),
+      ...(args.launchArgs ? { launchArgs: [...args.launchArgs] } : {}),
+      ...(args.callerEnv ? { callerEnv: args.callerEnv } : {}),
       provider: resolved.provider,
       agent: resolved.agent,
       envelope: { ...args.envelope, payloadFingerprint: hostFingerprint }
@@ -157,11 +162,13 @@ export async function commitStructuredAgentSessionCreate(args: {
   caller: StructuredAgentSessionCaller
   prepared: PreparedStructuredAgentSessionCreate
   activate: boolean
+  /** Spawn the provider before returning. A view subscription is not required. */
+  startProvider?: boolean
 }): Promise<AgentSessionMutationResult<AgentSessionAttachResult>> {
   const { prepared } = args
   const tab = prepared.tab
   if (prepared.atRest) {
-    return prepared.host.create(args.caller, prepared.attachParams, {
+    const created = await prepared.host.create(args.caller, prepared.attachParams, {
       ...prepared.atRest,
       ...(prepared.hostLaunchDirectory
         ? { hostLaunchDirectory: prepared.hostLaunchDirectory }
@@ -181,13 +188,27 @@ export async function commitStructuredAgentSessionCreate(args: {
           }
         : {})
     })
+    if (!created.ok || !args.startProvider) {
+      return created
+    }
+    const started = await prepared.host.startProviderChild(created.value.sessionId)
+    return started.ok ? created : { ok: false, refusal: started.refusal }
   }
   const result = prepared.hostLaunchDirectory
     ? await prepared.host.attach(args.caller, prepared.attachParams, {
         hostLaunchDirectory: prepared.hostLaunchDirectory
       })
     : await prepared.host.attach(args.caller, prepared.attachParams)
-  if (!result.ok || !prepared.tab) {
+  if (!result.ok) {
+    return result
+  }
+  if (args.startProvider) {
+    const started = await prepared.host.startProviderChild(result.value.sessionId)
+    if (!started.ok) {
+      return { ok: false, refusal: started.refusal }
+    }
+  }
+  if (!prepared.tab) {
     return result
   }
   const surfaceTabId = prepared.attachParams.surfaceTabId
@@ -205,16 +226,17 @@ export async function commitStructuredAgentSessionCreate(args: {
       sessionId: result.value.sessionId,
       error
     })
-    return {
-      ok: false,
-      refusal: refuse(
-        'agent_session_operation_unknown',
-        { reason: 'tabUnconfirmed' },
-        'The chat may have been created, but its tab could not be confirmed.'
-      )
+    if (!args.startProvider) {
+      return {
+        ok: false,
+        refusal: refuse(
+          'agent_session_operation_unknown',
+          { reason: 'tabUnconfirmed' },
+          'The chat may have been created, but its tab could not be confirmed.'
+        )
+      }
     }
   }
-  // Read after publishing, which is what gives the chat its tab.
   const tabId = prepared.host.getSessionTabId?.(result.value.sessionId)
   return tabId ? { ...result, value: { ...result.value, tabId } } : result
 }
@@ -228,7 +250,10 @@ export async function createStructuredAgentSessionForWorktree(args: {
   agent: StructuredAgentId
   activate: boolean
   options?: Readonly<Record<string, string>>
+  callerEnv?: Readonly<Record<string, string>>
   tabId?: string
+  startProvider?: boolean
+  launchArgs?: readonly string[]
 }): Promise<AgentSessionMutationResult<AgentSessionAttachResult>> {
   const prepared: PreparedStructuredAgentSessionCreate | StructuredCreateRefused =
     await resolveUncommittedStructuredCreate(() =>
@@ -241,7 +266,8 @@ export async function createStructuredAgentSessionForWorktree(args: {
     runtime: args.runtime,
     caller: args.caller,
     prepared,
-    activate: args.activate
+    activate: args.activate,
+    ...(args.startProvider ? { startProvider: true } : {})
   })
 }
 

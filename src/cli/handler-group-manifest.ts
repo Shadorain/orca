@@ -1,5 +1,6 @@
 import type { CommandHandler } from './dispatch'
 import { BROWSER_HANDLER_GROUPS } from './browser-handler-groups'
+import { AGENT_HANDLER_GROUPS } from './agent-handler-groups'
 
 export type HandlerGroup = {
   name: string
@@ -94,6 +95,7 @@ export const HANDLER_GROUPS: readonly HandlerGroup[] = [
       'worktree show',
       'worktree current',
       'worktree create',
+      'worktree exec',
       'worktree set',
       'worktree rm'
     ],
@@ -205,11 +207,7 @@ export const HANDLER_GROUPS: readonly HandlerGroup[] = [
     keys: ['agent hooks prepare-codex', 'agent hooks status', 'agent hooks off', 'agent hooks on'],
     load: async () => (await import('./handlers/agent-hooks.js')).AGENT_HOOK_HANDLERS
   },
-  {
-    name: 'agent-launch',
-    keys: ['agent launch'],
-    load: async () => (await import('./handlers/agent-launch.js')).AGENT_LAUNCH_HANDLERS
-  },
+  ...AGENT_HANDLER_GROUPS,
   {
     name: 'profile-state',
     keys: ['profile state exports', 'profile state rollback'],

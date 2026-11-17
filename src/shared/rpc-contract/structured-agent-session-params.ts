@@ -264,7 +264,14 @@ export const SetOptionParams = z
   })
   .strict()
 
-export const OptionsParams = z.object({ sessionId: SessionId }).strict()
+export const OptionsParams = z
+  .object({
+    sessionId: SessionId,
+    executionHostId: z.string().min(1).optional(),
+    worktreeId: z.string().min(1).optional(),
+    incarnation: z.number().int().nonnegative().optional()
+  })
+  .strict()
 export const AcknowledgeAttentionParams = OptionsParams.extend({ observedCursor: JournalCursor })
 
 /** `agentSession.agents` takes nothing: the list is the host's, whichever client asks. */

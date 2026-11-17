@@ -85,10 +85,20 @@ export function boundJournalPromptBody(
       options: boundPromptOptions(body.options)
     }
   }
+  const options = boundPromptOptions(body.options)
   return {
     ...body,
     question: boundPromptText(body.question),
-    options: boundPromptOptions(body.options),
+    ...(body.questionId ? { questionId: boundPromptIdentifier(body.questionId) } : {}),
+    options,
+    ...(body.initialOptionIds
+      ? {
+          initialOptionIds: body.initialOptionIds
+            .slice(0, MAX_JOURNAL_PROMPT_OPTIONS)
+            .map(boundPromptIdentifier)
+            .filter((id) => options.some((option) => option.id === id))
+        }
+      : {}),
     ...(body.questions
       ? {
           questions: body.questions
@@ -104,12 +114,22 @@ export function boundJournalPromptBody(
 }
 
 function boundPromptQuestion(question: AgentJournalQuestion): AgentJournalQuestion {
+  const options = boundPromptOptions(question.options)
   return {
     id: boundPromptIdentifier(question.id),
     question: boundPromptText(question.question),
     ...(question.header === undefined ? {} : { header: boundPromptText(question.header) }),
     multiSelect: question.multiSelect,
-    options: boundPromptOptions(question.options),
+    options,
+    ...(question.initialOptionIds
+      ? {
+          initialOptionIds: question.initialOptionIds
+            .slice(0, MAX_JOURNAL_PROMPT_OPTIONS)
+            .map(boundPromptIdentifier)
+            .filter((id) => options.some((option) => option.id === id))
+        }
+      : {}),
+    ...(question.allowEmptySelection ? { allowEmptySelection: true } : {}),
     ...(question.freeTextQuestionId
       ? { freeTextQuestionId: boundPromptIdentifier(question.freeTextQuestionId) }
       : {}),

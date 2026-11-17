@@ -59,6 +59,9 @@ export const AGENT_LAUNCH_UNSTARTED_TAB_CLIENT_CAPABILITY = 'agent.launch.unstar
 // `agent_session_operation_unknown` for it, as before the host knew.
 export const AGENT_LAUNCH_TAB_CLOSED_CLIENT_CAPABILITY = 'agent.launch.tab-closed.v1' as const
 
+// Host-advertised. Help flags are not proof: an older host strips unknown launch fields. A CLI
+// strict or mission launch must see this on status.get before it sends the mutation.
+export const AGENT_MISSION_LIFECYCLE_RUNTIME_CAPABILITY = 'agent.mission-lifecycle.v1' as const
 export const AGENT_LAUNCH_SETTINGS_CAPABILITY = 'settings.agent-launch.v1' as const
 
 export const AGENT_LAUNCH_RUNTIME_CAPABILITIES = [
@@ -70,5 +73,6 @@ export const AGENT_LAUNCH_RUNTIME_CAPABILITIES = [
   AGENT_LAUNCH_PROMPT_UNCONFIRMED_RUNTIME_CAPABILITY,
   AGENT_LAUNCH_PLACEMENT_RUNTIME_CAPABILITY,
   AGENT_LAUNCH_LOCAL_PRESENTATION_RUNTIME_CAPABILITY,
-  AGENT_LAUNCH_CREATE_FOLDER_WORKSPACE_RUNTIME_CAPABILITY
+  AGENT_LAUNCH_CREATE_FOLDER_WORKSPACE_RUNTIME_CAPABILITY,
+  AGENT_MISSION_LIFECYCLE_RUNTIME_CAPABILITY
 ] as const

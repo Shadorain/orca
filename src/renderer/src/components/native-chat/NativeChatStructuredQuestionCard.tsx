@@ -28,10 +28,18 @@ export function NativeChatStructuredQuestionCard({
           options: question.options.map((option) => ({
             label: option.label,
             ...(option.description ? { description: option.description } : {})
-          }))
+          })),
+          ...(question.initialOptionIds
+            ? {
+                initialOptionIndices: question.initialOptionIds.flatMap((id) => {
+                  const index = question.options.findIndex((option) => option.id === id)
+                  return index !== -1 ? [index] : []
+                })
+              }
+            : {}),
+          ...(question.allowEmptySelection ? { allowEmptySelection: true } : {})
         }))
       }}
-      allowOther={questions.map((question) => Boolean(question.freeTextQuestionId))}
       freeTextInputs={questions.map((question) => question.freeTextInput)}
       onAnswer={(answers) => {
         const chosen = questions.map((question, index) => {
@@ -48,7 +56,14 @@ export function NativeChatStructuredQuestionCard({
               : {})
           }
         })
-        if (chosen.every((answer) => answer.optionIds.length > 0 || answer.other !== undefined)) {
+        if (
+          chosen.every(
+            (answer, index) =>
+              answer.optionIds.length > 0 ||
+              answer.other !== undefined ||
+              questions[index]?.allowEmptySelection === true
+          )
+        ) {
           onAnswer({ kind: 'answers', answers: chosen })
         }
       }}

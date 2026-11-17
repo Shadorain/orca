@@ -9,10 +9,13 @@
 
 import type { AgentSessionProviderHandleLink } from '../../shared/agent-session-provider-handle'
 import {
+  AgentSessionAcquisitionRefusal,
   AgentSessionPreSpawnError,
   type AgentSessionAcquisition,
   type StructuredAgentSessionAcquireInput
 } from '../native-chat/agent-session-wire/structured-agent-session-adapter'
+import { ompMissionAcpMissing, OMP_MISSION_ACP_REQUIRED } from './omp-mission-lifecycle'
+
 import { providerTimelineSink } from '../native-chat/agent-session-timeline/provider-timeline-plan'
 import { providerSpawnedProcessIdentity } from '../provider-process/provider-spawned-process-identity'
 import { AcpAgentError } from './acp-errors'
@@ -215,6 +218,9 @@ export async function acquireAcpStructuredSession(input: {
   const agentName = acpAgentName(spec.agent)
   try {
     const initialized = await connection.initialize()
+    if (ompMissionAcpMissing(spec.agent, launch.env, initialized)) {
+      throw new AgentSessionAcquisitionRefusal(OMP_MISSION_ACP_REQUIRED)
+    }
     // Chosen here, on the machine Grok runs on, from the environment it was launched with.
     const authMethodId = spec.authMethod?.({
       advertised: (initialized.authMethods ?? []).map((method) => method.id),

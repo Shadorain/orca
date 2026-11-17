@@ -153,6 +153,20 @@ export class OrcaRuntimeWithListManagedWorktrees extends OrcaRuntimeWithRestoreS
     return await this.resolveTerminalWorkspaceLaunchScope(worktreeSelector)
   }
 
+  /** Registered checkout paths only. Never parses a workspace id into a path. */
+  async listRegisteredWorkspacePaths(): Promise<{
+    worktrees: { id: string; path: string }[]
+    folders: { id: string; folderPath: string }[]
+  }> {
+    const worktrees = (await this.listResolvedWorktrees())
+      .filter((worktree) => typeof worktree.path === 'string' && worktree.path.length > 0)
+      .map((worktree) => ({ id: worktree.id, path: worktree.path }))
+    const folders = (this.store?.getFolderWorkspaces?.() ?? [])
+      .filter((folder) => typeof folder.folderPath === 'string' && folder.folderPath.length > 0)
+      .map((folder) => ({ id: folder.id, folderPath: folder.folderPath }))
+    return { worktrees, folders }
+  }
+
   async scanWorkspacePorts(repoId?: string): Promise<WorkspacePortScanResult> {
     return scanWorkspacePortProbes(await this.getWorkspacePortProbes(repoId))
   }

@@ -17,7 +17,12 @@ type WorktreeExecResult = {
   exitCode: number
 }
 
-export const worktreeExecHandler: CommandHandler = async ({ flags, client, json, rawArgs }) => {
+export const worktreeExecHandler: CommandHandler = async ({
+  flags,
+  client,
+  json,
+  rawArgs = []
+}) => {
   if (!json) {
     throw new RuntimeClientError('invalid_argument', 'worktree exec requires --json')
   }

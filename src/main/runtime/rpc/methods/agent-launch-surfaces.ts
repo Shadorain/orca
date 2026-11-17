@@ -21,6 +21,7 @@ import {
   AgentLaunchStructuredSessionRefusedError,
   type AgentLaunchSurfaceFactory
 } from '../../../agent-launch/agent-launch-surface-factories'
+import { isBoardMissionEnv } from '../../../../shared/omp-mission-lifecycle'
 import { getStructuredAgentSessionHost } from '../../../native-chat/agent-session-wire/structured-agent-session-registry'
 import type { StructuredAgentSessionHost } from '../../../native-chat/agent-session-wire/structured-agent-session-host'
 import type { RpcContext } from '../core'
@@ -62,8 +63,11 @@ export function agentLaunchSurfaceFactory(
       worktreeId,
       agent,
       options,
+      env,
       sessionId: requested,
-      tabId
+      tabId,
+      startProvider,
+      launchArgs
     }) => {
       const sessionId = requested ?? createStructuredAgentSessionId(agent, randomUUID)
       const seeded = narrowStructuredLaunchSeedOptions(options)
@@ -89,6 +93,9 @@ export function agentLaunchSurfaceFactory(
         worktree: `id:${worktreeId}`,
         agent,
         ...(seeded ? { options: seeded } : {}),
+        ...(env ? { callerEnv: env } : {}),
+        ...(startProvider || isBoardMissionEnv(env) ? { startProvider: true } : {}),
+        ...(launchArgs ? { launchArgs: [...launchArgs] } : {}),
         ...(tabId ? { tabId } : {}),
         activate:
           !callerPresentsSurface &&

@@ -158,6 +158,8 @@ const Question = z.object({
   header: z.string().optional(),
   multiSelect: z.boolean(),
   options: z.array(PromptOption),
+  initialOptionIds: z.array(z.string()).optional(),
+  allowEmptySelection: z.boolean().optional(),
   freeTextQuestionId: z.string().optional(),
   freeTextInput: FreeTextInput.optional()
 })
@@ -250,7 +252,11 @@ const KnownItemBody = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('question'),
     question: z.string(),
+    questionId: z.string().optional(),
     options: z.array(PromptOption),
+    multiSelect: z.boolean().optional(),
+    initialOptionIds: z.array(z.string()).optional(),
+    allowEmptySelection: z.boolean().optional(),
     questions: z.array(Question).optional(),
     freeTextQuestionId: z.string().optional(),
     freeTextInput: FreeTextInput.optional(),

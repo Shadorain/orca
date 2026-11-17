@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { acpElicitationPresentation, pendingAcpResolution } from './acp-elicitation-requests'
 import {
   boundInlineText,
   DEFAULT_JOURNAL_PAYLOAD_LIMITS
@@ -8,13 +9,7 @@ import type { AcpDialect, AcpRequestPresentation } from './acp-dialects/acp-dial
 import type { AcpToolTimeline } from './acp-tool-timeline'
 import { AcpRpcError } from './acp-errors'
 import { readAcpPermissionRequest } from './acp-permission-requests'
-
-export const pendingAcpResolution = {
-  state: 'pending',
-  selectedOptionId: null,
-  resolvedBy: null,
-  resolvedAt: null
-} as const
+export { pendingAcpResolution } from './acp-elicitation-requests'
 
 export function acpPermissionPresentation(params: unknown): AcpRequestPresentation {
   // The runtime already read this request and reported any field it dropped.
@@ -107,7 +102,9 @@ export function translateAcpRequest(
   const presentation =
     method === 'session/request_permission'
       ? acpPermissionPresentation(params)
-      : options.dialect.request?.(method, params)
+      : method === 'unstable_createElicitation'
+        ? acpElicitationPresentation(params)
+        : options.dialect.request?.(method, params)
   if (!presentation) {
     // A file system or terminal call Orca never advertised is the agent's own misstep (OpenCode 1.x
     // repeats each approved edit as a file write it already made): refused, with no row.

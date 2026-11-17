@@ -6,6 +6,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { NativeChatQuestionCard } from './NativeChatQuestionCard'
 import type { AskAnswerSelection, AskPrompt } from './native-chat-interactive-prompt'
 import { NATIVE_CHAT_QUESTION_AUTO_ADVANCE_MS } from '../../../../shared/native-chat-question-auto-advance'
+import type { AgentJournalQuestion } from '../../../../shared/agent-session-journal-types'
+import type { AgentSessionPromptResponse } from '../../../../shared/agent-session-question-answer'
+import { NativeChatStructuredQuestionCard } from './NativeChatStructuredQuestionCard'
 
 // The card resolves its own label-keyed selection state into the index-based
 // answer the delivery layer needs. These tests pin that resolution — the exact
@@ -520,5 +523,55 @@ describe('NativeChatQuestionCard', () => {
 
     expect(event.defaultPrevented).toBe(false)
     expect(onAnswer).not.toHaveBeenCalled()
+  })
+  it('shows defaults and delivers cleared text and an empty multi-select array', () => {
+    const questions: AgentJournalQuestion[] = [
+      {
+        id: 'labels',
+        question: 'Labels',
+        header: 'Labels',
+        multiSelect: true,
+        options: [
+          { id: 'red,blue', label: 'Red and blue' },
+          { id: 'green', label: 'Green' }
+        ],
+        initialOptionIds: ['red,blue'],
+        allowEmptySelection: true
+      },
+      {
+        id: 'note',
+        question: 'Note',
+        header: 'Note',
+        multiSelect: false,
+        options: [],
+        freeTextQuestionId: 'note',
+        freeTextInput: { allowEmpty: true, initialValue: 'Prefilled note' }
+      }
+    ]
+    const onAnswer = vi.fn<(response: AgentSessionPromptResponse) => void>()
+    act(() => {
+      root.render(
+        <NativeChatStructuredQuestionCard
+          questions={questions}
+          onAnswer={onAnswer}
+          onCancel={() => {}}
+        />
+      )
+    })
+
+    expect(optionPressed('Red and blue')).toBe('true')
+    clickOption('Red and blue')
+    clickAction('Note')
+    expect((container.querySelector('input') as HTMLInputElement).value).toBe('Prefilled note')
+    typeAnswer('')
+    clickAction('Submit')
+
+    expect(onAnswer).toHaveBeenCalledExactlyOnceWith({
+      kind: 'answers',
+      answers: [
+        { questionId: 'labels', optionIds: [] },
+        { questionId: 'note', optionIds: [], other: '' }
+      ]
+    })
   })
 })

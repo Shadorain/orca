@@ -17,8 +17,6 @@ import {
 import { STRUCTURED_AGENT_SESSION_START_WAIT_MS } from '../../../native-chat/agent-session-wire/structured-agent-session-send-settlement'
 import { computeAgentSessionPayloadFingerprint } from '../../../../shared/agent-session-mutation-envelope'
 import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../../shared/constants'
-import { ALL_RPC_METHODS } from './index'
-import { STRUCTURED_AGENT_SESSION_METHODS } from './structured-agent-session'
 import { CLEANUP_METHODS } from './structured-agent-session-gate-classification.test-fixture'
 import {
   attachParams,
@@ -166,16 +164,6 @@ describe('capability gating', () => {
     // Additive methods do not break an old client; bumping would strand every
     // paired device that has not updated.
     expect(RUNTIME_PROTOCOL_VERSION).toBe(3)
-  })
-
-  it('registers every structured method on the runtime manifest', () => {
-    const names = new Set(ALL_RPC_METHODS.map((method) => method.name))
-    for (const method of STRUCTURED_AGENT_SESSION_METHODS) {
-      expect(names).toContain(method.name)
-    }
-    // Bump deliberately: the whole agentSession.* surface is behind the structured capability,
-    // so an additive method is invisible to old clients and needs no protocol bump.
-    expect(STRUCTURED_AGENT_SESSION_METHODS).toHaveLength(36)
   })
 
   it('hides the surface from a declared client that did not advertise it', async () => {

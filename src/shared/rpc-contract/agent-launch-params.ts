@@ -24,6 +24,8 @@ import { TerminalTabIdParam } from './agent-session-params'
 import { SessionId } from './structured-agent-session-params'
 import { isStructuredAgentSessionIdFor } from '../structured-agent-session-create'
 import { AgentLaunchAccountEnv } from '../agent-launch-account-env'
+import { isAgentSessionLaunchEnv } from '../agent-session-record'
+import { isAgentSessionLaunchArgs } from '../agent-session-launch-args'
 
 const LaunchAgent = z
   .unknown()
@@ -148,7 +150,18 @@ export const AgentLaunchFields = z.object({
    * Terminal-only: a structured launch keeps its host-derived home and warns. Optional forever; an
    * older host strips it and runs its default account. Outside the replay fingerprint.
    */
-  accountEnv: AgentLaunchAccountEnv.optional()
+  accountEnv: AgentLaunchAccountEnv.optional(),
+  /** Caller-supplied environment merged into the provider child's spawn env.
+   *  Validated as a bounded map; values never appear in logs or receipts.
+   *  Persisted on the session record so a restart relaunches with the same keys. */
+  env: z
+    .record(z.string(), z.string())
+    .refine(isAgentSessionLaunchEnv, 'Invalid launch env')
+    .optional(),
+  /** Refuses rather than downgrading to a terminal when structured creation fails. */
+  strict: z.literal(true).optional(),
+  /** OMP `--config`, `--append-system-prompt`, and `--session-dir`, persisted for restart. */
+  launchArgs: z.array(z.string()).refine(isAgentSessionLaunchArgs, 'Invalid launch args').optional()
 })
 
 /** A caller-minted session id must be shaped like every id the host mints, so an id still names

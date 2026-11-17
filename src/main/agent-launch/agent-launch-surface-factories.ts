@@ -17,11 +17,17 @@ export type AgentLaunchSurfaceFactory = {
     /** An agent this host registered as structured; the launch mode already checked it. */
     agent: StructuredAgentId
     options?: Readonly<Record<string, unknown>>
+    /** Caller-supplied environment for the provider child, persisted on the record. */
+    env?: Readonly<Record<string, string>>
     /** The caller-minted session id; refused with `AgentLaunchSessionAlreadyExistsError` if taken. */
     sessionId?: string
     /** The caller-reserved tab id (the tab half of `paneKey`), so the host records where this chat
      *  is shown; absent records the id clients derive. */
     tabId?: string
+    /** Spawn the ACP child before the launch returns, with no chat view required. */
+    startProvider?: boolean
+    /** Persisted on the session record and appended on every later acquire. */
+    launchArgs?: readonly string[]
   }): Promise<AgentLaunchStructuredSurface>
   createTerminalAgent(args: {
     worktreeId: string

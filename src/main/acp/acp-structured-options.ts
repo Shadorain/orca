@@ -121,6 +121,10 @@ export class AcpStructuredOptions {
       const option = this.select('thought_level')
       return option ? { method: 'config', configId: option.id, value } : null
     }
+    if (key === 'mode') {
+      const option = this.select('mode')
+      return option ? { method: 'config', configId: option.id, value } : null
+    }
     return null
   }
 
@@ -162,12 +166,18 @@ export class AcpStructuredOptions {
         ...(advertised && advertised.efforts.length > 0 ? advertised : sessionMenu)
       }
     })
-    const confirmed = [...(currentModel ? ['model'] : []), ...(effortOption ? ['effort'] : [])]
+    const modeOption = this.select('mode')
+    const confirmed = [
+      ...(currentModel ? ['model'] : []),
+      ...(effortOption ? ['effort'] : []),
+      ...(modeOption ? ['mode'] : [])
+    ]
     return {
       models,
       current: {
         ...(currentModel ? { model: currentModel } : {}),
         ...(effortOption ? { effort: effortOption.currentValue } : {}),
+        ...(modeOption ? { mode: modeOption.currentValue } : {}),
         confirmed
       }
     }
@@ -196,7 +206,8 @@ export class AcpStructuredOptions {
     const { current } = this.read()
     return {
       ...(current.model ? { model: current.model } : {}),
-      ...(current.effort ? { effort: current.effort } : {})
+      ...(current.effort ? { effort: current.effort } : {}),
+      ...(current.mode ? { mode: current.mode } : {})
     }
   }
 

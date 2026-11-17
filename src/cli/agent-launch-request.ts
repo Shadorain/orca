@@ -9,6 +9,7 @@ import type { AgentLaunchPrompt, AgentLaunchResult } from '../shared/agent-launc
 import { checkAgentLaunchModelPreferences } from '../shared/agent-launch-model-preferences'
 import {
   AGENT_LAUNCH_RUNTIME_CAPABILITY,
+  AGENT_MISSION_LIFECYCLE_RUNTIME_CAPABILITY,
   AGENT_LAUNCH_PROMPT_CARRY_RUNTIME_CAPABILITY,
   AGENT_LAUNCH_LOCAL_PRESENTATION_RUNTIME_CAPABILITY,
   AGENT_LAUNCH_REPLAY_REQUIRED_RUNTIME_CAPABILITY
@@ -25,6 +26,8 @@ import {
 } from './flags'
 import { RuntimeClientError, type RuntimeClient, type RuntimeRpcSuccess } from './runtime-client'
 import { withCliAgentLaunchRecovery } from './agent-launch-recovery'
+import { REPEATED_FLAG_SEPARATOR } from './args'
+import { ompProviderStartup, parseRepeatedLaunchEnv } from '../shared/agent-session-launch-args'
 
 type Flags = Map<string, string | boolean>
 
@@ -38,6 +41,10 @@ export type CliAgentLaunch = {
   prompt?: AgentLaunchPrompt
   sessionOptions?: Record<string, string>
   operationId?: string
+  env?: Record<string, string>
+  /** Refuses rather than downgrading to a terminal when structured creation fails. */
+  strict?: true
+  launchArgs?: readonly string[]
 }
 
 export function parseCliAgent(value: string): TuiAgent {
@@ -73,14 +80,45 @@ export function readCliAgentLaunch(
   if (operationId !== undefined && parseAgentSessionOperationTimestamp(operationId) === null) {
     throw new RuntimeClientError('invalid_argument', 'Malformed --retry-launch operation ID')
   }
+  const envFlag = flags.get('env')
+  let env: Record<string, string> | undefined
+  if (typeof envFlag === 'string') {
+    try {
+      env = parseRepeatedLaunchEnv(envFlag, REPEATED_FLAG_SEPARATOR)
+    } catch (error) {
+      throw new RuntimeClientError(
+        'invalid_argument',
+        error instanceof Error ? error.message : 'Malformed --env'
+      )
+    }
+  }
+  const targetKind = flags.get('target-kind')
+  if (typeof targetKind === 'string' && targetKind !== 'structured-session') {
+    throw new RuntimeClientError('invalid_argument', '--target-kind must be structured-session')
+  }
+  const mode = flags.get('mode')
+  const startup = ompProviderStartup({
+    ...(typeof flags.get('config') === 'string' ? { config: flags.get('config') as string } : {}),
+    ...(typeof flags.get('append-system-prompt') === 'string'
+      ? { appendSystemPrompt: flags.get('append-system-prompt') as string }
+      : {}),
+    ...(typeof flags.get('session-dir') === 'string'
+      ? { sessionDir: flags.get('session-dir') as string }
+      : {}),
+    ...(typeof mode === 'string' ? { mode } : {})
+  })
   return {
     agent,
     ...(operationId ? { operationId } : {}),
-    // A blank prompt is no prompt: the agent starts with nothing sent.
     ...(typeof prompt === 'string' && prompt.trim()
       ? { prompt: { text: prompt, delivery: 'submit' as const } }
       : {}),
-    ...(checked.preferences ? { sessionOptions: { ...checked.preferences } } : {})
+    ...(checked.preferences || startup.options.mode
+      ? { sessionOptions: { ...checked.preferences, ...startup.options } }
+      : {}),
+    ...(env ? { env } : {}),
+    ...(startup.launchArgs.length > 0 ? { launchArgs: startup.launchArgs } : {}),
+    ...(flags.has('strict') || targetKind === 'structured-session' ? { strict: true as const } : {})
   }
 }
 
@@ -120,6 +158,15 @@ export async function callAgentLaunch(
     throw new RuntimeClientError(
       'incompatible_runtime',
       'This Orca host cannot honor CLI launch focus or background behavior. Update Orca on the execution host.'
+    )
+  }
+  if (
+    (launch.strict || launch.env || launch.launchArgs) &&
+    !capabilities.includes(AGENT_MISSION_LIFECYCLE_RUNTIME_CAPABILITY)
+  ) {
+    throw new RuntimeClientError(
+      'incompatible_runtime',
+      'This Orca host does not advertise agent.mission-lifecycle.v1. Refusing the launch so mission scope is not silently dropped. Update Orca on the execution host.'
     )
   }
   const operationId = replaySupported

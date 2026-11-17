@@ -63,7 +63,12 @@ export function NativeChatQuestionCard({
   useNativeChatPromptCardFocus(cardRef, shouldFocus, index)
   // Keep option identity by index: labels are display text and are not guaranteed
   // unique, while Claude's selector commits the numbered row (STA-1860).
-  const [selections, setSelections] = useState<number[][]>(() => prompt.questions.map(() => []))
+  const [selections, setSelections] = useState<number[][]>(() =>
+    prompt.questions.map((question, qi) => [
+      ...(question.initialOptionIndices ?? []),
+      ...(freeTextInputs?.[qi]?.initialValue !== undefined ? [TYPED_ANSWER] : [])
+    ])
+  )
   const [otherText, setOtherText] = useState<string[]>(() =>
     prompt.questions.map((_, qi) => freeTextInputs?.[qi]?.initialValue ?? '')
   )
@@ -75,6 +80,8 @@ export function NativeChatQuestionCard({
   const freeTextInput = freeTextInputs?.[index]
   const acceptsEmpty = (qi: number): boolean =>
     freeTextInputs?.[qi]?.allowEmpty === true && prompt.questions[qi]?.options.length === 0
+  const allowsEmptyAnswer = (qi: number): boolean =>
+    acceptsEmpty(qi) || prompt.questions[qi]?.allowEmptySelection === true
   const typedText = (qi: number, oth = otherText): string =>
     freeTextInputs?.[qi]?.allowEmpty ? (oth[qi] ?? '') : (oth[qi] ?? '').trim()
 
@@ -119,7 +126,7 @@ export function NativeChatQuestionCard({
     return [...picked, ...(other ? [other] : [])].join(', ')
   }
 
-  const currentAnswered = answerFor(index).length > 0 || acceptsEmpty(index)
+  const currentAnswered = answerFor(index).length > 0 || allowsEmptyAnswer(index)
   const currentTypedAnswerChosen = typedAnswerChosen(index)
 
   const submitAll = (sel: number[][], oth: string[]): void => {
@@ -130,7 +137,7 @@ export function NativeChatQuestionCard({
       }
     })
     const anyAnswered = resolved.some(
-      (s, i) => s.indices.length > 0 || (s.other ?? '').length > 0 || acceptsEmpty(i)
+      (s, i) => s.indices.length > 0 || (s.other ?? '').length > 0 || allowsEmptyAnswer(i)
     )
     if (anyAnswered) {
       onAnswer(resolved)
@@ -184,7 +191,9 @@ export function NativeChatQuestionCard({
       advanceOrSubmit(selections, otherText)
       return
     }
-    const anyAnswered = prompt.questions.some((_, i) => answerFor(i).length > 0 || acceptsEmpty(i))
+    const anyAnswered = prompt.questions.some(
+      (_, i) => answerFor(i).length > 0 || allowsEmptyAnswer(i)
+    )
     if (anyAnswered) {
       submitAll(selections, otherText)
     } else if (!fromKeyboard) {

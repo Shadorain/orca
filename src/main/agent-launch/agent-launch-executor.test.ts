@@ -229,6 +229,22 @@ describe('a structured launch that creates its own worktree', () => {
     ])
   })
 
+  it('does not claim success or open a terminal when a board mission is refused', async () => {
+    const h = harness({
+      structuredCreateError: new AgentLaunchStructuredSessionRefusedError(
+        'agent_session_operation_invalid',
+        'requires OMP native mission ACP APIs'
+      )
+    })
+    await expect(
+      h.run({
+        ...CREATE_INTENT,
+        env: { OMP_HOLOTABLE_CHILD: '1', OMP_MISSION_AUTOSTART: 'mission-1' }
+      })
+    ).rejects.toThrow('requires OMP native mission ACP APIs')
+    expect(h.createTerminalAgent).not.toHaveBeenCalled()
+  })
+
   it('creates a folder workspace, then opens its structured session there', async () => {
     const h = harness({})
     const result = await h.run({
@@ -786,5 +802,31 @@ describe('a new local worktree whose startup terminal did not come up', () => {
 
     expect(h.createStructuredSession).toHaveBeenCalled()
     expect(h.createTerminalAgent).not.toHaveBeenCalled()
+  })
+})
+
+describe('a required native mission surface', () => {
+  it('opens a chat despite a terminal preference without changing that preference', async () => {
+    const settings = { experimentalNativeChat: false }
+    const h = harness({ settings })
+    const result = await h.run({
+      ...CREATE_INTENT,
+      agent: 'omp',
+      strict: true,
+      env: { OMP_HOLOTABLE_CHILD: '1' }
+    })
+    expect(result.outcome.kind).toBe('structured')
+    expect(result.receipt.reason).toBe('explicit_structured')
+    expect(settings.experimentalNativeChat).toBe(false)
+    expect(h.createTerminalAgent).not.toHaveBeenCalled()
+  })
+
+  it('refuses unsupported native placement without opening a terminal', async () => {
+    const h = harness({ settings: {}, createSupport: { supported: false, reason: 'wsl' } })
+    await expect(h.run({ ...CREATE_INTENT, agent: 'omp', strict: true })).rejects.toThrow(
+      'Structured launch required: wsl_execution_runtime'
+    )
+    expect(h.createTerminalAgent).not.toHaveBeenCalled()
+    expect(h.createStructuredSession).not.toHaveBeenCalled()
   })
 })

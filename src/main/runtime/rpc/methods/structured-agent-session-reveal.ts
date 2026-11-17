@@ -15,6 +15,13 @@ import {
   isAgentSessionWireRefusalCode
 } from '../../../../shared/agent-session-wire'
 import type { StructuredAgentSessionReveal } from '../../../native-chat/agent-session-wire/structured-agent-session-host-types'
+import {
+  isStructuredSessionIdentity,
+  assertSessionIdentityMatch,
+  structuredSessionIdentity,
+  type StructuredSessionIdentity,
+  type StructuredSessionIdentityOmission
+} from '../../structured-session-identity'
 import { refuseAgentSessionMutation } from '../../../native-chat/agent-session-wire/structured-agent-session-mutation-admission'
 import { defineMethod } from '../core'
 import {
@@ -34,11 +41,33 @@ export const STRUCTURED_AGENT_SESSION_REVEAL_METHODS = [
       requireStructuredCapability(ctx)
       await ensureStructuredHostInstalled(ctx)
       let revealed: StructuredAgentSessionReveal
+      let identity: StructuredSessionIdentity | StructuredSessionIdentityOmission | null = null
       try {
         const host = requireStructuredHost(ctx)
         requireStructuredAgentAudience(ctx, host.sessionAgent(params.sessionId) ?? '')
+        if (
+          params.executionHostId !== undefined ||
+          params.worktreeId !== undefined ||
+          params.incarnation !== undefined
+        ) {
+          const record = host.deps.store.getRecord(params.sessionId)
+          identity = record
+            ? structuredSessionIdentity(
+                record,
+                await ctx.runtime.listRegisteredWorkspacePaths(),
+                host.sessionLiveness(params.sessionId)
+              )
+            : null
+          if (!identity || !isStructuredSessionIdentity(identity)) {
+            throw new Error('worktree_path_unresolved')
+          }
+          assertSessionIdentityMatch(identity, params)
+        }
         revealed = await host.revealSession(params.sessionId)
       } catch (error) {
+        if (error instanceof Error && error.message === 'worktree_path_unresolved') {
+          throw error
+        }
         // The host raises its refusal as the code itself; anything else is a genuine fault and
         // must not be laundered into a tidy "no such chat".
         const code = error instanceof Error ? error.message : ''
@@ -60,9 +89,7 @@ export const STRUCTURED_AGENT_SESSION_REVEAL_METHODS = [
         agent: revealed.agent,
         activate: true
       })
-      // Named fields only: the host's reasons a journal did not open stay on the host.
-      const { sessionId, workspaceId, agent, readable } = revealed
-      return { ok: true as const, sessionId, workspaceId, agent, readable }
+      return { ok: true as const, ...revealed, ...identity }
     }
   })
 ]

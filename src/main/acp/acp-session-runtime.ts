@@ -104,7 +104,13 @@ export class AcpSessionRuntime {
       'initialize',
       {
         protocolVersion: ACP_PROTOCOL_VERSION,
-        clientCapabilities: { fs: { readTextFile: false, writeTextFile: false }, terminal: false },
+        clientCapabilities: {
+          fs: { readTextFile: false, writeTextFile: false },
+          terminal: false,
+          // Advertised only where a handler answers it: a structured session. A catalog probe
+          // passes none, and an agent must not elicit from a client that cannot show the form.
+          ...(this.options.onRequest ? { elicitation: { form: {} } } : {})
+        },
         ...(this.options.clientInfo === undefined ? {} : { clientInfo: this.options.clientInfo })
       } satisfies InitializeRequest,
       InitializeResponseSchema
