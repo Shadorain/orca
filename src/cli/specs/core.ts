@@ -63,11 +63,29 @@ export const CORE_COMMAND_SPECS: CommandSpec[] = [
     examples: ['orca worktree current', 'orca worktree current --json']
   },
   {
+    path: ['worktree', 'exec'],
+    repeatableFlags: ['env'],
+    summary: 'Run a non-interactive command in an exact registered worktree',
+    usage:
+      'orca worktree exec --host <local|ssh:<id>|runtime:<id>> --worktree path:<path> [--env KEY=VALUE...] [--timeout-ms <ms>] [--max-output-bytes <bytes>] --json -- <argv...>',
+    allowedFlags: [...GLOBAL_FLAGS, 'host', 'worktree', 'env', 'timeout-ms', 'max-output-bytes'],
+    notes: [
+      'Runs without a PTY on the explicitly selected host, using the normal host user and the exact registered worktree path. It never guesses a path or falls back to another host.',
+      'The JSON result includes hostId, worktree, argv, stdout, stderr, and the command exitCode; a nonzero command exit is still a completed RPC call.',
+      'Timeout defaults to 10000 ms and is limited to 180000 ms. Combined stdout and stderr default to 1 MiB and are limited to 4 MiB; timeout or output overflow fails without returning partial JSON.',
+      'Pass --env KEY=VALUE to set a command environment value. Values are argv-safe and are not interpolated into a shell command.'
+    ],
+    examples: [
+      'orca worktree exec --host ssh:buildbox --worktree path:/srv/orca/task --json -- git status --short',
+      'orca worktree exec --host local --worktree path:/home/me/orca --env MODE=check --json -- node -e "process.stdout.write(process.env.MODE)"'
+    ]
+  },
+  {
     path: ['worktree', 'create'],
     repeatableFlags: ['reference'],
     summary: 'Create a new Orca-managed worktree',
     usage:
-      'orca worktree create --name <name> [--repo <selector>|--project <id> [--host <host-id>]|--project-host-setup <id>] [--agent <id>] [--prompt <text>] [--model <id>] [--effort <level>] [--setup run|skip|inherit] [--base-branch <ref>] [--reference <url>...] [--issue <number>] [--pr <number>] [--linear-issue <identifier-or-url>] [--gitlab-issue <number-or-url>] [--gitlab-mr <number-or-url>] [--comment <text>] [--parent-worktree <selector>] [--no-parent] [--run-hooks] [--activate] [--retry-launch <operationId>] [--json]',
+      'orca worktree create --name <name> [--repo <selector>|--project <id> [--host <host-id>]|--project-host-setup <id>] [--agent <id>] [--prompt <text>] [--model <id>] [--effort <level>] [--setup run|skip|inherit] [--base-branch <ref>] [--reference <url>...] [--issue <number>] [--pr <number>] [--linear-issue <identifier-or-url>] [--gitlab-issue <number-or-url>] [--gitlab-mr <number-or-url>] [--comment <text>] [--parent-worktree <selector>] [--no-parent] [--run-hooks] [--activate] [--pinned] [--retry-launch <operationId>] [--json]',
     allowedFlags: [
       ...GLOBAL_FLAGS,
       'repo',
@@ -93,6 +111,7 @@ export const CORE_COMMAND_SPECS: CommandSpec[] = [
       'parent-worktree',
       'no-parent',
       'run-hooks',
+      'pinned',
       'activate'
     ],
     notes: [
@@ -113,6 +132,7 @@ export const CORE_COMMAND_SPECS: CommandSpec[] = [
       'Repo-defined setup hooks follow the repository setup policy; pass --setup run to force them.',
       'Pass --activate when the CLI caller intentionally wants to reveal the new worktree in the app.',
       'Passing --run-hooks is kept as a legacy alias for --setup run and reveals the worktree.',
+      'Pass --pinned to protect the created worktree from automatic cleanup. Existing registered worktrees reused by the create are pinned before startup; failed creates do not change unrelated worktree pins.',
       'Use --pr for GitHub pull requests; --gitlab-issue and --gitlab-mr write separate GitLab links. GitLab URLs must match the stored source project or remote; they cannot select a foreign project.'
     ],
     examples: [
@@ -124,7 +144,8 @@ export const CORE_COMMAND_SPECS: CommandSpec[] = [
       'orca worktree create --repo id:<repoId> --name agent-task --agent codex --prompt "hi" --json',
       'orca worktree create --repo id:<repoId> --name folder-child --parent-worktree folder:<folderId> --json',
       'orca worktree create --repo id:<repoId> --name related-task --parent-worktree active --json',
-      'orca worktree create --repo id:<repoId> --name independent-task --no-parent --json'
+      'orca worktree create --repo id:<repoId> --name independent-task --no-parent --json',
+      'orca worktree create --repo id:<repoId> --name protected-task --pinned --json'
     ]
   },
   WORKTREE_SET_COMMAND_SPEC,

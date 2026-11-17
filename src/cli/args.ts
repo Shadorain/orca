@@ -69,6 +69,9 @@ export function parseArgs(
 
   for (let i = 0; i < argv.length; i += 1) {
     const token = argv[i]
+    if (token === '--') {
+      break
+    }
     if (!token.startsWith('--')) {
       commandPath.push(token)
       continue

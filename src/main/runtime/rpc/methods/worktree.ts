@@ -24,17 +24,18 @@ import {
   WorktreeRemove,
   WorktreeResolveMrBase,
   WorktreeResolvePrBase,
-  WorktreeSelector,
   WorktreeSet,
   WorktreeSortOrder,
   WorktreeTeardownMissingTerminalsParams
 } from '../../../../shared/rpc-contract/worktree-params'
 import { WORKTREE_CATALOG_METHODS } from './worktree-catalog-methods'
 import { WORKTREE_PROVISIONED_ROOT_METHOD } from './worktree-provisioned-root-method'
+import { WORKTREE_INTERACTION_METHODS } from './worktree-interaction-methods'
 import { readsWorktreeRemovalMarker } from '../worktree-removal-marker-projection'
 
 export const WORKTREE_METHODS = [
   ...WORKTREE_CATALOG_METHODS,
+  ...WORKTREE_INTERACTION_METHODS,
   defineMethod({
     name: 'worktree.teardownMissingTerminals',
     permission: 'workspace',
@@ -45,29 +46,6 @@ export const WORKTREE_METHODS = [
         params.worktreeIds,
         params.connectionId
       )
-  }),
-  defineMethod({
-    name: 'worktree.lineageList',
-    permission: 'workspace',
-    params: null,
-    handler: async (_params, { runtime }) => ({
-      lineage: await runtime.listWorktreeLineage(),
-      workspaceLineage: await runtime.listWorkspaceLineage()
-    })
-  }),
-  defineMethod({
-    name: 'worktree.show',
-    permission: 'workspace',
-    params: WorktreeSelector,
-    handler: async (params, { runtime }) => ({
-      worktree: await runtime.showManagedWorktree(params.worktree)
-    })
-  }),
-  defineMethod({
-    name: 'worktree.sleep',
-    permission: 'workspace',
-    params: WorktreeSelector,
-    handler: async (params, { runtime }) => runtime.sleepManagedWorktree(params.worktree)
   }),
   defineMethod({
     name: 'worktree.activate',

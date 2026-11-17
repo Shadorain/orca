@@ -10,6 +10,7 @@ import {
   getBranchConflictKind,
   getPRForBranchMock,
   gitRunner,
+  describeCreatedWorktree,
   listWorktrees,
   resolveLocalGitUsernameMock
 } from '../orca-runtime-test-mocks.spec'
@@ -22,7 +23,7 @@ import {
 } from '../orca-runtime-test-fixtures.spec'
 
 describe('OrcaRuntimeService', () => {
-  it('creates additional workspace metadata for folder-mode repos through runtime create', async () => {
+  it('persists a folder workspace pin before startup terminal launch', async () => {
     const folderRepo = {
       id: 'folder-repo',
       path: '/workspace/folder',
@@ -69,13 +70,18 @@ describe('OrcaRuntimeService', () => {
       kill: () => true,
       getForegroundProcess: async () => null
     })
-    const createTerminal = vi.spyOn(runtime, 'createTerminal').mockResolvedValue({
-      handle: 'term_folder_startup',
-      tabId: 'tab-folder-startup',
-      worktreeId: '',
-      title: null,
-      surface: 'background'
-    })
+    const createTerminal = vi
+      .spyOn(runtime, 'createTerminal')
+      .mockImplementation(async (selector) => {
+        expect(metaById[selector.slice('id:'.length)]).toMatchObject({ isPinned: true })
+        return {
+          handle: 'term_folder_startup',
+          tabId: 'tab-folder-startup',
+          worktreeId: '',
+          title: null,
+          surface: 'background'
+        }
+      })
     const notifier = { worktreesChanged: vi.fn() }
     runtime.setNotifier(notifier as never)
 
@@ -85,7 +91,8 @@ describe('OrcaRuntimeService', () => {
       displayName: '\u0000\u202e',
       displayNameKind: 'user',
       createdWithAgent: 'codex',
-      startup: { command: 'codex', viewMode: 'chat' }
+      startup: { command: 'codex', viewMode: 'chat' },
+      isPinned: true
     })
 
     expect(addWorktreeMock).not.toHaveBeenCalled()
@@ -100,14 +107,16 @@ describe('OrcaRuntimeService', () => {
         path: '/workspace/folder',
         displayName: 'folder-session',
         isMainWorktree: false,
-        createdWithAgent: 'codex'
+        createdWithAgent: 'codex',
+        isPinned: true
       })
     )
     expect(metaById[result.worktree.id]).toMatchObject({
       instanceId: result.worktree.instanceId,
       displayName: 'folder-session',
       orcaCreationSource: 'runtime',
-      createdWithAgent: 'codex'
+      createdWithAgent: 'codex',
+      isPinned: true
     })
     expect(metaById[result.worktree.id]).not.toHaveProperty('displayNameIsPinned')
     await expect(runtime.showManagedWorktree(`id:${result.worktree.id}`)).resolves.toMatchObject({
@@ -162,6 +171,7 @@ describe('OrcaRuntimeService', () => {
     }
     computeWorktreePathMock.mockReturnValue(createdWorktree.path)
     ensurePathWithinWorkspaceMock.mockReturnValue(createdWorktree.path)
+    vi.mocked(describeCreatedWorktree).mockResolvedValueOnce(createdWorktree)
     vi.mocked(listWorktrees).mockResolvedValueOnce([createdWorktree])
     const gitSpy = vi.spyOn(gitRunner, 'gitExecFileAsync').mockImplementation(async (args) => {
       if (args[0] === 'rev-parse' && args.includes('refs/heads/cli-fresh-base^{commit}')) {
@@ -249,6 +259,7 @@ describe('OrcaRuntimeService', () => {
       isMainWorktree: false
     }
     computeWorktreePathMock.mockReturnValue(createdWorktree.path)
+    vi.mocked(describeCreatedWorktree).mockResolvedValueOnce(createdWorktree)
     ensurePathWithinWorkspaceMock.mockReturnValue(createdWorktree.path)
     vi.mocked(addWorktree).mockResolvedValueOnce({
       localBaseRefUpdateSuggestion: {
@@ -303,6 +314,7 @@ describe('OrcaRuntimeService', () => {
     const getReposSpy = vi.spyOn(store, 'getRepos').mockReturnValue([repo] as never)
     computeWorktreePathMock.mockReturnValue(createdWorktree.path)
     ensurePathWithinWorkspaceMock.mockReturnValue(createdWorktree.path)
+    vi.mocked(describeCreatedWorktree).mockResolvedValueOnce(createdWorktree)
     vi.mocked(addWorktree).mockResolvedValueOnce({})
     vi.mocked(listWorktrees).mockResolvedValue([createdWorktree])
     const gitSpy = vi.spyOn(gitRunner, 'gitExecFileAsync').mockImplementation(async (args) => {
@@ -368,6 +380,7 @@ describe('OrcaRuntimeService', () => {
     const getReposSpy = vi.spyOn(store, 'getRepos').mockReturnValue([repo] as never)
     computeWorktreePathMock.mockReturnValue(createdWorktree.path)
     ensurePathWithinWorkspaceMock.mockReturnValue(createdWorktree.path)
+    vi.mocked(describeCreatedWorktree).mockResolvedValueOnce(createdWorktree)
     vi.mocked(addWorktree).mockResolvedValueOnce({})
     vi.mocked(listWorktrees).mockResolvedValue([createdWorktree])
     const gitSpy = vi.spyOn(gitRunner, 'gitExecFileAsync').mockImplementation(async (args) => {
@@ -421,6 +434,7 @@ describe('OrcaRuntimeService', () => {
     const getReposSpy = vi.spyOn(store, 'getRepos').mockReturnValue([repo] as never)
     computeWorktreePathMock.mockReturnValue(createdWorktree.path)
     ensurePathWithinWorkspaceMock.mockReturnValue(createdWorktree.path)
+    vi.mocked(describeCreatedWorktree).mockResolvedValueOnce(createdWorktree)
     vi.mocked(addWorktree).mockResolvedValueOnce({})
     vi.mocked(listWorktrees).mockResolvedValue([createdWorktree])
     const gitSpy = vi.spyOn(gitRunner, 'gitExecFileAsync').mockImplementation(async (args) => {
@@ -526,6 +540,7 @@ describe('OrcaRuntimeService', () => {
     }
     computeWorktreePathMock.mockReturnValue(createdWorktree.path)
     ensurePathWithinWorkspaceMock.mockReturnValue(createdWorktree.path)
+    vi.mocked(describeCreatedWorktree).mockResolvedValueOnce(createdWorktree)
     vi.mocked(addWorktree).mockResolvedValueOnce({})
     vi.mocked(listWorktrees).mockResolvedValue([createdWorktree])
     const gitSpy = vi.spyOn(gitRunner, 'gitExecFileAsync').mockImplementation(async (args) => {
@@ -587,6 +602,13 @@ describe('OrcaRuntimeService', () => {
     vi.spyOn(gitRunner, 'gitExecFileAsync').mockResolvedValue({ stdout: '', stderr: '' })
     computeWorktreePathMock.mockReturnValue('/tmp/workspaces/feature-something')
     ensurePathWithinWorkspaceMock.mockReturnValue('/tmp/workspaces/feature-something')
+    vi.mocked(describeCreatedWorktree).mockResolvedValueOnce({
+      path: '/tmp/workspaces/feature-something',
+      head: 'def',
+      branch: 'feature/something',
+      isBare: false,
+      isMainWorktree: false
+    })
     vi.mocked(listWorktrees).mockResolvedValueOnce([
       {
         path: '/tmp/workspaces/feature-something',
@@ -639,6 +661,7 @@ describe('OrcaRuntimeService', () => {
       isMainWorktree: false
     }
     computeWorktreePathMock.mockReturnValue(createdWorktree.path)
+    vi.mocked(describeCreatedWorktree).mockResolvedValueOnce(createdWorktree)
     ensurePathWithinWorkspaceMock.mockReturnValue(createdWorktree.path)
     vi.mocked(getBranchConflictKind).mockClear()
     getPRForBranchMock.mockResolvedValue({

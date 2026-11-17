@@ -71,6 +71,7 @@ export const WorktreeCreate = z
         remoteUrl: OptionalString
       })
       .optional(),
+    pinned: OptionalBoolean,
     runHooks: OptionalBoolean,
     activate: OptionalBoolean,
     // Why: activation on create is view intent, so it is addressed like worktree.activate.

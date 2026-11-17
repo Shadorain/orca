@@ -23,15 +23,13 @@ import {
   getRequiredWorktreeSelector,
   resolveCurrentWorktreeSelector
 } from '../selectors'
-import type { TuiAgent } from '../../shared/tui-agent'
-import { parseCliAgent, readCliAgentLaunch } from '../agent-launch-request'
+import { readCliAgentLaunch } from '../agent-launch-request'
 import { createWorktreeWithAgent } from './worktree-create-agent-launch'
 import { printLineageSummary } from './worktree-lineage-summary'
 import { projectWorktreePsTerminalVerdict } from '../worktree-ps-terminal-verdict'
 import {
   assertWorkspaceTargetFlagsCompatible,
-  hasWorkspaceProjectTarget,
-  resolveProjectCreateRepoSelector
+  hasWorkspaceProjectTarget
 } from '../worktree-project-target'
 import {
   assertWorktreeParentFlagsCompatible,
@@ -45,89 +43,15 @@ import { withSetupDecisionRecovery } from './worktree-setup-decision-recovery'
 import { assertGitLabLinkFlagProjectsMatch } from './worktree-gitlab-link-context'
 import { assertReferenceWritesSupported, getCreateReferences } from '../reference-input'
 import { readWorktreeStartupCommand } from './worktree-create-command'
-
-function getPresentStringFlag(
-  flags: Map<string, string | boolean>,
-  name: string,
-  options: { allowEmpty?: boolean } = {}
-): string | undefined {
-  if (!flags.has(name)) {
-    return undefined
-  }
-  const value = flags.get(name)
-  if (typeof value === 'string' && (options.allowEmpty || value.length > 0)) {
-    return value
-  }
-  throw new RuntimeClientError('invalid_argument', `Missing value for --${name}`)
-}
-
-function getOptionalStartupAgent(flags: Map<string, string | boolean>): TuiAgent | undefined {
-  const agent = getPresentStringFlag(flags, 'agent')
-  if (agent === undefined) {
-    const needsAgent = ['prompt', 'model', 'effort', 'retry-launch'].find((name) => flags.has(name))
-    if (needsAgent) {
-      throw new RuntimeClientError('invalid_argument', `--${needsAgent} requires --agent`)
-    }
-    return undefined
-  }
-  return parseCliAgent(agent)
-}
-
-function getOptionalSetupDecision(
-  flags: Map<string, string | boolean>
-): 'run' | 'skip' | 'inherit' | undefined {
-  const setup = getPresentStringFlag(flags, 'setup')
-  if (setup !== undefined && setup !== 'run' && setup !== 'skip' && setup !== 'inherit') {
-    throw new RuntimeClientError('invalid_argument', '--setup must be one of: run, skip, inherit')
-  }
-  if (flags.get('run-hooks') === true) {
-    if (setup !== undefined && setup !== 'run') {
-      throw new RuntimeClientError(
-        'invalid_argument',
-        'Choose either --run-hooks or --setup run, not contradictory setup flags.'
-      )
-    }
-    return setup
-  }
-  return setup
-}
-
-function getRepoSelectorFromWorktreeSelector(selector: string | undefined): string | undefined {
-  if (!selector?.startsWith('id:')) {
-    return undefined
-  }
-  const worktreeId = selector.slice('id:'.length)
-  const separatorIndex = worktreeId.indexOf('::')
-  if (separatorIndex <= 0) {
-    return undefined
-  }
-  return `id:${worktreeId.slice(0, separatorIndex)}`
-}
-
-async function getCreateRepoSelector(
-  flags: Map<string, string | boolean>,
-  cwdParentWorktree: string | undefined,
-  client: Parameters<CommandHandler>[0]['client']
-): Promise<string> {
-  const projectRepoSelector = await resolveProjectCreateRepoSelector(flags, client)
-  if (projectRepoSelector) {
-    return projectRepoSelector
-  }
-  const explicitRepo = getPresentStringFlag(flags, 'repo')
-  if (explicitRepo) {
-    return explicitRepo
-  }
-  const inferredRepo = getRepoSelectorFromWorktreeSelector(cwdParentWorktree)
-  if (inferredRepo) {
-    return inferredRepo
-  }
-  throw new RuntimeClientError(
-    'invalid_argument',
-    'Missing repo selector. Pass --repo or run from inside an Orca-managed worktree.'
-  )
-}
+import {
+  getCreateRepoSelector,
+  getOptionalSetupDecision,
+  getOptionalStartupAgent
+} from './worktree-create-flags'
+import { worktreeExecHandler } from './worktree-exec'
 
 export const WORKTREE_HANDLERS: Record<string, CommandHandler> = {
+  'worktree exec': worktreeExecHandler,
   'worktree ps': async ({ flags, client, json }) => {
     const result = await client.call<WithAnnotatedHostScope<RuntimeWorktreePsResult>>(
       'worktree.ps',
@@ -215,6 +139,7 @@ export const WORKTREE_HANDLERS: Record<string, CommandHandler> = {
       name,
       displayName: name,
       displayNameKind: 'user',
+      ...(flags.get('pinned') === true ? { pinned: true } : {}),
       baseBranch: getOptionalStringFlag(flags, 'base-branch'),
       ...(startupCommand !== undefined ? { startupCommand } : {}),
       ...reviewLinks,

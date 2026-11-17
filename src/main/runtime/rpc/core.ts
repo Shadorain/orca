@@ -27,6 +27,7 @@ import type {
   RegisterDeviceKeyResult
 } from '../../../shared/device-key-registration-contract'
 
+import type { WorktreeExecRequest, WorktreeExecResult } from './methods/worktree-exec'
 // Why: bound to the authenticated socket by the transport, so a caller can only re-key itself.
 export type DeviceSelfRpcContext = {
   registerDeviceKey(params: RegisterDeviceKeyParams): RegisterDeviceKeyResult
@@ -86,6 +87,8 @@ export type LegacyCoordinatorAuthorityProof = Readonly<{
 }>
 
 export type RpcContext = {
+  // Why: bound at dispatch to the runtime worktree catalog and authenticated host execution.
+  worktreeExec?: (request: WorktreeExecRequest) => Promise<WorktreeExecResult>
   runtime: OrcaRuntimeService
   // Why: lets long-poll handlers release immediately on client disconnect instead of running down timeoutMs. See design doc §3.1.
   signal?: AbortSignal

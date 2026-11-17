@@ -3,6 +3,7 @@ import type { OrchestrationSessionCaller } from '../orchestration/orchestration-
 import { isRegistrationFencedUnsubscribe, type RpcContext, type RpcRequest } from './core'
 import { resolveRpcCallerIdentity } from './rpc-caller-identity'
 import type { RpcCallerScope } from './rpc-caller-scope'
+import { executeWorktreeCommand } from './methods/worktree-exec'
 
 export type RpcDispatchStreamingOptions = Pick<
   RpcContext,
@@ -34,6 +35,7 @@ export function rpcContextFromTransport(
   orchestrationCaller: OrchestrationSessionCaller | undefined
 ): RpcContext {
   return {
+    worktreeExec: (params) => executeWorktreeCommand(runtime, params),
     runtime,
     signal: options?.signal,
     requestId: request.id,

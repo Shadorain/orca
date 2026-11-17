@@ -42,6 +42,7 @@ export type RuntimeManagedWorktreeCreateArgs = {
   telemetrySource?: WorkspaceCreateTelemetrySource
   workspaceStatus?: string
   manualOrder?: number
+  isPinned?: boolean
   sparseCheckout?: { directories: string[]; presetId?: string }
   pushTarget?: GitPushTarget
   runHooks?: boolean

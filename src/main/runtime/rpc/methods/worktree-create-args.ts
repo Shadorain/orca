@@ -39,6 +39,7 @@ export function buildManagedWorktreeCreateArgs(
     linkedItems: params.linkedItems,
     linkedTaskSourceContext: params.linkedTaskSourceContext,
     comment: params.comment,
+    ...(params.pinned === true ? { isPinned: true } : {}),
     displayName: params.displayName,
     displayNameKind: params.displayNameKind,
     telemetrySource: params.telemetrySource,

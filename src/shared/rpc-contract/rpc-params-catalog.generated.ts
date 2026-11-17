@@ -575,6 +575,7 @@ import { WorktreeCreate, WorktreePrefetchCreateBase } from './worktree-create-pa
 import {
   WorktreeActivate,
   WorktreeDetectedListParams,
+  WorktreeExecParams,
   WorktreeForceDeleteBranch,
   WorktreeListParams,
   WorktreePsParams,
@@ -1286,6 +1287,7 @@ export const RPC_PARAMS_BY_METHOD = {
   'worktree.adoptProvisionedRoot': WorktreeAdoptProvisionedRoot,
   'worktree.create': WorktreeCreate,
   'worktree.detectedList': WorktreeDetectedListParams,
+  'worktree.exec': WorktreeExecParams,
   'worktree.forceDeleteBranch': WorktreeForceDeleteBranch,
   'worktree.lineageList': null,
   'worktree.list': WorktreeListParams,
@@ -1298,7 +1300,6 @@ export const RPC_PARAMS_BY_METHOD = {
   'worktree.rm': WorktreeRemove,
   'worktree.set': WorktreeSet,
   'worktree.show': WorktreeSelectorOfWorktreeParams,
-  'worktree.sleep': WorktreeSelectorOfWorktreeParams,
   'worktree.teardownMissingTerminals': WorktreeTeardownMissingTerminalsParams
 } as const
 

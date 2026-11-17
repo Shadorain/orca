@@ -20,6 +20,31 @@ describe('parseArgs', () => {
     expect(parsed.flags.get('json')).toBe(true)
   })
 
+  it('stops parsing flags and positionals after the command separator', () => {
+    const parsed = parseArgs(
+      [
+        'worktree',
+        'exec',
+        '--host',
+        'local',
+        '--worktree',
+        'path:/tmp/repo',
+        '--json',
+        '--',
+        'node',
+        '--unknown-option'
+      ],
+      COMMAND_SPECS.map((spec) => spec.path),
+      COMMAND_SPECS
+    )
+
+    expect(parsed.commandPath).toEqual(['worktree', 'exec'])
+    expect(parsed.flags.get('host')).toBe('local')
+    expect(parsed.flags.get('worktree')).toBe('path:/tmp/repo')
+    expect(parsed.flags.get('json')).toBe(true)
+    expect(parsed.flags.has('unknown-option')).toBe(false)
+  })
+
   it('accepts a flag value that starts with -- via the = form', () => {
     const parsed = parseArgs(['terminal', 'send', '--text=--help'])
 

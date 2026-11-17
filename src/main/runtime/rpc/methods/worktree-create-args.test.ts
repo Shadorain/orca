@@ -27,6 +27,16 @@ describe('buildManagedWorktreeCreateArgs', () => {
     })
   })
 
+  it('maps an explicit creation pin without changing existing pins by default', () => {
+    expect(build({ repo: 'id:repo-1', name: 'protected', pinned: true })).toMatchObject({
+      isPinned: true
+    })
+    expect(build({ repo: 'id:repo-1', name: 'ordinary' })).not.toHaveProperty('isPinned')
+    expect(build({ repo: 'id:repo-1', name: 'ordinary', pinned: false })).not.toHaveProperty(
+      'isPinned'
+    )
+  })
+
   it('keeps the legacy CLI marker on a name-only create request', () => {
     const args = buildManagedWorktreeCreateArgs(
       WorktreeCreate.parse({ repo: 'id:repo-1', name: 'feature' }),

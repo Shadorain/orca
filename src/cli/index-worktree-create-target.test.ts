@@ -88,6 +88,27 @@ describe('orca cli worktree awareness', () => {
       cliProvenanceRequest: {}
     })
   })
+  it('passes pin protection through worktree.create', async () => {
+    queueFixtures(
+      callMock,
+      worktreeListFixture([buildWorktree('/tmp/repo', 'main', 'abc', 'repo-1')]),
+      okFixture('req_create', {
+        worktree: buildWorktree('/tmp/repo/feature', 'feature', 'abc', 'repo-1')
+      })
+    )
+    vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    await main(
+      ['worktree', 'create', '--repo', 'id:repo-1', '--name', 'feature', '--pinned', '--json'],
+      '/tmp/repo'
+    )
+
+    expect(callMock).toHaveBeenNthCalledWith(
+      2,
+      'worktree.create',
+      expect.objectContaining({ pinned: true })
+    )
+  })
 
   it('resolves project and host flags to the matching repo for worktree.create', async () => {
     pairRuntimeEnvironment(listEnvironmentsMock, 'gpu')

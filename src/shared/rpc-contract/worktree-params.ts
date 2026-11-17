@@ -85,6 +85,25 @@ export const WorktreeSelector = z.object({
     .transform((v) => (typeof v === 'string' ? v : ''))
     .pipe(z.string().min(1, 'Missing worktree selector'))
 })
+export const WorktreeExecParams = z.object({
+  hostId: z
+    .string()
+    .min(1)
+    .refine((hostId) => normalizeExecutionHostId(hostId) !== null),
+  worktree: z.string().min(6).startsWith('path:'),
+  argv: z
+    .array(z.string().refine((arg) => !arg.includes('\0')))
+    .min(1)
+    .max(256),
+  env: z.record(z.string(), z.string()).default({}),
+  timeoutMs: z.number().int().min(1).max(180_000).default(10_000),
+  maxOutputBytes: z
+    .number()
+    .int()
+    .min(1)
+    .max(4 * 1024 * 1024)
+    .default(1024 * 1024)
+})
 
 export const WorktreeActivate = WorktreeSelector.extend({
   notifyClients: OptionalBoolean,

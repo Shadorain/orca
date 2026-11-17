@@ -138,7 +138,10 @@ export async function materializeRuntimeLocalWorktree<T>(args: {
       creatorProvenance: request.creatorProvenance ?? { kind: 'host' },
       ...(request.comment !== undefined ? { comment: request.comment } : {}),
       ...(request.manualOrder !== undefined ? { manualOrder: request.manualOrder } : {}),
-      ...(request.workspaceStatus !== undefined ? { workspaceStatus: request.workspaceStatus } : {})
+      ...(request.workspaceStatus !== undefined
+        ? { workspaceStatus: request.workspaceStatus }
+        : {}),
+      ...(request.isPinned === true ? { isPinned: true } : {})
     })
   )
   const worktree = {

@@ -99,7 +99,24 @@ orca worktree create --name child-task --agent codex --prompt "Investigate the f
 orca worktree set --worktree active --comment "reproduced failure; testing token refresh fix" --json
 orca worktree set --worktree active --workspace-status in-review --unread --json
 orca worktree rm --worktree id:<worktreeId> --force --json
+orca worktree create --repo id:<repoId> --name protected-task --pinned --json
 ```
+
+Run a non-interactive command in a selected, registered worktree with no PTY:
+
+```bash
+orca worktree exec --host ssh:buildbox --worktree path:/srv/orca/task --json -- git status --short
+orca worktree exec --host local --worktree path:/home/me/orca --env MODE=check --json -- node -e "process.stdout.write(process.env.MODE)"
+```
+
+The JSON result contains the selected `hostId`, exact worktree path, argv, stdout, stderr, and the
+command's `exitCode` (a nonzero exit is still a completed request). `--env KEY=VALUE` passes an
+explicit environment value without shell interpolation. Timeout defaults to 10 seconds (maximum
+180 seconds); combined output defaults to 1 MiB (maximum 4 MiB). Timeout and output overflow fail
+without returning partial JSON. The host must be explicit and the `path:` selector must exactly
+identify a registered worktree on that host.
+
+`worktree create --pinned` marks the new or reused registered worktree as protected from automatic cleanup before startup. It does not prevent an operator from removing it with the authorized `worktree rm` flow.
 
 When `worktree create` runs from inside an Orca-managed worktree, Orca records the new worktree as a child when it can infer the relationship. Pass `--parent-worktree active` to be explicit, or `--no-parent` when the new work is independent.
 
